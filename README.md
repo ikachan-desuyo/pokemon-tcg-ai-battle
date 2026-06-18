@@ -30,9 +30,32 @@ cabt_bot/
     random_bot.py     # ランダムに合法手を選ぶベースライン
     greedy_bot.py     # OptionType ベースの簡易ヒューリスティック
 decks/deck.csv        # 60 枚のカードIDデッキ定義（要差し替え）
+data/cards.csv        # カードID一覧（id/name/expansion/collection_no）1267件
+data/cards.json       # 同上の JSON 版
+scripts/extract_cards.py  # input_data/ の PDF からカードデータを再生成
 scripts/run_match.py  # ローカルで2エージェントを対戦させる
 tests/                # パース・合法手のテスト
 ```
+
+## カードデータ
+
+`data/cards.csv` / `data/cards.json` に全 1267 枚のカード情報を収録。
+`card_id` は deck.csv や `Option.card_id` と同じ ID 体系。
+
+```python
+from cabt_bot import load_cards, card_name
+cards = load_cards()        # {card_id: CardInfo}
+card_name(40)               # -> "Greninja ex"
+```
+
+再生成（`input_data/` の PDF が必要）:
+
+```bash
+pip install pymupdf
+python scripts/extract_cards.py
+```
+
+> 注: 元 PDF で Expansion 列が欠落しているカードが 8 件あり、その `expansion` は空文字。
 
 ## セットアップ
 

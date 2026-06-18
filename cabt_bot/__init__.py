@@ -1,6 +1,7 @@
 """cabt (Pokémon TCG AI Battle) 用 bot フレームワーク。"""
 
 from .bots import Bot, GreedyBot, RandomBot
+from .cards import CardInfo, card_name, load_cards
 from .enums import (
     AreaType,
     OptionType,
@@ -21,4 +22,7 @@ __all__ = [
     "OptionType",
     "AreaType",
     "SpecialConditionType",
+    "CardInfo",
+    "load_cards",
+    "card_name",
 ]
