@@ -1,0 +1,5 @@
+# cabt の対戦環境。"cabt" 環境の入手方法は README を参照。
+kaggle-environments>=1.14.0
+
+# 開発用（任意）
+pytest>=7.0
