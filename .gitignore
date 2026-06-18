@@ -21,6 +21,9 @@ htmlcov/
 replays/
 *.replay
 
+# 大容量の参照データ（GitHub の 100MB 制限超のため追跡しない）
+input_data/
+
 # OS / editor
 .DS_Store
 .idea/
