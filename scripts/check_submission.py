@@ -101,19 +101,24 @@ def check_isolated_run(tar_path: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         with tarfile.open(tar_path) as t:
             t.extractall(tmp)
+        # Kaggle と同様に __file__ 無しで exec して main.py を読み込む
+        # （import だと __file__ が定義され、本番固有のバグを見逃すため）。
         runner = (
             "import sys; sys.path.insert(0,'.')\n"
             "from cg.api import to_observation_class\n"
             "from cg.game import battle_start, battle_select, battle_finish\n"
-            "import main\n"
+            "ns={}\n"
+            "exec(compile(open('main.py').read(),"
+            "'/kaggle_simulations/agent/main.py','exec'), ns)\n"
+            "agent=ns['agent']\n"
             "deck=[int(x) for x in open('deck.csv').read().split() if x.strip()]\n"
             "obs,sd=battle_start(deck,deck); steps=0\n"
             "while obs is not None and steps<5000:\n"
             "    o=to_observation_class(obs); st=o.current\n"
             "    if st and st.result!=-1:\n"
-            "        print('FINISHED',type(main.BOT).__name__,'winner',st.result,'turn',st.turn); break\n"
+            "        print('FINISHED',type(ns['BOT']).__name__,'winner',st.result,'turn',st.turn); break\n"
             "    if o.select is None or not o.select.option: break\n"
-            "    obs=battle_select(main.agent(obs)); steps+=1\n"
+            "    obs=battle_select(agent(obs)); steps+=1\n"
             "else:\n"
             "    print('NO_RESULT'); sys.exit(2)\n"
             "battle_finish()\n"
