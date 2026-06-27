@@ -21,10 +21,10 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 from cabt_bot import Observation  # noqa: E402
-from cabt_bot.bots import Bot, GreedyBot  # noqa: E402
+from cabt_bot.bots import Bot, HeuristicBot  # noqa: E402
 
-# 使用する戦略。RandomBot() や自作 Bot に差し替え可能。
-BOT: Bot = GreedyBot()
+# 使用する戦略。RandomBot() / GreedyBot() / 自作 Bot に差し替え可能。
+BOT: Bot = HeuristicBot()
 
 
 def read_deck_csv() -> list[int]:
