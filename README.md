@@ -31,9 +31,9 @@ cabt_bot/
   bots/
     base.py           # Bot 基底クラス（select() を実装）
     random_bot.py     # ランダムに合法手を選ぶベースライン
-    greedy_bot.py     # OptionType ベースの簡易ヒューリスティック
+    heuristic_bot.py  # 展開→最後に攻撃するルールベース実戦エージェント
 decks/
-  deck.csv            # 自分のデッキ（要差し替え・現状プレースホルダ）
+  deck.csv            # 自分のデッキ（メガスターミーex・検証済み）
   sample_deck.csv     # 公式サンプルの合法デッキ（動作確認用）
 data/cards.json       # 全1267カードのリッチデータ（id/name/hp/type/weakness/retreat/moves）
 data/cards.csv        # フラット概観版
@@ -84,7 +84,7 @@ python scripts/build_submission.py --deck decks/deck.csv
 
 ### 戦略の差し替え
 
-[main.py](main.py) の `BOT = GreedyBot()` を変えるだけ。独自ロジックは
+[main.py](main.py) の `BOT = HeuristicBot()` を変えるだけ。独自ロジックは
 `Bot` を継承して `select()` を実装する：
 
 ```python
@@ -117,4 +117,4 @@ python scripts/extract_cards.py --csv input_data/extracted/EN_Card_Data.csv
 
 - デッキ最適化ツール: `cabt_bot/arena.run_series` で候補デッキの勝率を測り、
   山登り / 遺伝的アルゴリズムで改良する（評価用の強い固定エージェントが前提）。
-- `GreedyBot` を超える思考ルーチン（探索 `search_*` API の活用など）。
+- `HeuristicBot` を超える思考ルーチン（探索 `search_*` API の活用など）。

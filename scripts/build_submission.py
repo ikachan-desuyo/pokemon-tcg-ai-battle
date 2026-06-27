@@ -77,11 +77,14 @@ def main() -> int:
         stage.mkdir()
         shutil.copy2(ROOT / "main.py", stage / "main.py")
         shutil.copy2(deck, stage / "deck.csv")
+        # 実行時に不要なものは同梱しない（arena.py はローカル対戦専用）。
         shutil.copytree(ROOT / "cabt_bot", stage / "cabt_bot",
-                        ignore=shutil.ignore_patterns("__pycache__"))
-        data_dir = ROOT / "data"
-        if data_dir.exists():
-            shutil.copytree(data_dir, stage / "data")
+                        ignore=shutil.ignore_patterns("__pycache__", "arena.py"))
+        # カードデータは実行時に使う cards.json のみ（cards.csv は概観用で不要）。
+        cards_json = ROOT / "data" / "cards.json"
+        if cards_json.exists():
+            (stage / "data").mkdir()
+            shutil.copy2(cards_json, stage / "data" / "cards.json")
         if cg is not None:
             shutil.copytree(cg, stage / "cg", ignore=shutil.ignore_patterns("__pycache__"))
 

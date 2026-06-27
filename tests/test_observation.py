@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from cabt_bot import Observation, OptionType, SelectType  # noqa: E402
-from cabt_bot.bots import GreedyBot, HeuristicBot, RandomBot  # noqa: E402
+from cabt_bot.bots import HeuristicBot, RandomBot  # noqa: E402
 
 SAMPLE_OBS = {
     "select": {
@@ -55,14 +55,6 @@ def test_random_bot_legal():
         _assert_legal(RandomBot(seed=seed).select(obs), obs)
 
 
-def test_greedy_bot_prefers_attack():
-    obs = Observation.from_dict(SAMPLE_OBS)
-    indices = GreedyBot().select(obs)
-    _assert_legal(indices, obs)
-    # ATTACK が最優先なので添字 0 を選ぶはず。
-    assert indices == [0]
-
-
 def test_heuristic_bot_legal_and_defers_attack():
     bot = HeuristicBot()
     obs = Observation.from_dict(SAMPLE_OBS)
@@ -100,7 +92,7 @@ def test_multi_select():
     }
     obs = Observation.from_dict(multi)
     _assert_legal(RandomBot(seed=1).select(obs), obs)
-    _assert_legal(GreedyBot().select(obs), obs)
+    _assert_legal(HeuristicBot().select(obs), obs)
 
 
 def test_enum_values_match_official():
@@ -134,7 +126,6 @@ if __name__ == "__main__":
     test_observation_parsing()
     test_observation_missing_keys()
     test_random_bot_legal()
-    test_greedy_bot_prefers_attack()
     test_heuristic_bot_legal_and_defers_attack()
     test_multi_select()
     test_enum_values_match_official()
