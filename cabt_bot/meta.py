@@ -13,6 +13,8 @@ from __future__ import annotations
 
 # --- 代表的な強いデッキの目印（signature）カードID ---
 ARCHETYPES: dict[str, set[int]] = {
+    "Dragapult":         {121, 119, 120, 133, 132, 112},  # ドラパルトex/ドラメシヤ/ドロンチ/ヨノワール/サマヨール/マシマシラ
+    "MegaLopunny":       {849, 758, 66},                   # メガミミロップex/ミミロル/ノココッチ
     "MegaLucario":       {678, 333, 676, 675, 673, 674},  # メガルカリオex/リオル/ソルロック/ルナトーン/マクノシタ/ハリテヤマ
     "MegaYukinooh":      {723, 722, 721},                  # メガユキノオーex/ユキカブリ/カイオーガ
     "Iwapa":             {345, 344, 970, 112},             # イワパレス/イシズマイ/キチキギス/マシマシラ
@@ -22,6 +24,7 @@ ARCHETYPES: dict[str, set[int]] = {
 
 # 一意性の強い目印（1枚見えれば確定に近い）
 _UNIQUE_HINT: dict[int, str] = {
+    121: "Dragapult", 849: "MegaLopunny",
     678: "MegaLucario", 723: "MegaYukinooh", 345: "Iwapa", 344: "Iwapa",
     104: "MegaStarmieSpread", 103: "MegaStarmieSpread",
 }
@@ -34,6 +37,8 @@ _UNIQUE_HINT: dict[int, str] = {
 # 新しい調整を入れるときは必ず A/B で勝率改善を確認してから有効化すること。
 DEFAULT_PROFILE = {"go_first": False, "attack_mode": "nebula", "gust_targets": []}
 PROFILES: dict[str, dict] = {
+    "Dragapult":    {"go_first": False, "attack_mode": "nebula", "gust_targets": []},
+    "MegaLopunny":  {"go_first": False, "attack_mode": "nebula", "gust_targets": []},
     "MegaLucario":  {"go_first": False, "attack_mode": "nebula", "gust_targets": []},
     "MegaYukinooh": {"go_first": False, "attack_mode": "nebula", "gust_targets": []},
     "Iwapa":        {"go_first": False, "attack_mode": "nebula", "gust_targets": []},
