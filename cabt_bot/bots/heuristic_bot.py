@@ -1,13 +1,9 @@
-"""ルールベースの実戦エージェント。
+"""Rule-based agent.
 
-設計の核:
-- 1ターン内は「特性 → 進化 → 場の展開/サポート → エネ加速」を先にやり切り、
-  他にやることが無くなってから**最大ダメージで攻撃**する（攻撃はターンを終える）。
-  GreedyBot が即攻撃で自滅していた問題への対策。
-- カード選択は文脈 (SelectContext) で「得る/捨てる」を判断し、カード価値で優先付け。
-- どんな場面でも合法手を返す（例外時は最小合法手にフォールバック）。
-
-エンジン非依存でテスト可能。攻撃ダメージ表のみ、利用可能なら cg.api.all_attack() を使う。
+Within a turn it does all setup first (ability -> evolve -> develop -> attach
+energy) and attacks last, since attacking ends the turn. Card choices are driven
+by SelectContext (take vs give up) and a card-value heuristic. Always returns a
+legal move.
 """
 
 from __future__ import annotations
@@ -17,19 +13,19 @@ from ..enums import OptionType, SelectContext, SelectType
 from ..models import Observation, Option
 from .base import Bot
 
-# MAIN でのアクション優先度（大きいほど先に実行）。攻撃は最後。
+# Action priority in MAIN (higher = sooner). Attack comes last.
 _MAIN_PRIORITY: dict[OptionType, int] = {
     OptionType.ABILITY: 90,
     OptionType.EVOLVE: 80,
     OptionType.PLAY: 70,
     OptionType.ATTACH: 60,
-    OptionType.ATTACK: 20,   # 展開を終えてから
-    OptionType.RETREAT: 8,   # 基本避ける（エネを無駄にしがち）
+    OptionType.ATTACK: 20,   # after setup is done
+    OptionType.RETREAT: 8,   # usually avoid (wastes energy)
     OptionType.END: 5,
     OptionType.DISCARD: 2,
 }
 
-# 「取りに行く」と得な文脈（最大数を取る）。
+# Contexts where taking the most cards is good.
 _TAKE_CONTEXTS = {
     SelectContext.TO_HAND, SelectContext.TO_FIELD, SelectContext.TO_ACTIVE,
     SelectContext.TO_BENCH, SelectContext.SETUP_ACTIVE_POKEMON,
@@ -37,7 +33,7 @@ _TAKE_CONTEXTS = {
     SelectContext.EVOLVES_TO, SelectContext.TO_HAND_ENERGY,
     SelectContext.HEAL, SelectContext.REMOVE_DAMAGE_COUNTER,
 }
-# 「手放す」文脈（最小数で済ませ、価値の低いものから）。
+# Contexts where giving up the fewest, lowest-value cards is best.
 _GIVE_CONTEXTS = {
     SelectContext.DISCARD, SelectContext.TO_DECK, SelectContext.TO_DECK_BOTTOM,
     SelectContext.TO_PRIZE, SelectContext.DISCARD_ENERGY,
@@ -45,7 +41,7 @@ _GIVE_CONTEXTS = {
     SelectContext.DISCARD_CARD_OR_ATTACHED_CARD, SelectContext.TO_DECK_ENERGY,
     SelectContext.DEVOLVE,
 }
-# YesNo を YES にしたい文脈。
+# Contexts where YesNo should answer YES.
 _YES_CONTEXTS = {
     SelectContext.IS_FIRST, SelectContext.ACTIVATE, SelectContext.FIRST_EFFECT,
     SelectContext.COIN_HEAD,
@@ -54,10 +50,11 @@ _YES_CONTEXTS = {
 
 class HeuristicBot(Bot):
     def __init__(self) -> None:
-        self._cards = load_cards()
+        try:
+            self._cards = load_cards()
+        except Exception:
+            self._cards = {}
         self._attack_dmg: dict[int, int] | None = None
-
-    # ----- 公開 ------------------------------------------------------
 
     def select(self, obs: Observation) -> list[int]:
         sel = obs.select
@@ -75,37 +72,30 @@ class HeuristicBot(Bot):
         if t in (SelectType.CARD, SelectType.ATTACHED_CARD,
                  SelectType.CARD_OR_ATTACHED_CARD, SelectType.ENERGY):
             return self._pick_cards(obs)
-        # EVOLVE / SKILL / SPECIAL_CONDITION など: 最小数を先頭から。
+        # EVOLVE / SKILL / SPECIAL_CONDITION: take the minimum, highest value.
         return self._take(obs, prefer_high=True)
 
-    # ----- MAIN ------------------------------------------------------
-
     def _main(self, options: list[Option]) -> list[int]:
-        # 展開系（攻撃以外）があれば最優先のものを実行。
+        # Run the highest-priority setup action if any is available.
         best_i, best_p = None, -1
         attack_idxs: list[int] = []
         for i, op in enumerate(options):
             if op.type == OptionType.ATTACK:
                 attack_idxs.append(i)
-            p = _MAIN_PRIORITY.get(op.type, 30) if isinstance(op.type, OptionType) else 30
-            # 攻撃は「展開を終えてから」なので、ここでは展開系のみ比較。
-            if isinstance(op.type, OptionType) and op.type in (
-                OptionType.ABILITY, OptionType.EVOLVE, OptionType.PLAY, OptionType.ATTACH
-            ):
+            if op.type in (OptionType.ABILITY, OptionType.EVOLVE,
+                           OptionType.PLAY, OptionType.ATTACH):
+                p = _MAIN_PRIORITY.get(op.type, 30)
                 if p > best_p:
                     best_p, best_i = p, i
         if best_i is not None:
             return [best_i]
-        # 展開が尽きた → 攻撃可能なら最大ダメージで攻撃。
+        # Setup exhausted: attack for max damage, else end the turn.
         if attack_idxs:
             return [max(attack_idxs, key=lambda i: self._dmg_of(options[i]))]
-        # 攻撃も無ければ END、無ければ先頭。
         for i, op in enumerate(options):
             if op.type == OptionType.END:
                 return [i]
         return [0]
-
-    # ----- カード/エネルギー選択 ------------------------------------
 
     def _pick_cards(self, obs: Observation) -> list[int]:
         ctx = obs.select.context
@@ -113,7 +103,6 @@ class HeuristicBot(Bot):
             return self._take(obs, prefer_high=False, take_max=False)
         if isinstance(ctx, SelectContext) and ctx in _TAKE_CONTEXTS:
             return self._take(obs, prefer_high=True, take_max=True)
-        # 不明な文脈: 最小数を、価値の高い方から（無難）。
         return self._take(obs, prefer_high=True, take_max=False)
 
     def _take(self, obs: Observation, prefer_high: bool, take_max: bool = False) -> list[int]:
@@ -130,17 +119,13 @@ class HeuristicBot(Bot):
         )
         return sorted(ranked[:k])
 
-    # ----- 個別ヘルパ ------------------------------------------------
-
     def _yes_no(self, obs: Observation) -> int:
         ctx = obs.select.context
-        want_yes = isinstance(ctx, SelectContext) and ctx in _YES_CONTEXTS
-        # MULLIGAN（引き直し）は受ける、それ以外の既定は YES（有益効果が多い）。
-        if not isinstance(ctx, SelectContext):
-            want_yes = True
-        elif ctx == SelectContext.MORE_DEVOLVE:
+        # Default to YES (most prompts offer a beneficial effect); decline only
+        # for over-devolving.
+        if isinstance(ctx, SelectContext) and ctx == SelectContext.MORE_DEVOLVE:
             want_yes = False
-        elif ctx not in _YES_CONTEXTS:
+        else:
             want_yes = True
         target = OptionType.YES if want_yes else OptionType.NO
         for i, op in enumerate(obs.select.options):
@@ -149,7 +134,7 @@ class HeuristicBot(Bot):
         return 0
 
     def _best_count(self, options: list[Option]) -> int:
-        # 引く/置く枚数などは基本「最大」。number があればそれで比較。
+        # Draw/place counts: take the largest.
         return max(range(len(options)), key=lambda i: options[i].number or 0)
 
     def _best_attack(self, options: list[Option]) -> int:
@@ -186,14 +171,14 @@ class HeuristicBot(Bot):
         if c is None:
             return 10
         stage = c.stage or ""
-        if c.hp is not None:  # ポケモン
+        if c.hp is not None:  # Pokémon
             if c.rule and "ex" in c.rule.lower():
                 return 100
             if "Stage 2" in stage:
                 return 85
             if "Stage 1" in stage:
                 return 80
-            return 70  # たね
+            return 70  # Basic
         if "Special Energy" in stage:
             return 60
         if "Basic Energy" in stage:
@@ -204,4 +189,4 @@ class HeuristicBot(Bot):
             return 30
         if "Stadium" in stage:
             return 25
-        return 30  # Item など
+        return 30  # Item
