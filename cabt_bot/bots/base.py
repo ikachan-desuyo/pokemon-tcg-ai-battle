@@ -20,8 +20,12 @@ class Bot(ABC):
         """選択肢インデックスのリストを返す。"""
         raise NotImplementedError
 
-    def on_search_begin(self, obs: Observation) -> str | None:
-        """探索開始時、相手の予想デッキ等を返す（任意・未使用なら None）。"""
+    def on_deck_selection(self, obs: Observation) -> list[int] | None:
+        """初期デッキ選択 (obs.select is None) で 60 枚のカードIDを返す。
+
+        None を返すと呼び出し側が deck.csv を読み込む（既定動作）。
+        コードでデッキを動的に決めたい場合のみオーバーライドする。
+        """
         return None
 
     def __call__(self, obs: Observation) -> list[int]:

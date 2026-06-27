@@ -1,5 +1,6 @@
-# cabt の対戦環境。"cabt" 環境の入手方法は README を参照。
-kaggle-environments>=1.14.0
-
-# 開発用（任意）
+# 実行時の必須依存はなし（標準ライブラリ + コンペ配布エンジン cg/ のみ）。
+# 開発・検証用:
 pytest>=7.0
+
+# Kaggle 上での提出テストに使う場合のみ:
+# kaggle-environments>=1.14.0

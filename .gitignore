@@ -24,6 +24,10 @@ replays/
 # 大容量の参照データ（GitHub の 100MB 制限超のため追跡しない）
 input_data/
 
+# 公式エンジン（再配布不可）と提出パッケージ
+cg/
+submission*.tar.gz
+
 # OS / editor
 .DS_Store
 .idea/

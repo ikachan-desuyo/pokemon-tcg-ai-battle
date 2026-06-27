@@ -77,10 +77,40 @@ def test_multi_select():
     _assert_legal(GreedyBot().select(obs), obs)
 
 
+def test_enum_values_match_official():
+    # 公式 cg/api.py と一致していること（過去の推測誤りの回帰防止）。
+    from cabt_bot import AreaType, EnergyType, SpecialConditionType
+    assert AreaType.DECK == 1 and AreaType.ACTIVE == 4 and AreaType.BENCH == 5
+    assert SpecialConditionType.POISON == 0 and SpecialConditionType.CONFUSE == 4
+    assert EnergyType.COLORLESS == 0 and EnergyType.DRAGON == 9
+
+
+def test_card_data_loads():
+    from cabt_bot import card_name, load_cards
+    cards = load_cards()
+    assert len(cards) == 1267
+    c = cards[30]
+    assert c.name == "Magcargo ex" and c.hp == 270 and c.is_pokemon
+    assert len(c.moves) == 3
+    assert card_name(40) == "Greninja ex"
+
+
+def test_agent_entrypoint_never_crashes():
+    import main
+    # 不正な observation でも例外を投げず list[int] を返す。
+    out = main.agent({"select": {"option": [{"type": 14}], "minCount": 1, "maxCount": 1}})
+    assert isinstance(out, list) and out == [0]
+    # 壊れた入力でもフォールバックする。
+    assert isinstance(main.agent({"select": {"option": [], "minCount": 0, "maxCount": 0}}), list)
+
+
 if __name__ == "__main__":
     test_observation_parsing()
     test_observation_missing_keys()
     test_random_bot_legal()
     test_greedy_bot_prefers_attack()
     test_multi_select()
+    test_enum_values_match_official()
+    test_card_data_loads()
+    test_agent_entrypoint_never_crashes()
     print("all tests passed")

@@ -1,92 +1,91 @@
 # pokemon-tcg-ai-battle
 
-[cabt](https://matsuoinstitute.github.io/cabt/api.html)（Kaggle Environments 上の
-ポケモンカードゲーム対戦環境）向け AI 対戦エージェントのベースコード。
+Kaggle コンペ **[Pokémon TCG AI Battle Challenge](https://www.kaggle.com/competitions/pokemon-tcg-ai-battle)**
+（cabt エンジン / Simulation 部門）向け AI 対戦エージェント。
+
+## コンペ概要
+
+- **Simulation 部門**: エージェント同士の Elo ラダー。1試合10分、時間切れは負け。1日最大5提出。
+- **Strategy 部門**: 戦略・デッキ設計を 2,000 語以内のレポートで説明。
+- 配布カードプール（約2,000枚 / 我々の `data/` は1267枚）から **60枚デッキ**を構築。
+- 対戦は **cabt エンジン**（ネイティブ lib + `cg/` Python ラッパ）上で実行。
 
 ## 仕組み
 
-cabt 環境は各手番でエージェントに **observation (dict)** を渡し、エージェントは
-`observation["select"]["option"]`（選択肢のリスト）から選んだ**インデックスの
-リスト (`list[int]`)** を返す。選ぶ個数は `minCount`〜`maxCount` の範囲。
+エンジンは各手番でエージェントに **observation (dict)** を渡し、エージェントは
+`obs["select"]["option"]`（選択肢）から選んだ**インデックスのリスト (`list[int]`)** を返す。
+個数は `minCount`〜`maxCount`、重複なし。`obs.select` が `None` のときは
+**初期デッキ選択**で 60 枚のカードIDを返す。
 
-```python
-from kaggle_environments import make
-env = make("cabt", configuration={"decks": [deck, deck]})
-env.run([agent, agent])
-```
-
-このリポジトリでは、素の dict を型付きの `Observation` に変換し、
-`Bot` クラスに思考を委譲する構成にしている。
+エージェントは**絶対にクラッシュしてはならない**（[main.py](main.py) は例外時も合法手を返す）。
 
 ## ディレクトリ構成
 
 ```
-agent.py              # Kaggle エントリポイント（agent(obs_dict) -> list[int]）
+main.py               # 提出エントリポイント agent(obs_dict)->list[int]（堅牢・フォールバック付き）
 cabt_bot/
-  enums.py            # SelectType / OptionType / AreaType などの列挙型
-  models.py           # Observation / SelectData / Option / Card のデータクラス
+  enums.py            # 公式 cg/api.py に一致する列挙型（SelectType/OptionType/AreaType/EnergyType/...）
+  models.py           # Observation / SelectData / Option / Card のデータクラス（エンジン非依存）
+  cards.py            # カードデータ(data/cards.json)ローダー（HP/タイプ/ワザ等）
+  arena.py            # 公式エンジン直叩きのローカル対戦アリーナ
   bots/
-    base.py           # Bot 基底クラス（select() を実装する）
+    base.py           # Bot 基底クラス（select() を実装）
     random_bot.py     # ランダムに合法手を選ぶベースライン
     greedy_bot.py     # OptionType ベースの簡易ヒューリスティック
-decks/deck.csv        # 60 枚のカードIDデッキ定義（要差し替え）
-data/cards.csv        # カードID一覧（id/name/expansion/collection_no）1267件
-data/cards.json       # 同上の JSON 版
-scripts/extract_cards.py  # input_data/ の PDF からカードデータを再生成
-scripts/run_match.py  # ローカルで2エージェントを対戦させる
-tests/                # パース・合法手のテスト
+decks/
+  deck.csv            # 自分のデッキ（要差し替え・現状プレースホルダ）
+  sample_deck.csv     # 公式サンプルの合法デッキ（動作確認用）
+data/cards.json       # 全1267カードのリッチデータ（id/name/hp/type/weakness/retreat/moves）
+data/cards.csv        # フラット概観版
+scripts/
+  extract_cards.py    # 公式 EN_Card_Data.csv からカードデータを再生成
+  run_match.py        # ローカル対戦（1試合 / 勝率集計）
+  build_submission.py # submission.tar.gz を作成
+tests/                # パース・列挙・カード・エントリポイントのテスト
+cg/                   # 公式エンジン（コンペ配布物・再配布不可・git 管理外）
+input_data/           # 配布 zip/PDF/CSV の展開先（git 管理外）
 ```
-
-## カードデータ
-
-`data/cards.csv` / `data/cards.json` に全 1267 枚のカード情報を収録。
-`card_id` は deck.csv や `Option.card_id` と同じ ID 体系。
-
-```python
-from cabt_bot import load_cards, card_name
-cards = load_cards()        # {card_id: CardInfo}
-card_name(40)               # -> "Greninja ex"
-```
-
-再生成（`input_data/` の PDF が必要）:
-
-```bash
-pip install pymupdf
-python scripts/extract_cards.py
-```
-
-> 注: 元 PDF で Expansion 列が欠落しているカードが 8 件あり、その `expansion` は空文字。
 
 ## セットアップ
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+# コンペ配布物を input_data/ に置いて展開後、エンジンをリポジトリ直下へコピー
+cp -r input_data/extracted/sample_submission/sample_submission/cg ./cg
 ```
 
-> **cabt 環境について**: `make("cabt", ...)` を使うには cabt 環境本体が
-> `kaggle_environments` に登録されている必要がある。配布形態（pip パッケージ /
-> Kaggle ノートブック上の追加登録など）は公式ドキュメント・コンペページの
-> 案内に従って導入すること。
+> `cg/`（ネイティブエンジン）と `input_data/`（配布データ）は **git 管理外**。
+> 各自 Kaggle のコンペページから入手する。
 
 ## 使い方
 
-### テスト（環境不要）
+### テスト（エンジン不要）
 
 ```bash
-python -m pytest          # または: python tests/test_observation.py
+python tests/test_observation.py      # または: python -m pytest
 ```
 
-### ローカル対戦
+### ローカル対戦（エンジン必要 / `cg/` 配置済み）
 
 ```bash
-python scripts/run_match.py --render
+python scripts/run_match.py                 # サンプルデッキ同士で1試合
+python scripts/run_match.py --games 50       # 50試合の勝率集計
+python scripts/run_match.py --deck0 decks/a.csv --deck1 decks/b.csv
+```
+
+### 提出パッケージ作成
+
+```bash
+python scripts/build_submission.py --deck decks/deck.csv
+# -> submission.tar.gz（main.py / deck.csv / cg/ / cabt_bot/ / data/）
 ```
 
 ### 戦略の差し替え
 
-`agent.py` の `BOT = GreedyBot()` を別の `Bot` 実装に変えるだけ。
-独自ロジックは `cabt_bot/bots/base.py` の `Bot` を継承して `select()` を実装する：
+[main.py](main.py) の `BOT = GreedyBot()` を変えるだけ。独自ロジックは
+`Bot` を継承して `select()` を実装する：
 
 ```python
 from cabt_bot.bots import Bot
@@ -98,10 +97,24 @@ class MyBot(Bot):
         ...
 ```
 
-## メモ / TODO
+## カードデータ
 
-- `AreaType` / `SpecialConditionType` の数値は公式ドキュメントに明記がなく**暫定値**。
-  実エンジンの値が判明したら `cabt_bot/enums.py` を修正する。
-- `Observation.search_begin_input`（探索開始時の相手デッキ予想）への本格対応は
-  `Bot.on_search_begin()` を実装して行う。
-- `decks/deck.csv` はプレースホルダ。`all_card_data()` で取得した実カードIDに置き換える。
+```python
+from cabt_bot import load_cards, card_name
+cards = load_cards()        # {card_id: CardInfo}
+cards[30].hp                # 270
+cards[30].moves             # (Move(name='Hot Magma', cost='{R}●', damage='70', ...), ...)
+card_name(40)               # "Greninja ex"
+```
+
+再生成（公式 `EN_Card_Data.csv` が必要）:
+
+```bash
+python scripts/extract_cards.py --csv input_data/extracted/EN_Card_Data.csv
+```
+
+## 次のステップ
+
+- デッキ最適化ツール: `cabt_bot/arena.run_series` で候補デッキの勝率を測り、
+  山登り / 遺伝的アルゴリズムで改良する（評価用の強い固定エージェントが前提）。
+- `GreedyBot` を超える思考ルーチン（探索 `search_*` API の活用など）。

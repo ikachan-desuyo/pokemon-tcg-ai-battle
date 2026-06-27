@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .enums import OptionType, SelectType
+from .enums import OptionType, SelectContext, SelectType
 
 
 def _enum_or_none(enum_cls, value):
@@ -114,7 +114,7 @@ class SelectData:
             max_count=d.get("maxCount", 1),
             remain_damage_counter=d.get("remainDamageCounter"),
             remain_energy_cost=d.get("remainEnergyCost"),
-            context=d.get("context"),
+            context=_enum_or_none(SelectContext, d.get("context")),
             context_card=Card.from_dict(d.get("contextCard")),
             effect=Card.from_dict(d.get("effect")),
             deck=[Card.from_dict(c) for c in deck] if deck else None,
