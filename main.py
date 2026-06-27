@@ -25,12 +25,7 @@ for _p in _CANDIDATES:
 _HERE = _CANDIDATES[0]
 
 from cabt_bot import Observation
-from cabt_bot.bots import Bot, HeuristicBot, RandomBot
-
-try:
-    BOT: Bot = HeuristicBot()
-except Exception:
-    BOT = RandomBot()
+from cabt_bot.bots import HeuristicBot, SearchBot
 
 
 def read_deck_csv() -> list[int]:
@@ -50,6 +45,21 @@ def read_deck_csv() -> list[int]:
     return deck
 
 
+def _load_decklist() -> list[int]:
+    try:
+        return read_deck_csv()
+    except Exception:
+        return []
+
+
+# SearchBot は cg(エンジン)があれば先読み探索、無ければ内部で HeuristicBot に委譲。
+# 生 obs_dict を取り、常に合法手を返す。
+try:
+    BOT = SearchBot(_load_decklist())
+except Exception:
+    BOT = HeuristicBot()
+
+
 def _fallback(obs_dict: dict) -> list[int]:
     try:
         sel = obs_dict.get("select")
@@ -63,10 +73,10 @@ def _fallback(obs_dict: dict) -> list[int]:
 
 def agent(obs_dict: dict, *_args) -> list[int]:
     try:
-        obs = Observation.from_dict(obs_dict)
-        if obs.select is None:
-            deck = BOT.on_deck_selection(obs)
-            return deck if deck is not None else read_deck_csv()
-        return BOT.select(obs)
+        if not obs_dict.get("select"):
+            return read_deck_csv()  # initial deck selection
+        if isinstance(BOT, SearchBot):
+            return BOT(obs_dict)
+        return BOT.select(Observation.from_dict(obs_dict))
     except Exception:
         return _fallback(obs_dict)

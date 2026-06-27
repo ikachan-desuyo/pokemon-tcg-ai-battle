@@ -1,6 +1,6 @@
 """cabt (Pokémon TCG AI Battle) 用 bot フレームワーク。"""
 
-from .bots import Bot, HeuristicBot, RandomBot
+from .bots import Bot, HeuristicBot, RandomBot, SearchBot
 from .cards import CardInfo, Move, card_name, load_cards
 from .enums import (
     AreaType,
@@ -18,6 +18,7 @@ __all__ = [
     "Bot",
     "RandomBot",
     "HeuristicBot",
+    "SearchBot",
     "Observation",
     "SelectData",
     "Option",
