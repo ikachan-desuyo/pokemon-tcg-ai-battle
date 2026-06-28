@@ -8,13 +8,16 @@ from .deck_bot import DeckBot, DeckPlan
 
 PLAN = DeckPlan(
     name="MegaLopunny",
-    go_first=False,
+    go_first=True,
     attackers=(849, 758),                 # メガミミロップex / ミミロル
     key_cards=(849, 758),
     preferred_attacks=(),                 # 既定: 最大ダメージ（後で「しっぷうづき」優先を検討）
     energy_rules=((None, 849),),          # 任意→メガミミロップex
     play_priority={758: 82, 66: 80, 109: 78},  # ミミロル/ノココッチ/ケーシィ
     card_values={849: 100, 758: 80},
+    lethal=True,
+    smart_gust=True,   # KOしやすい相手を引きずり出す（A/B +0.050）
+    reposition=True,   # 攻撃役を前に出してから殴る（A/B(80戦) +0.038）
 )
 
 

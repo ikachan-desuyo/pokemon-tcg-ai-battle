@@ -37,13 +37,15 @@ class SearchBot:
         max_rollout_steps: int = 400,
         move_time_budget: float = 3.0,
         rng_seed: int = 0,
+        rollout_policy=None,
     ) -> None:
         self.deck = [int(x) for x in decklist]
         self.D = determinizations
         self.R = rollouts
         self.max_rollout_steps = max_rollout_steps
         self.move_time_budget = move_time_budget
-        self.policy = HeuristicBot()
+        # ロールアウト方策（デッキ専用 DeckBot を渡すと探索の質が上がる）。既定は汎用。
+        self.policy = rollout_policy if rollout_policy is not None else HeuristicBot()
         self.rng = random.Random(rng_seed)
         try:
             cards = load_cards()

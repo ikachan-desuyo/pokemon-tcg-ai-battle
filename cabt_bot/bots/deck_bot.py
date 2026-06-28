@@ -56,6 +56,12 @@ class DeckPlan:
     energy_rules: tuple[tuple, ...] = ()      # (energy_id|None, target_id)
     play_priority: dict[int, int] = field(default_factory=dict)
     card_values: dict[int, int] = field(default_factory=dict)
+    lethal: bool = False                      # 相手バトル場をKOできる技を優先
+    skip_abilities: bool = False              # 特性を自動使用しない（自滅特性対策の検証用）
+    hold_energies: tuple[int, ...] = ()       # これらのエネは energy_rules の付け先以外には貼らない（温存）
+    est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
+    smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
+    reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
 
 
 class DeckBot(Bot):
@@ -70,6 +76,7 @@ class DeckBot(Bot):
             self._cards = {}
         self._atk_dmg = None
         self._atk_name = None
+        self._atk_est = None
         self._cur = None
         self._sel = None
 
@@ -103,7 +110,7 @@ class DeckBot(Bot):
         g: dict = {}
         for i, op in enumerate(options):
             g.setdefault(op.type, []).append(i)
-        if OptionType.ABILITY in g:
+        if OptionType.ABILITY in g and not self.plan.skip_abilities:
             return [g[OptionType.ABILITY][0]]
         if OptionType.PLAY in g:
             c = self._pick_play(g[OptionType.PLAY], options, hand)
@@ -112,8 +119,13 @@ class DeckBot(Bot):
         if OptionType.EVOLVE in g:
             return [self._pick_evolve(g[OptionType.EVOLVE], options, hand)]
         if OptionType.ATTACH in g:
-            return [self._pick_attach(g[OptionType.ATTACH], options, hand, me)]
+            a = self._pick_attach(g[OptionType.ATTACH], options, hand, me)
+            if a is not None:
+                return [a]
         if OptionType.ATTACK in g:
+            if (self.plan.reposition and OptionType.RETREAT in g
+                    and self._should_reposition(me)):
+                return [g[OptionType.RETREAT][0]]
             return [self._best_attack(g[OptionType.ATTACK], options)]
         if OptionType.END in g:
             return [g[OptionType.END][0]]
@@ -151,19 +163,22 @@ class DeckBot(Bot):
                 best_key, best = key, i
         return best
 
-    def _pick_attach(self, idxs, options, hand, me) -> int:
-        best, best_key = idxs[0], (-1, -1, -1)
+    def _pick_attach(self, idxs, options, hand, me):
+        best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
             energy = self._hand_id(hand, op.index)
             target = self._target_id(me, op.in_play_area, op.in_play_index)
             rule = self._energy_rule_rank(energy, target)
+            # 温存指定エネは規則の付け先以外には貼らない（無駄付け回避）
+            if energy in self.plan.hold_energies and rule == 0:
+                continue
             key = (rule,
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
             if key > best_key:
                 best_key, best = key, i
-        return best
+        return best  # None なら良い付け先なし → 付けずに次フェーズへ
 
     def _energy_rule_rank(self, energy, target) -> int:
         # energy_rules の上にあるものほど高ランク
@@ -176,6 +191,10 @@ class DeckBot(Bot):
     # ===== 攻撃 =====
     def _best_attack(self, idxs, options) -> int:
         idxs = list(idxs)
+        if self.plan.lethal:
+            ko = self._lethal_choice(idxs, options)
+            if ko is not None:
+                return ko
         for nm in self.plan.preferred_attacks:
             aid = self._attack_name_ids().get(nm)
             for i in idxs:
@@ -183,10 +202,53 @@ class DeckBot(Bot):
                     return i
         return max(idxs, key=lambda i: self._dmg(options[i]))
 
+    def _lethal_choice(self, idxs, options):
+        """相手バトル場を倒せる技があれば、その中で最大ダメージを選ぶ。"""
+        hp, weak = self._opp_active_hp_weak()
+        if hp is None:
+            return None
+        my_type = self._my_active_type()
+        best, best_eff = None, -1
+        for i in idxs:
+            base = self._dmg(options[i])
+            eff = base * 2 if (weak and my_type and weak == my_type) else base
+            if eff >= hp and eff > best_eff:
+                best_eff, best = eff, i
+        return best
+
+    def _opp_active_hp_weak(self):
+        cur = self._cur
+        if not cur:
+            return None, None
+        opp = cur["players"][1 - cur["yourIndex"]]
+        act = opp.get("active") or []
+        if act and act[0]:
+            c = self._cards.get(act[0].get("id"))
+            return act[0].get("hp"), (c.weakness if c else None)
+        return None, None
+
+    def _my_active_type(self):
+        cur = self._cur
+        if not cur:
+            return None
+        act = (cur["players"][cur["yourIndex"]].get("active") or [])
+        if act and act[0]:
+            c = self._cards.get(act[0].get("id"))
+            return c.type if c else None
+        return None
+
     def _dmg(self, op: Option) -> int:
         if op.attack_id is None:
             return 0
-        return self._attack_table().get(op.attack_id, 0)
+        base = self._attack_table().get(op.attack_id, 0)
+        if base == 0 and self.plan.est_var_damage:
+            return self._attack_est().get(op.attack_id, 0)
+        return base
+
+    def _attack_est(self) -> dict:
+        if getattr(self, "_atk_est", None) is None:
+            self._load_attacks()
+        return self._atk_est or {}
 
     # ===== YesNo =====
     def _yes_no(self, sel) -> int:
@@ -205,6 +267,10 @@ class DeckBot(Bot):
 
     # ===== カード選択 =====
     def _cards(self, sel) -> list[int]:
+        if self.plan.smart_gust:
+            g = self._smart_gust_pick(sel)
+            if g is not None:
+                return [g]
         ctx = sel.context
         if isinstance(ctx, SelectContext) and ctx == SelectContext.SETUP_ACTIVE_POKEMON:
             pref = self._first_of(sel, self.plan.attackers)  # 進化前が居れば前に
@@ -217,6 +283,37 @@ class DeckBot(Bot):
         if take:
             return self._take(sel, prefer_high=True, take_max=True)
         return self._take(sel, prefer_high=True, take_max=False)
+
+    def _should_reposition(self, me) -> bool:
+        if not me or not self.plan.attackers:
+            return False
+        act = me.get("active") or []
+        if not act or not act[0]:
+            return False
+        if act[0].get("id") in self.plan.attackers:
+            return False  # 既に攻撃役が前
+        for sp in me.get("bench") or []:
+            if sp and sp.get("id") in self.plan.attackers and (sp.get("energies") or []):
+                return True  # エネ持ちの攻撃役がベンチに居る
+        return False
+
+    def _smart_gust_pick(self, sel):
+        """相手ポケモンを選ぶ選択なら、現HP最小（KOしやすい）を選ぶ。"""
+        cur = self._cur
+        if not cur:
+            return None
+        opp_idx = 1 - cur["yourIndex"]
+        opp = cur["players"][opp_idx]
+        cand = []
+        for i, op in enumerate(sel.options):
+            if op.player_index != opp_idx:
+                continue
+            spots = (opp.get("active") if op.area == AreaType.ACTIVE else opp.get("bench")) or []
+            if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
+                cand.append((spots[op.index].get("hp", 9999), i))
+        if not cand:
+            return None
+        return min(cand)[1]
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)
@@ -297,7 +394,8 @@ class DeckBot(Bot):
         return self._atk_name
 
     def _load_attacks(self):
-        self._atk_dmg, self._atk_name = {}, {}
+        import re
+        self._atk_dmg, self._atk_name, self._atk_est = {}, {}, {}
         try:
             import sys
             from pathlib import Path
@@ -306,8 +404,18 @@ class DeckBot(Bot):
                 sys.path.insert(0, root)
             from cg.api import all_attack  # type: ignore
             for a in all_attack():
-                self._atk_dmg[a.attackId] = a.damage or 0
+                base = a.damage or 0
+                self._atk_dmg[a.attackId] = base
                 self._atk_name.setdefault(a.name, a.attackId)
+                # 可変ダメージ推定: 効果文の「N damage」を拾い、"for each" は概算で増やす
+                est = base
+                if base == 0 and a.text:
+                    m = re.search(r"(\d+)\s*damage", a.text)
+                    if m and "benched" not in a.text.lower():  # ベンチ限定技は対象外
+                        est = int(m.group(1))
+                        if "for each" in a.text.lower():
+                            est = min(est * 3, 240)
+                self._atk_est[a.attackId] = est
         except Exception:
             pass
 
