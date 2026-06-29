@@ -71,12 +71,13 @@ class DeckBot(Bot):
         if plan is not None:
             self.plan = plan
         try:
-            self._cards = load_cards()
+            self._cardinfo = load_cards()
         except Exception:
-            self._cards = {}
+            self._cardinfo = {}
         self._atk_dmg = None
         self._atk_name = None
         self._atk_est = None
+        self._atk_no_weak = None
         self._cur = None
         self._sel = None
 
@@ -211,7 +212,10 @@ class DeckBot(Bot):
         best, best_eff = None, -1
         for i in idxs:
             base = self._dmg(options[i])
-            eff = base * 2 if (weak and my_type and weak == my_type) else base
+            # 弱点無視の技(例: Nebula Beam)は2倍にしない
+            apply_weak = (weak and my_type and weak == my_type
+                          and options[i].attack_id not in self._attack_no_weak())
+            eff = base * 2 if apply_weak else base
             if eff >= hp and eff > best_eff:
                 best_eff, best = eff, i
         return best
@@ -223,7 +227,7 @@ class DeckBot(Bot):
         opp = cur["players"][1 - cur["yourIndex"]]
         act = opp.get("active") or []
         if act and act[0]:
-            c = self._cards.get(act[0].get("id"))
+            c = self._cardinfo.get(act[0].get("id"))
             return act[0].get("hp"), (c.weakness if c else None)
         return None, None
 
@@ -233,7 +237,7 @@ class DeckBot(Bot):
             return None
         act = (cur["players"][cur["yourIndex"]].get("active") or [])
         if act and act[0]:
-            c = self._cards.get(act[0].get("id"))
+            c = self._cardinfo.get(act[0].get("id"))
             return c.type if c else None
         return None
 
@@ -378,7 +382,7 @@ class DeckBot(Bot):
             return self.plan.card_values[cid]
         if cid in self.plan.attackers:
             return 95
-        c = self._cards.get(cid)
+        c = self._cardinfo.get(cid)
         if c and c.hp is not None:
             return 80 if (c.rule and "ex" in (c.rule or "").lower()) else 60
         return 42
@@ -393,9 +397,15 @@ class DeckBot(Bot):
             self._load_attacks()
         return self._atk_name
 
+    def _attack_no_weak(self) -> set:
+        if getattr(self, "_atk_no_weak", None) is None:
+            self._load_attacks()
+        return self._atk_no_weak or set()
+
     def _load_attacks(self):
         import re
         self._atk_dmg, self._atk_name, self._atk_est = {}, {}, {}
+        self._atk_no_weak = set()
         try:
             import sys
             from pathlib import Path
@@ -416,6 +426,9 @@ class DeckBot(Bot):
                         if "for each" in a.text.lower():
                             est = min(est * 3, 240)
                 self._atk_est[a.attackId] = est
+                # 弱点/抵抗を無視する技を記録（例: Nebula Beam）
+                if a.text and "affected by Weakness" in a.text:
+                    self._atk_no_weak.add(a.attackId)
         except Exception:
             pass
 
