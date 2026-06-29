@@ -135,6 +135,12 @@ class DeckBot(Bot):
             a = self._pick_attach(g[OptionType.ATTACH], options, hand, me)
             if a is not None:
                 return [a]
+        # 展開・進化・エネ付けを終えた後にリーリエ（手札を全部山に戻して引き直す）を判断。
+        # ＝戻したくないエネ等を先に使い切ってから引き直す。
+        if OptionType.PLAY in g and self._should_use_lillie():
+            for i in g[OptionType.PLAY]:
+                if self._hand_id(hand, options[i].index) == LILLIE:
+                    return [i]
         if OptionType.ATTACK in g:
             if (self.plan.reposition and OptionType.RETREAT in g
                     and self._should_reposition(me)):
@@ -156,7 +162,7 @@ class DeckBot(Bot):
 
     def _play_score(self, cid, hand):
         if cid == LILLIE:
-            return 60 if self._should_use_lillie() else None
+            return None  # リーリエは展開・進化・エネ付けを終えた後（_main後段）で判断する
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
         if cid in self.plan.heal_return_cards:
             return 50 if self._attacker_damaged() else None
