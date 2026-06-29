@@ -379,7 +379,15 @@ class DeckBot(Bot):
         if cid in self.plan.heal_return_cards:
             return 190 if self._attacker_damaged(150) else 10
         if cid == LILLIE:
-            return 150 if self._should_use_lillie() else 30
+            # 引き直しは「プレイ直前の手札が少ないほど純増が大きい」＝枚数でスケール。
+            if self._should_use_lillie():
+                me = self._me()
+                hand_n = len(me.get("hand") or []) if me else 0
+                prizes_left = len(me.get("prize") or []) if me else 6
+                draw_n = 8 if prizes_left >= 6 else 6
+                gain = max(0, draw_n - hand_n)        # 引いて増える枚数
+                return 140 + gain * 18                # 手札僅少なら最優先級(最大~266)
+            return 30
         c = self._cardinfo.get(cid)
         if c and c.stage == "Supporter":          # ドロー/展開系サポ
             return 170 if not self._evolved_attacker_in_play() else 100
