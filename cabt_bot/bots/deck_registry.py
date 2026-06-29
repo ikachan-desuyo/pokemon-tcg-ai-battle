@@ -22,6 +22,7 @@ STARMIE_PLAN = DeckPlan(
     play_priority={1030: 80, 666: 60},
     card_values={1031: 100, 17: 90, 1030: 84},
     lethal=True,
+    reposition=True,               # 壁(エースバーン)を無料retreatで退かし、ベンチのメガを前に出して殴る（A/B +0.022）
     volatile_energies=(17,),       # イグニはメガ(進化)の場・攻撃できる番のみ付与（浪費防止）
     conserve_volatile=True,        # 今のエネ(ジェットブロー等)でKOできるならイグニ温存
     heal_return_cards=(1229,),     # ミツルは負傷時のみ（無傷使用＝エネ全戻しで有害なため抑止）
