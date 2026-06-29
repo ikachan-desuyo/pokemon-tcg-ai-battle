@@ -367,16 +367,34 @@ class DeckBot(Bot):
         return False
 
     def _take_rank(self, op: Option) -> int:
-        """取得(サーチ/ポケギア等)時のカード評価。状況依存サポートは今役立つ時だけ高評価。"""
+        """取得(サーチ/ポケギア等)時のカード評価。効果×盤面で「今/直近に最も活きるサポ」を選ぶ。
+        - ボス: KOでサイドを取れる時に最優先。取れなくても将来用に中庸。
+        - ミツル: アタッカーが重傷の時のみ高評価。
+        - リーリエ: 手札が死んでいる時に高評価。
+        - その他ドロー/展開サポ(トウコ/セイジ): アタッカー未起動なら最優先（展開加速）、起動後は安定札として中位。
+        """
         cid = self._opt_card_id(op)
-        hand = (self._me() or {}).get("hand") or []
         if cid in self.plan.boss_cards:
-            return 200 if self._should_play_boss() else 3
+            return 200 if self._should_play_boss() else 40
         if cid in self.plan.heal_return_cards:
-            return 190 if self._attacker_damaged() else 3
+            return 190 if self._attacker_damaged(150) else 10
         if cid == LILLIE:
-            return 120 if not (self._has_key(hand) or len(hand) >= 4) else 6
+            return 150 if self._should_use_lillie() else 30
+        c = self._cardinfo.get(cid)
+        if c and c.stage == "Supporter":          # ドロー/展開系サポ
+            return 170 if not self._evolved_attacker_in_play() else 100
         return self._opt_value(op)
+
+    def _evolved_attacker_in_play(self) -> bool:
+        me = self._me()
+        if not me:
+            return False
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if sp and sp.get("id") in self.plan.attackers:
+                c = self._cardinfo.get(sp.get("id"))
+                if c and not c.is_basic:
+                    return True
+        return False
 
     def _should_reposition(self, me) -> bool:
         if not me or not self.plan.attackers:
@@ -621,6 +639,11 @@ class DeckBot(Bot):
         if self._sel is not None and self._sel.deck and area == AreaType.DECK:
             if 0 <= idx < len(self._sel.deck):
                 return self._sel.deck[idx].card_id
+        # ピーク領域(ポケギア等で山上を見ている)。current["looking"] に実体がある。
+        if area == AreaType.LOOKING and self._cur:
+            look = self._cur.get("looking") or []
+            if 0 <= idx < len(look) and look[idx]:
+                return look[idx].get("id")
         if me is None:
             return None
         zone = {AreaType.HAND: me.get("hand"), AreaType.ACTIVE: me.get("active"),

@@ -27,6 +27,7 @@ STARMIE_PLAN = DeckPlan(
     boss_cards=(1182,),            # ボスはKO(サイド)を生む時のみ＋引きずり出し対象もKO優先
     recover_cards=(1097,),         # 夜のタンカは回収価値がある時のみ（無駄打ち防止）
     switch_cards=(1123,),          # ポケモンいれかえは攻撃役を前に出す必要がある時のみ
+    smart_take=True,               # ポケギア等のサポ取得を効果×盤面で選ぶ（展開/KO/手札立て直し）
 )
 # Mega Starmie（spread 主軸）
 SPREAD_PLAN = DeckPlan(
