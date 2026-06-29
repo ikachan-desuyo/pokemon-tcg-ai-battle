@@ -70,6 +70,7 @@ class DeckPlan:
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
+    energy_supporters: tuple[int, ...] = ()   # エネ補給サポ(例:トウコ)。進化アタッカーが居てエネ切れ＝攻撃不可の時に優先して打つ
     eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
     sacrifice_abilities: tuple[int, ...] = () # 自滅特性(例:カースドボム)。ベンチ backup有り＆相手をKOできる時のみ使う
     sacrifice_damage: dict = field(default_factory=dict)  # {特性カードid: 与ダメージ} 自滅特性のKO判定用
@@ -212,6 +213,9 @@ class DeckBot(Bot):
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
         if cid in self.plan.heal_return_cards:
             return 50 if self._attacker_damaged() else None
+        # エネ補給サポ(トウコ等): 進化アタッカーが居て攻撃できない(エネ切れ)なら優先＝攻撃を早める
+        if cid in self.plan.energy_supporters and self._attacker_needs_energy():
+            return 83
         # 引きずり出し系(ボス等): KO(サイド獲得)を生む時のみ
         if cid in self.plan.boss_cards:
             return 62 if self._should_play_boss() else None
@@ -610,6 +614,23 @@ class DeckBot(Bot):
         succ = sum(max(0, self.deck_counts.get(cid, 0) - seen.get(cid, 0))
                    for cid in success_ids)
         return self._hyp_at_least1(pool, succ, n)
+
+    def _attacker_needs_energy(self) -> bool:
+        """進化アタッカーが場に居て攻撃できない(エネ0)＆手札にもエネが無い＝エネ補給が要る。"""
+        me = self._me()
+        if not me:
+            return False
+        if any(self._is_energy(c.get("id")) for c in (me.get("hand") or [])):
+            return False  # 手札にエネあり→直接付けられるので補給サポ不要
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if not sp or sp.get("id") not in self.plan.attackers:
+                continue
+            info = self._cardinfo.get(sp.get("id"))
+            if info and info.is_basic:
+                continue  # 進化アタッカーのみ（殴れる本命）
+            if not (sp.get("energies") or []):
+                return True  # 進化アタッカーがエネ0＝攻撃不可
+        return False
 
     def _attacker_in_play(self) -> bool:
         me = self._me()

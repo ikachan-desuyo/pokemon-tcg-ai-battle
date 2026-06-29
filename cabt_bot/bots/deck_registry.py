@@ -31,6 +31,7 @@ STARMIE_PLAN = DeckPlan(
     switch_cards=(1123,),          # ポケモンいれかえは攻撃役を前に出す必要がある時のみ
     smart_take=True,               # ポケギア等のサポ取得を効果×盤面で選ぶ（展開/KO/手札立て直し）
     setup_wall=(666,),             # 先攻T1は攻撃不可→HP160エースバーンを壁に開幕。reposition修正と併せA/B +0.020
+    energy_supporters=(1225,),     # トウコ(進化+エネ)。メガが居てエネ切れ＝攻撃不可なら優先＝攻撃を早める
 )
 # Mega Starmie（spread 主軸）
 SPREAD_PLAN = DeckPlan(
