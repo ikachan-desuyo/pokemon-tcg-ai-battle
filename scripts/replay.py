@@ -53,6 +53,28 @@ def load_names() -> dict[int, str]:
     return names
 
 
+def load_kinds() -> dict[int, str]:
+    """card_id -> 種別タグ（poke/energy/sup/item）。チップの色分け用。"""
+    kinds: dict[int, str] = {}
+    if EN_CSV.exists():
+        with EN_CSV.open(encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f):
+                try:
+                    cid = int(r["card_id"])
+                except (KeyError, ValueError):
+                    continue
+                stage = (r.get("stage") or "")
+                if "Pokémon" in stage and "Tool" not in stage:
+                    kinds[cid] = "poke"
+                elif "Energy" in stage:
+                    kinds[cid] = "energy"
+                elif "Supporter" in stage:
+                    kinds[cid] = "sup"
+                else:
+                    kinds[cid] = "item"
+    return kinds
+
+
 def load_attack_names() -> dict[int, str]:
     try:
         from cg.api import all_attack  # type: ignore
@@ -132,7 +154,7 @@ def narrate(L, names, atk):
     return None  # shuffle / has_basic / turn_end / *_reverse などは省略
 
 
-def record(deck0, deck1, names, atk, max_steps=6000):
+def record(deck0, deck1, names, atk, kinds, max_steps=6000):
     from cg.game import battle_finish, battle_select, battle_start
     _, a0 = make_agent(deck0)
     _, a1 = make_agent(deck1)
@@ -145,6 +167,8 @@ def record(deck0, deck1, names, atk, max_steps=6000):
     state_by_turn: dict[int, dict] = {}
     events_by_turn: dict[int, list] = {}
     owner_by_turn: dict[int, int] = {}
+    # 手札は手番側(自分視点)だけ実物が見える → 見えた時点の手札を保持
+    hand_by_player: dict[int, list] = {0: [], 1: []}
     result = {"winner": -1, "reason": None}
     try:
         for _ in range(max_steps):
@@ -159,10 +183,17 @@ def record(deck0, deck1, names, atk, max_steps=6000):
                 if n is not None:
                     events_by_turn.setdefault(turn, []).append(n)
             if cur is not None:
-                state_by_turn[turn] = {
-                    "p0": _snap(cur["players"][0], names),
-                    "p1": _snap(cur["players"][1], names),
-                }
+                for pi in (0, 1):
+                    pl = cur["players"][pi]
+                    h = pl.get("hand") or []
+                    # 手札が完全に見えている（公開）ときだけ更新。相手は [] のまま枚数のみ
+                    if len(h) == pl.get("handCount", -1):
+                        hand_by_player[pi] = [
+                            {"n": names.get(c.get("id"), f"#{c.get('id')}"),
+                             "k": kinds.get(c.get("id"), "item")} for c in h]
+                s0 = _snap(cur["players"][0], names); s0["handCards"] = list(hand_by_player[0])
+                s1 = _snap(cur["players"][1], names); s1["handCards"] = list(hand_by_player[1])
+                state_by_turn[turn] = {"p0": s0, "p1": s1}
                 if cur["result"] != -1:
                     break
             sel_data = obs.get("select")
@@ -222,6 +253,12 @@ h1{font-size:15px;margin:0 0 6px}
 .e{color:#fde68a} .tool{color:#a5b4fc}
 .empty{color:var(--mut);font-style:italic;padding:6px}
 .benchlbl{font-size:11px;color:var(--mut);margin:6px 0 2px}
+.hand{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.chip{background:#1f2940;border:1px solid #3a4a66;border-radius:6px;padding:2px 7px;font-size:12px}
+.chip.poke{border-left:3px solid var(--acc)} .chip.energy{border-left:3px solid #fde68a}
+.chip.sup{border-left:3px solid #93c5fd} .chip.item{border-left:3px solid #86efac}
+.hand-hidden{color:var(--mut);font-size:12px;font-style:italic}
+.ownerbadge{font-size:10px;color:#0b0f18;background:var(--acc);border-radius:8px;padding:1px 6px;margin-left:6px}
 aside{background:var(--panel);border-radius:10px;padding:10px;align-self:start;position:sticky;top:64px;max-height:80vh;overflow:auto}
 aside h3{font-size:13px;margin:0 0 6px}
 .ev{padding:2px 0;font-size:13px;border-bottom:1px solid #222b3f}
@@ -243,10 +280,12 @@ input[type=range]{flex:1}
 </header>
 <div class="wrap">
   <div class="board">
-    <div class="side opp"><h2><span><span class="tag opp">P1</span> __DECK1__</span><span class="meta" id="m1"></span></h2>
-      <div id="act1"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench1"></div></div>
-    <div class="side you"><h2><span><span class="tag you">P0</span> __DECK0__</span><span class="meta" id="m0"></span></h2>
-      <div id="act0"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench0"></div></div>
+    <div class="side opp"><h2><span><span class="tag opp">P1</span> __DECK1__<span id="ob1"></span></span><span class="meta" id="m1"></span></h2>
+      <div id="act1"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench1"></div>
+      <div class="benchlbl">手札</div><div class="hand" id="hand1"></div></div>
+    <div class="side you"><h2><span><span class="tag you">P0</span> __DECK0__<span id="ob0"></span></span><span class="meta" id="m0"></span></h2>
+      <div id="act0"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench0"></div>
+      <div class="benchlbl">手札</div><div class="hand" id="hand0"></div></div>
     <div class="ctrl">
       <button id="prev">◀ 前</button>
       <span class="tcount" id="tc"></span>
@@ -273,15 +312,26 @@ function cardHTML(p, active){
     '<div class="hpt">HP '+p.hp+'/'+p.maxHp+'</div>'+
     (b?'<div class="badges">'+b+'</div>':'')+'</div>';
 }
-function side(pl, actId, benchId, metaId){
+function handHTML(pl){
+  const hc = pl.handCards || [];
+  if(hc.length === 0)
+    return pl.hand>0? '<span class="hand-hidden">'+pl.hand+'枚（非公開）</span>' : '<span class="hand-hidden">（なし）</span>';
+  let s = hc.map(c=>'<span class="chip '+c.k+'">'+c.n+'</span>').join('');
+  if(hc.length !== pl.hand) s += ' <span class="hand-hidden">(直近 '+hc.length+'枚 / 現在 '+pl.hand+'枚)</span>';
+  return s;
+}
+function side(pl, actId, benchId, metaId, handId){
   $(actId).innerHTML = cardHTML(pl.active, true);
   $(benchId).innerHTML = pl.bench.length? pl.bench.map(b=>cardHTML(b,false)).join('') : '<div class="empty">（ベンチなし）</div>';
   $(metaId).innerHTML = 'サイド'+pips(pl.prize)+' 手札:'+pl.hand+' 山:'+pl.deck+' トラッシュ:'+pl.discard;
+  $(handId).innerHTML = handHTML(pl);
 }
 function render(){
   const f = F[i];
-  side(f.p1,'act1','bench1','m1');
-  side(f.p0,'act0','bench0','m0');
+  side(f.p1,'act1','bench1','m1','hand1');
+  side(f.p0,'act0','bench0','m0','hand0');
+  $('ob1').innerHTML = f.owner===1? '<span class="ownerbadge">手番</span>':'';
+  $('ob0').innerHTML = f.owner===0? '<span class="ownerbadge">手番</span>':'';
   $('log').innerHTML = (f.events.length? f.events : [['mut','（イベントなし）']])
      .map(e=>'<div class="ev '+e[0]+'">'+e[1].replace(/</g,'&lt;')+'</div>').join('');
   const owner = f.owner==null? '' : ('　手番: P'+f.owner);
@@ -325,7 +375,8 @@ def main() -> int:
 
     names = load_names()
     atk = load_attack_names()
-    frames, result = record(args.deck0, args.deck1, names, atk)
+    kinds = load_kinds()
+    frames, result = record(args.deck0, args.deck1, names, atk, kinds)
     out = Path(args.out) if args.out else (
         ROOT / "replays" / f"{Path(args.deck0).stem}_vs_{Path(args.deck1).stem}.html")
     out.parent.mkdir(parents=True, exist_ok=True)
