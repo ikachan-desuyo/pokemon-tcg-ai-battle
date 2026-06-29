@@ -61,6 +61,7 @@ class DeckPlan:
     hold_energies: tuple[int, ...] = ()       # これらのエネは energy_rules の付け先以外には貼らない（温存）
     volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
+    boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
@@ -152,6 +153,9 @@ class DeckBot(Bot):
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
         if cid in self.plan.heal_return_cards:
             return 50 if self._attacker_damaged() else None
+        # 引きずり出し系(ボス等): KO(サイド獲得)を生む時のみ
+        if cid in self.plan.boss_cards:
+            return 62 if self._should_play_boss() else None
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if cid in self.plan.attackers:   # 進化前/アタッカーをベンチに置くのは重要
@@ -282,8 +286,8 @@ class DeckBot(Bot):
 
     # ===== カード選択 =====
     def _cards(self, sel) -> list[int]:
-        if self.plan.smart_gust:
-            g = self._smart_gust_pick(sel)
+        if self.plan.smart_gust or self.plan.boss_cards:
+            g = self._ko_gust_pick(sel)
             if g is not None:
                 return [g]
         ctx = sel.context
@@ -326,23 +330,96 @@ class DeckBot(Bot):
                 return True  # エネ持ちの攻撃役がベンチに居る
         return False
 
-    def _smart_gust_pick(self, sel):
-        """相手ポケモンを選ぶ選択なら、現HP最小（KOしやすい）を選ぶ。"""
+    def _active_attack_potential(self):
+        """現バトル場アタッカーの (払えるワザの最大ダメージ, 弱点無視か)。攻撃不可なら(0,False)。"""
+        import re
+        cur = self._cur
+        if not cur:
+            return 0, False
+        me = cur["players"][cur["yourIndex"]]
+        act = (me.get("active") or [None])[0]
+        if not act or act.get("id") not in self.plan.attackers:
+            return 0, False
+        info = self._cardinfo.get(act.get("id"))
+        if not info:
+            return 0, False
+        # 実効エネ数: イグニ等の volatile エネは進化ポケ上で無3として数える
+        evolved = not info.is_basic
+        e = 0
+        for ec in act.get("energyCards") or []:
+            e += 3 if (ec.get("id") in self.plan.volatile_energies and evolved) else 1
+        if e <= 0:
+            return 0, False
+        best, ign = 0, False
+        for m in info.moves:
+            if not m.damage:
+                continue
+            cost = m.cost or ""
+            need = len(re.findall(r"\{[A-Z]\}", cost)) + cost.count("●")
+            if need > e:                       # 概算: 付与エネ数で払えるワザのみ
+                continue
+            mt = re.match(r"(\d+)", m.damage)
+            dm = int(mt.group(1)) if mt else 0
+            if dm > best:
+                best, ign = dm, ("affected by Weakness" in (m.effect or ""))
+        return best, ign
+
+    def _eff_dmg(self, base, ign, target_id) -> int:
+        """対象(target_id)へ与える実効ダメージ（弱点2倍を考慮、弱点無視技は据置）。"""
+        my_type = self._my_active_type()
+        c = self._cardinfo.get(target_id)
+        weak = c.weakness if c else None
+        return base * 2 if (weak and my_type and weak == my_type and not ign) else base
+
+    def _prize_value(self, cid) -> int:
+        c = self._cardinfo.get(cid)
+        return 2 if (c and "ex" in (c.rule or "").lower()) else 1
+
+    def _should_play_boss(self) -> bool:
+        """ボスは『前を倒せない×ベンチにKO可能あり』または『より大きなサイドを取れる』時のみ。"""
+        cur = self._cur
+        if not cur:
+            return False
+        dmg, ign = self._active_attack_potential()
+        if dmg <= 0:
+            return False
+        opp = cur["players"][1 - cur["yourIndex"]]
+        act = (opp.get("active") or [None])[0]
+        if not act:
+            return False
+        can_ko_active = self._eff_dmg(dmg, ign, act.get("id")) >= (act.get("hp") or 9999)
+        active_val = self._prize_value(act.get("id"))
+        best_bench = 0
+        for sp in opp.get("bench") or []:
+            if sp and self._eff_dmg(dmg, ign, sp.get("id")) >= (sp.get("hp") or 9999):
+                best_bench = max(best_bench, self._prize_value(sp.get("id")))
+        if best_bench == 0:
+            return False                       # ベンチにKOできる相手なし → 打たない
+        if not can_ko_active:
+            return True                        # 前を倒せない → ベンチのKO対象を引っ張る
+        return best_bench > active_val         # 前は倒せるが、より大きなサイドを優先
+
+    def _ko_gust_pick(self, sel):
+        """相手ポケモン選択: KO可能を最優先 → サイド価値大 → 現HP小 で選ぶ。"""
         cur = self._cur
         if not cur:
             return None
         opp_idx = 1 - cur["yourIndex"]
         opp = cur["players"][opp_idx]
+        dmg, ign = self._active_attack_potential()
         cand = []
         for i, op in enumerate(sel.options):
             if op.player_index != opp_idx:
                 continue
             spots = (opp.get("active") if op.area == AreaType.ACTIVE else opp.get("bench")) or []
             if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
-                cand.append((spots[op.index].get("hp", 9999), i))
+                sp = spots[op.index]
+                hp = sp.get("hp", 9999)
+                koable = 1 if self._eff_dmg(dmg, ign, sp.get("id")) >= hp else 0
+                cand.append((koable, self._prize_value(sp.get("id")), -hp, i))
         if not cand:
             return None
-        return min(cand)[1]
+        return max(cand)[3]
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)

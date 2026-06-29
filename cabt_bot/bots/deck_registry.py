@@ -24,6 +24,7 @@ STARMIE_PLAN = DeckPlan(
     lethal=True,
     volatile_energies=(17,),       # イグニはメガ(進化)の場・攻撃できる番のみ付与（浪費防止）
     heal_return_cards=(1229,),     # ミツルは負傷時のみ（無傷使用＝エネ全戻しで有害なため抑止）
+    boss_cards=(1182,),            # ボスはKO(サイド)を生む時のみ＋引きずり出し対象もKO優先
 )
 # Mega Starmie（spread 主軸）
 SPREAD_PLAN = DeckPlan(
