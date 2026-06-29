@@ -62,6 +62,7 @@ class DeckPlan:
     skip_abilities: bool = False              # 特性を自動使用しない（自滅特性対策の検証用）
     hold_energies: tuple[int, ...] = ()       # これらのエネは energy_rules の付け先以外には貼らない（温存）
     volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
+    conserve_volatile: bool = False           # 今のエネで相手バトル場をKOできるなら volatile(イグニ)を温存（番末トラッシュの無駄回避）
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
@@ -69,6 +70,9 @@ class DeckPlan:
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
+    eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
+    sacrifice_abilities: tuple[int, ...] = () # 自滅特性(例:カースドボム)。ベンチ backup有り＆相手をKOできる時のみ使う
+    sacrifice_damage: dict = field(default_factory=dict)  # {特性カードid: 与ダメージ} 自滅特性のKO判定用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
@@ -126,13 +130,20 @@ class DeckBot(Bot):
         for i, op in enumerate(options):
             g.setdefault(op.type, []).append(i)
         if OptionType.ABILITY in g and not self.plan.skip_abilities:
-            return [g[OptionType.ABILITY][0]]
+            ab = self._pick_ability(g[OptionType.ABILITY], options)
+            if ab is not None:
+                return [ab]
         if OptionType.PLAY in g:
             c = self._pick_play(g[OptionType.PLAY], options, hand)
             if c is not None:
                 return [c]
         if OptionType.EVOLVE in g:
             return [self._pick_evolve(g[OptionType.EVOLVE], options, hand)]
+        # （任意）エネ付けの前に壁を退いて攻撃役を前に出すと今ターン殴れるなら退く。
+        # イグニはベンチに付けられないため、前進後に手札のイグニ→ネビュラを成立させる。
+        if (self.plan.reposition and self.plan.eager_reposition
+                and OptionType.RETREAT in g and self._should_reposition_eager(me, hand)):
+            return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACH in g:
             a = self._pick_attach(g[OptionType.ATTACH], options, hand, me)
             if a is not None:
@@ -143,8 +154,7 @@ class DeckBot(Bot):
             for i in g[OptionType.PLAY]:
                 if self._hand_id(hand, options[i].index) == LILLIE:
                     return [i]
-        # 攻撃役を前に出す（現アクティブが攻撃不可＝壁等でも、退かして攻撃役を前進させる）。
-        # ※以前は ATTACK 肢がある時しか発火せず、エネ0の壁が居座る不具合があった。
+        # 攻撃役を前に出す（現アクティブが攻撃不可＝壁等でも、退かして攻撃役を前進）。
         if (self.plan.reposition and OptionType.RETREAT in g
                 and self._should_reposition(me)):
             return [g[OptionType.RETREAT][0]]
@@ -153,6 +163,38 @@ class DeckBot(Bot):
         if OptionType.END in g:
             return [g[OptionType.END][0]]
         return [0]
+
+    def _pick_ability(self, idxs, options):
+        """特性は基本そのまま使うが、自滅特性(カースドボム等)は条件を満たす時だけ使う。
+        非自滅特性を優先し、無ければ自滅特性を『価値がある時のみ』使う。"""
+        deferred = []
+        for i in idxs:
+            cid = self._opt_card_id(options[i])
+            if cid in self.plan.sacrifice_abilities:
+                deferred.append((i, cid))
+                continue
+            return i  # 非自滅特性(ドロー等)は即使用
+        for i, cid in deferred:
+            if self._sacrifice_worth_it(cid):
+                return i
+        return None  # 使うべき特性なし → 次フェーズへ
+
+    def _sacrifice_worth_it(self, src_cid) -> bool:
+        """自滅特性: ①ベンチに後続が居る(展開済み) ②与ダメージで相手をKOできる 時のみ。"""
+        dmg = self.plan.sacrifice_damage.get(src_cid, 0)
+        if dmg <= 0:
+            return False
+        cur = self._cur
+        if not cur:
+            return False
+        me = cur["players"][cur["yourIndex"]]
+        opp = cur["players"][1 - cur["yourIndex"]]
+        if len([s for s in (me.get("bench") or []) if s]) < 1:
+            return False  # ベンチが薄い＝先に展開すべき。自滅で盤面を失わない
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp and (sp.get("hp") or 9999) <= dmg:
+                return True  # この自滅でKOできる相手が居る
+        return False
 
     def _pick_play(self, idxs, options, hand):
         scored = []
@@ -211,6 +253,9 @@ class DeckBot(Bot):
             if energy in self.plan.volatile_energies:
                 turn = (self._cur or {}).get("turn", 99)
                 if rule == 0 or op.in_play_area != AreaType.ACTIVE or turn <= 1:
+                    continue
+                # 今のエネで相手バトル場をKOできるなら、イグニは温存（より安い技で十分）
+                if self.plan.conserve_volatile and self._active_lethal_now():
                     continue
             key = (rule,
                    1 if target in self.plan.attackers else 0,
@@ -426,6 +471,29 @@ class DeckBot(Bot):
                 return True  # エネ持ちの攻撃役がベンチに居る
         return False
 
+    def _should_reposition_eager(self, me, hand) -> bool:
+        """eager版: 進化アタッカーが①既にエネ有 or ②手札にエネがあり未アタッチ（前進後に付けて殴れる）なら退く。
+        先攻T1(攻撃不可)では退かない。たねは前に出さない。"""
+        if not me or not self.plan.attackers:
+            return False
+        cur = self._cur or {}
+        if cur.get("turn") == 1 and cur.get("yourIndex") == cur.get("firstPlayer"):
+            return False
+        act = (me.get("active") or [None])[0]
+        if not act or act.get("id") in self.plan.attackers:
+            return False
+        not_attached = not cur.get("energyAttached")
+        have_energy = any(self._is_energy(c.get("id")) for c in (hand or []))
+        for sp in me.get("bench") or []:
+            if not sp or sp.get("id") not in self.plan.attackers:
+                continue
+            info = self._cardinfo.get(sp.get("id"))
+            if info and info.is_basic:
+                continue
+            if sp.get("energies") or (not_attached and have_energy):
+                return True
+        return False
+
     def _active_attack_potential(self):
         """現バトル場アタッカーの (払えるワザの最大ダメージ, 弱点無視か)。攻撃不可なら(0,False)。"""
         import re
@@ -459,6 +527,21 @@ class DeckBot(Bot):
             if dm > best:
                 best, ign = dm, ("affected by Weakness" in (m.effect or ""))
         return best, ign
+
+    def _active_lethal_now(self) -> bool:
+        """今バトル場アタッカーに付いているエネだけで、相手バトル場をKOできるか
+        （新たにエネを付けずに）。＝より安い技で足りる＝volatile(イグニ)を温存できる。"""
+        dmg, ign = self._active_attack_potential()
+        if dmg <= 0:
+            return False
+        cur = self._cur
+        if not cur:
+            return False
+        opp = cur["players"][1 - cur["yourIndex"]]
+        act = (opp.get("active") or [None])[0]
+        if not act:
+            return False
+        return self._eff_dmg(dmg, ign, act.get("id")) >= (act.get("hp") or 9999)
 
     def _eff_dmg(self, base, ign, target_id) -> int:
         """対象(target_id)へ与える実効ダメージ（弱点2倍を考慮、弱点無視技は据置）。"""

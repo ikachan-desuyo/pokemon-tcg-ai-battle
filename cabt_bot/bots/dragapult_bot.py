@@ -21,6 +21,8 @@ PLAN = DeckPlan(
     switch_cards=(1123,),          # いれかえは攻撃役を前に出す時のみ
     smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.026）
     strict_lillie_guard=True,      # コンボ素材を抱えるため、キー所持時はリーリエ抑制（緩和は -0.049）
+    sacrifice_abilities=(132, 133),          # サマヨール/ヨノワールのカースドボム(自滅)
+    sacrifice_damage={132: 50, 133: 130},    # 与ダメージ(5/13ダメカン)。ベンチ有り＆KO時のみ自滅
 )
 
 
