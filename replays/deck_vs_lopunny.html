@@ -1,0 +1,146 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<title>Replay: deck vs lopunny</title>
+<style>
+:root{--bg:#0f1420;--panel:#1b2233;--ink:#e8edf6;--mut:#8a96ad;--you:#2563eb;--opp:#b91c1c;
+--hp:#22c55e;--hpl:#374151;--card:#283246;--acc:#f59e0b}
+*{box-sizing:border-box}
+body{margin:0;padding-bottom:64px;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
+header{padding:10px 16px;background:#0b0f18;border-bottom:1px solid #222b3f;position:sticky;top:0;z-index:5}
+h1{font-size:15px;margin:0 0 6px}
+.sub{color:var(--mut);font-size:12px}
+.wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;padding:12px;max-width:1100px;margin:0 auto}
+.board{display:flex;flex-direction:column;gap:8px}
+.side{background:var(--panel);border-radius:10px;padding:10px}
+.side.opp{border-top:3px solid var(--opp)} .side.you{border-top:3px solid var(--you)}
+.side h2{font-size:13px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+.tag{font-size:11px;color:#fff;padding:1px 7px;border-radius:9px}
+.tag.opp{background:var(--opp)} .tag.you{background:var(--you)}
+.meta{color:var(--mut);font-size:12px;font-weight:400}
+.pips{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}
+.pip{width:9px;height:9px;border-radius:50%;background:var(--acc)}
+/* ステップ移動で枠サイズが変わらないよう、行は折り返さず固定高さ＋横スクロール */
+.row{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;min-height:90px;align-items:flex-start}
+#act0,#act1{min-height:104px}
+.card{background:var(--card);border-radius:8px;padding:8px;width:130px;min-height:84px;flex:0 0 auto}
+.card.active{border:1px solid var(--acc);width:190px;min-height:96px}
+.card .nm{font-weight:600;font-size:13px;margin-bottom:4px}
+.card.active .nm{font-size:15px}
+.hpbar{height:7px;background:var(--hpl);border-radius:4px;overflow:hidden;margin:3px 0}
+.hpbar>i{display:block;height:100%;background:var(--hp)}
+.hpt{font-size:11px;color:var(--mut)}
+.badges{margin-top:4px;font-size:11px;color:var(--mut)}
+.e{color:#fde68a} .tool{color:#a5b4fc}
+.empty{color:var(--mut);font-style:italic;padding:6px}
+.benchlbl{font-size:11px;color:var(--mut);margin:6px 0 2px}
+.hand{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-top:2px;min-height:28px;align-items:center}
+.chip{background:#1f2940;border:1px solid #3a4a66;border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap;flex:0 0 auto}
+.chip.poke{border-left:3px solid var(--acc)} .chip.energy{border-left:3px solid #fde68a}
+.chip.sup{border-left:3px solid #93c5fd} .chip.item{border-left:3px solid #86efac}
+.hand-hidden{color:var(--mut);font-size:12px;font-style:italic}
+.ownerbadge{font-size:10px;color:#0b0f18;background:var(--acc);border-radius:8px;padding:1px 6px;margin-left:6px}
+aside{background:var(--panel);border-radius:10px;padding:10px;align-self:start;position:sticky;top:64px;max-height:80vh;overflow:auto}
+aside h3{font-size:13px;margin:0 0 6px}
+.evgrp{padding:3px 6px;margin:2px 0;border-radius:6px;border-left:3px solid transparent}
+.evgrp.cur{background:#0b1730;border-left-color:var(--acc)}
+.evgrp.past{opacity:.62}
+.ev{padding:2px 0;font-size:13px;border-bottom:1px solid #222b3f}
+.ev.turn{color:var(--acc);font-weight:600;border:0;margin-top:6px}
+.ev.attack{color:#fca5a5} .ev.dmg{color:#fda4af;padding-left:8px}
+.ev.evolve{color:#86efac} .ev.attach{color:#fde68a} .ev.play{color:#93c5fd}
+.ev.result{color:#fff;background:#334155;border-radius:6px;padding:4px 6px;margin-top:6px;font-weight:700}
+.ev.draw,.ev.move{color:var(--mut)}
+/* コントロールは画面下部に固定（盤面の高さ変化に左右されず常に同じ位置） */
+.ctrl{display:flex;gap:8px;align-items:center;position:fixed;left:0;right:0;bottom:0;z-index:10;
+  padding:10px 16px;background:#0b0f18;border-top:1px solid #222b3f}
+button{background:#243049;color:var(--ink);border:1px solid #344056;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:14px}
+button:hover{background:#2d3b58} button:disabled{opacity:.4;cursor:default}
+input[type=range]{flex:1}
+/* 幅を固定し、テキスト長で隣のボタンが動かないようにする */
+.tcount{font-variant-numeric:tabular-nums;flex:0 0 300px;width:300px;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.win-you{color:#60a5fa} .win-opp{color:#f87171}
+</style></head><body>
+<header>
+  <h1>Replay: deck vs lopunny</h1>
+  <div class="sub">P0(下/青)= deck　vs　P1(上/赤)= lopunny　／　結果: <b id="res"></b></div>
+</header>
+<div class="wrap">
+  <div class="board">
+    <div class="side opp"><h2><span><span class="tag opp">P1</span> lopunny<span id="ob1"></span></span><span class="meta" id="m1"></span></h2>
+      <div id="act1"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench1"></div>
+      <div class="benchlbl">手札</div><div class="hand" id="hand1"></div></div>
+    <div class="side you"><h2><span><span class="tag you">P0</span> deck<span id="ob0"></span></span><span class="meta" id="m0"></span></h2>
+      <div id="act0"></div><div class="benchlbl">ベンチ</div><div class="row" id="bench0"></div>
+      <div class="benchlbl">手札</div><div class="hand" id="hand0"></div></div>
+    <div class="ctrl">
+      <button id="prev">◀ 前</button>
+      <span class="tcount" id="tc"></span>
+      <button id="next">次 ▶</button>
+      <input type="range" id="slider" min="0" value="0">
+    </div>
+  </div>
+  <aside><h3>進行ログ（処理ごと）</h3><div id="log"></div></aside>
+</div>
+<script>
+const R = {"frames": [{"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 0, "deck": 60, "discard": 0, "handCards": []}, "p1": {"active": null, "bench": [], "prize": 0, "hand": 0, "deck": 60, "discard": 0, "handCards": []}, "events": []}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "メガスターミーex", "k": "poke"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "エースバーン", "k": "poke"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "夜のタンカ", "k": "item"}]}, "p1": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": []}, "events": [["draw", "P0 ドロー: セイジ"], ["draw", "P0 ドロー: リーリエの決心"], ["draw", "P0 ドロー: メガスターミーex"], ["draw", "P0 ドロー: ポケギア3.0"], ["draw", "P0 ドロー: エースバーン"], ["draw", "P0 ドロー: なかよしポフィン"], ["draw", "P0 ドロー: 夜のタンカ"]]}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "ミツルの思いやり", "k": "sup"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "エースバーン", "k": "poke"}, {"n": "セイジ", "k": "sup"}, {"n": "夜のタンカ", "k": "item"}, {"n": "ポケパッド", "k": "item"}]}, "p1": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": []}, "events": [["move", "P0 夜のタンカ: 手札→山"], ["move", "P0 なかよしポフィン: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 ポケギア3.0: 手札→山"], ["move", "P0 メガスターミーex: 手札→山"], ["move", "P0 リーリエの決心: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["draw", "P0 ドロー: ミツルの思いやり"], ["draw", "P0 ドロー: 基本【水】エネルギー"], ["draw", "P0 ドロー: ポケギア3.0"], ["draw", "P0 ドロー: エースバーン"], ["draw", "P0 ドロー: セイジ"], ["draw", "P0 ドロー: 夜のタンカ"], ["draw", "P0 ドロー: ポケパッド"], ["move", "P1 基本【水】エネルギー: 手札→山"], ["move", "P1 ポケモンいれかえ: 手札→山"], ["move", "P1 基本【水】エネルギー: 手札→山"], ["move", "P1 リーリエの決心: 手札→山"], ["move", "P1 ふうせん: 手札→山"], ["move", "P1 ノココッチ: 手札→山"], ["move", "P1 危険な密林: 手札→山"]]}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "ミツルの思いやり", "k": "sup"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "エースバーン", "k": "poke"}, {"n": "セイジ", "k": "sup"}, {"n": "夜のタンカ", "k": "item"}, {"n": "ポケパッド", "k": "item"}]}, "p1": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ケーシィ", "k": "poke"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["draw", "P1 ドロー: 危険な密林"], ["draw", "P1 ドロー: ノココッチ"], ["draw", "P1 ドロー: ふうせん"], ["draw", "P1 ドロー: リーリエの決心"], ["draw", "P1 ドロー: 基本【水】エネルギー"], ["draw", "P1 ドロー: ポケモンいれかえ"], ["draw", "P1 ドロー: 基本【水】エネルギー"], ["move", "P0 夜のタンカ: 手札→山"], ["move", "P0 なかよしポフィン: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 ポケギア3.0: 手札→山"], ["move", "P0 メガスターミーex: 手札→山"], ["move", "P0 リーリエの決心: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["move", "P1 基本【水】エネルギー: 手札→山"], ["move", "P1 ポケモンいれかえ: 手札→山"], ["move", "P1 基本【水】エネルギー: 手札→山"], ["move", "P1 リーリエの決心: 手札→山"], ["move", "P1 ふうせん: 手札→山"], ["move", "P1 ノココッチ: 手札→山"], ["move", "P1 危険な密林: 手札→山"], ["draw", "P1 ドロー: ポケギア3.0"], ["draw", "P1 ドロー: 基本【水】エネルギー"], ["draw", "P1 ドロー: トウコ"], ["draw", "P1 ドロー: ケーシィ"], ["draw", "P1 ドロー: ハイパーボール"], ["draw", "P1 ドロー: 夜のタンカ"], ["draw", "P1 ドロー: リーリエの決心"]]}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "ボスの指令", "k": "sup"}, {"n": "セイジ", "k": "sup"}, {"n": "エースバーン", "k": "poke"}, {"n": "ボスの指令", "k": "sup"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "メガスターミーex", "k": "poke"}, {"n": "トウコ", "k": "sup"}]}, "p1": {"active": null, "bench": [], "prize": 6, "hand": 6, "deck": 47, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ケーシィ", "k": "poke"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 ポケパッド: 手札→山"], ["move", "P0 夜のタンカ: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 ポケギア3.0: 手札→山"], ["move", "P0 基本【水】エネルギー: 手札→山"], ["move", "P0 ミツルの思いやり: 手札→山"], ["draw", "P0 ドロー: ボスの指令"], ["draw", "P0 ドロー: セイジ"], ["draw", "P0 ドロー: エースバーン"], ["draw", "P0 ドロー: ボスの指令"], ["draw", "P0 ドロー: なかよしポフィン"], ["draw", "P0 ドロー: メガスターミーex"], ["draw", "P0 ドロー: トウコ"]]}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 0, "hand": 7, "deck": 53, "discard": 0, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ヒトデマン", "k": "poke"}, {"n": "なかよしポフィン", "k": "item"}]}, "p1": {"active": null, "bench": [], "prize": 6, "hand": 6, "deck": 47, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ケーシィ", "k": "poke"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 トウコ: 手札→山"], ["move", "P0 メガスターミーex: 手札→山"], ["move", "P0 なかよしポフィン: 手札→山"], ["move", "P0 ボスの指令: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["move", "P0 ボスの指令: 手札→山"], ["draw", "P0 ドロー: セイジ"], ["draw", "P0 ドロー: ポケギア3.0"], ["draw", "P0 ドロー: ポケギア3.0"], ["draw", "P0 ドロー: なかよしポフィン"], ["draw", "P0 ドロー: トウコ"], ["draw", "P0 ドロー: ヒトデマン"], ["draw", "P0 ドロー: なかよしポフィン"]]}, {"turn": 0, "owner": null, "p0": {"active": null, "bench": [], "prize": 6, "hand": 6, "deck": 47, "discard": 0, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ヒトデマン", "k": "poke"}, {"n": "なかよしポフィン", "k": "item"}]}, "p1": {"active": null, "bench": [], "prize": 6, "hand": 6, "deck": 47, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P1 ケーシィ: 手札→バトル場"], ["move", "P0 ポケパッド: 手札→山"], ["move", "P0 夜のタンカ: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 ポケギア3.0: 手札→山"], ["move", "P0 基本【水】エネルギー: 手札→山"], ["move", "P0 ミツルの思いやり: 手札→山"], ["move", "P0 トウコ: 手札→山"], ["move", "P0 メガスターミーex: 手札→山"], ["move", "P0 なかよしポフィン: 手札→山"], ["move", "P0 ボスの指令: 手札→山"], ["move", "P0 エースバーン: 手札→山"], ["move", "P0 セイジ: 手札→山"], ["move", "P0 ボスの指令: 手札→山"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 7, "deck": 46, "discard": 0, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 ヒトデマン: 手札→バトル場"], ["turn", "――― P0 のターン ―――"], ["draw", "P0 ドロー: ボスの指令"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 6, "deck": 46, "discard": 0, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["play", "P0 なかよしポフィン をプレイ"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 6, "deck": 44, "discard": 1, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "なかよしポフィン", "k": "item"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 ヒトデマン: 山→ベンチ"], ["move", "P0 ヒトデマン: 山→ベンチ"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 44, "discard": 1, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["play", "P0 なかよしポフィン をプレイ"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 43, "discard": 2, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 ヒトデマン: 山→ベンチ"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 4, "deck": 36, "discard": 2, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["play", "P0 ポケギア3.0 をプレイ"], ["move", "P0 メガシグナル: 山→確認中"], ["move", "P0 リーリエの決心: 山→確認中"], ["move", "P0 基本【水】エネルギー: 山→確認中"], ["move", "P0 セイジ: 山→確認中"], ["move", "P0 基本【水】エネルギー: 山→確認中"], ["move", "P0 基本【水】エネルギー: 山→確認中"], ["move", "P0 イグニッションエネルギー: 山→確認中"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 42, "discard": 3, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "ポケギア3.0", "k": "item"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 リーリエの決心: 確認中→手札"], ["move", "P0 メガシグナル: 確認中→山"], ["move", "P0 基本【水】エネルギー: 確認中→山"], ["move", "P0 セイジ: 確認中→山"], ["move", "P0 基本【水】エネルギー: 確認中→山"], ["move", "P0 基本【水】エネルギー: 確認中→山"], ["move", "P0 イグニッションエネルギー: 確認中→山"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 4, "deck": 35, "discard": 3, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["play", "P0 ポケギア3.0 をプレイ"], ["move", "P0 トウコ: 山→確認中"], ["move", "P0 夜のタンカ: 山→確認中"], ["move", "P0 メガスターミーex: 山→確認中"], ["move", "P0 メガスターミーex: 山→確認中"], ["move", "P0 トウコ: 山→確認中"], ["move", "P0 ポケギア3.0: 山→確認中"], ["move", "P0 メガシグナル: 山→確認中"]]}, {"turn": 1, "owner": 0, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 41, "discard": 4, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "トウコ", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 8, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}]}, "events": [["move", "P0 トウコ: 確認中→手札"], ["move", "P0 夜のタンカ: 確認中→山"], ["move", "P0 メガスターミーex: 確認中→山"], ["move", "P0 メガスターミーex: 確認中→山"], ["move", "P0 トウコ: 確認中→山"], ["move", "P0 ポケギア3.0: 確認中→山"], ["move", "P0 メガシグナル: 確認中→山"]]}, {"turn": 2, "owner": 1, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 41, "discard": 4, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "トウコ", "k": "sup"}]}, "p1": {"active": {"name": "ケーシィ", "hp": 40, "maxHp": 40, "e": 0, "tools": []}, "bench": [], "prize": 6, "hand": 9, "deck": 44, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "メガミミロップex", "k": "poke"}]}, "events": [["draw", "P1 ドロー: 基本【水】エネルギー"], ["draw", "P1 ドロー: 基本【水】エネルギー"], ["turn", "――― P0 のターン ―――"], ["play", "P0 なかよしポフィン をプレイ"], ["move", "P0 ヒトデマン: 山→ベンチ"], ["move", "P0 ヒトデマン: 山→ベンチ"], ["play", "P0 なかよしポフィン をプレイ"], ["move", "P0 ヒトデマン: 山→ベンチ"], ["play", "P0 ポケギア3.0 をプレイ"], ["move", "P0 リーリエの決心: 確認中→手札"], ["play", "P0 ポケギア3.0 をプレイ"], ["move", "P0 トウコ: 確認中→手札"], ["turn", "――― P1 のターン ―――"], ["draw", "P1 ドロー: メガミミロップex"]]}, {"turn": 2, "owner": 1, "p0": {"active": {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, "bench": [{"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}, {"name": "ヒトデマン", "hp": 70, "maxHp": 70, "e": 0, "tools": []}], "prize": 6, "hand": 5, "deck": 41, "discard": 4, "handCards": [{"n": "セイジ", "k": "sup"}, {"n": "トウコ", "k": "sup"}, {"n": "ボスの指令", "k": "sup"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "トウコ", "k": "sup"}]}, "p1": {"active": null, "bench": [], "prize": 6, "hand": 9, "deck": 45, "discard": 0, "handCards": [{"n": "ポケギア3.0", "k": "item"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "トウコ", "k": "sup"}, {"n": "ハイパーボール", "k": "item"}, {"n": "夜のタンカ", "k": "item"}, {"n": "リーリエの決心", "k": "sup"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "基本【水】エネルギー", "k": "energy"}, {"n": "メガミミロップex", "k": "poke"}]}, "events": [["move", "P1 ケーシィ: バトル場→山"], ["result", "★ 勝者 P0（reason 3）"]]}], "result": {"winner": 0, "reason": 3}};
+const F = R.frames;
+let i = 0;
+const $ = id => document.getElementById(id);
+function pips(n){let s='<span class="pips">';for(let k=0;k<n;k++)s+='<span class="pip"></span>';return s+'</span>';}
+function cardHTML(p, active){
+  if(!p) return '<div class="card'+(active?' active':'')+'"><div class="empty">（なし）</div></div>';
+  const pct = p.maxHp? Math.max(0,Math.round(100*p.hp/p.maxHp)):0;
+  let b='';
+  if(p.e>0) b+='<span class="e">⚡×'+p.e+'</span> ';
+  if(p.tools&&p.tools.length) b+='<span class="tool">🔧'+p.tools.join(',')+'</span>';
+  return '<div class="card'+(active?' active':'')+'"><div class="nm">'+p.name+'</div>'+
+    '<div class="hpbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="hpt">HP '+p.hp+'/'+p.maxHp+'</div>'+
+    (b?'<div class="badges">'+b+'</div>':'')+'</div>';
+}
+function handHTML(pl){
+  const hc = pl.handCards || [];
+  if(hc.length === 0)
+    return pl.hand>0? '<span class="hand-hidden">'+pl.hand+'枚（非公開）</span>' : '<span class="hand-hidden">（なし）</span>';
+  let s = hc.map(c=>'<span class="chip '+c.k+'">'+c.n+'</span>').join('');
+  if(hc.length !== pl.hand) s += ' <span class="hand-hidden">(直近 '+hc.length+'枚 / 現在 '+pl.hand+'枚)</span>';
+  return s;
+}
+function side(pl, actId, benchId, metaId, handId){
+  $(actId).innerHTML = cardHTML(pl.active, true);
+  $(benchId).innerHTML = pl.bench.length? pl.bench.map(b=>cardHTML(b,false)).join('') : '<div class="empty">（ベンチなし）</div>';
+  $(metaId).innerHTML = 'サイド'+pips(pl.prize)+' 手札:'+pl.hand+' 山:'+pl.deck+' トラッシュ:'+pl.discard;
+  $(handId).innerHTML = handHTML(pl);
+}
+function render(){
+  const f = F[i];
+  side(f.p1,'act1','bench1','m1','hand1');
+  side(f.p0,'act0','bench0','m0','hand0');
+  $('ob1').innerHTML = f.owner===1? '<span class="ownerbadge">手番</span>':'';
+  $('ob0').innerHTML = f.owner===0? '<span class="ownerbadge">手番</span>':'';
+  // 累積ログ：処理を1つずつ積み上げ、現ステップを強調して自動スクロール
+  let lg='';
+  for(let k=0;k<=i;k++){
+    const fr=F[k];
+    const evs = fr.events.length? fr.events : [['move','（盤面更新）']];
+    lg += '<div class="evgrp '+(k===i?'cur':'past')+'"'+(k===i?' id="curgrp"':'')+'>'
+        + evs.map(e=>'<div class="ev '+e[0]+'">'+e[1].replace(/</g,'&lt;')+'</div>').join('')
+        + '</div>';
+  }
+  $('log').innerHTML = lg;
+  const cg=document.getElementById('curgrp'); if(cg) cg.scrollIntoView({block:'nearest'});
+  $('tc').textContent = 'ステップ '+(i+1)+'/'+F.length+' ・ Turn '+f.turn+(f.owner==null?'':' (手番 P'+f.owner+')');
+  $('slider').value = i;
+  $('prev').disabled = i<=0; $('next').disabled = i>=F.length-1;
+}
+$('prev').onclick=()=>{if(i>0){i--;render();}};
+$('next').onclick=()=>{if(i<F.length-1){i++;render();}};
+$('slider').max = F.length-1;
+$('slider').oninput=e=>{i=+e.target.value;render();};
+document.onkeydown=e=>{if(e.key==='ArrowLeft')$('prev').click();if(e.key==='ArrowRight')$('next').click();};
+const w=R.result.winner;
+$('res').innerHTML = w===0? '<span class="win-you">P0（下）の勝ち</span>' :
+  w===1? '<span class="win-opp">P1（上）の勝ち</span>' : '引き分け/未決着';
+render();
+</script>
+</body></html>
