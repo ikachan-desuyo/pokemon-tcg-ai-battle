@@ -8,7 +8,7 @@ from .deck_bot import DeckBot, DeckPlan
 PLAN = DeckPlan(
     name="MegaYukinooh",
     go_first=True,
-    attackers=(723, 722),                 # メガユキノオーex / ユキカブリ
+    attackers=(723, 722, 721),                 # メガユキノオーex / ユキカブリ
     key_cards=(723, 722),
     preferred_attacks=(),
     energy_rules=((None, 723),),          # 水→メガユキノオーex

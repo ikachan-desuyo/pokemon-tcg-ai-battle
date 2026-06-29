@@ -8,7 +8,7 @@ from .deck_bot import DeckBot, DeckPlan
 PLAN = DeckPlan(
     name="Iwapa",
     go_first=True,
-    attackers=(345, 112),                 # イワパレス / マシマシラ
+    attackers=(345, 112, 344),                 # イワパレス / マシマシラ
     key_cards=(345, 344, 112),
     preferred_attacks=(),
     energy_rules=((7, 112), (None, 345)),  # 悪→マシマシラ, 任意→イワパレス

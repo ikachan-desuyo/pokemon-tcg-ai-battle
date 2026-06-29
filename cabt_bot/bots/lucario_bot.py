@@ -9,7 +9,7 @@ from .deck_bot import DeckBot, DeckPlan
 PLAN = DeckPlan(
     name="MegaLucario",
     go_first=True,
-    attackers=(678, 333),                 # メガルカリオex / リオル
+    attackers=(678, 333, 674, 676, 673),                 # メガルカリオex / リオル
     key_cards=(678, 333),
     preferred_attacks=(),                 # 既定: 最大ダメージ（メガブレイブ等）
     energy_rules=((None, 678),),          # 闘→メガルカリオex

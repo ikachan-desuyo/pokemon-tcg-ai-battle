@@ -10,7 +10,7 @@ from .deck_bot import DeckBot, DeckPlan
 PLAN = DeckPlan(
     name="Dragapult",
     go_first=True,
-    attackers=(121, 120),                 # ドラパルトex / ドロンチ
+    attackers=(121, 120, 119),                 # ドラパルトex / ドロンチ
     key_cards=(121, 119),                 # ドラパルトex / ドラメシヤ
     preferred_attacks=("Phantom Dive",),
     energy_rules=((7, 112), (None, 121)),  # 悪→マシマシラ, 任意→ドラパルト
