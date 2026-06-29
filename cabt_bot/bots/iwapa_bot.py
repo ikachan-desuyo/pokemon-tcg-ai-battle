@@ -18,6 +18,7 @@ PLAN = DeckPlan(
     boss_cards=(1182,),            # ボスはKO時のみ
     recover_cards=(1097,),         # 夜タンカは回収価値がある時のみ
     smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.042）
+    strict_lillie_guard=True,      # コンボ素材(マシマシラ等)を抱えるため、キー所持時はリーリエ抑制（緩和は -0.025）
 )
 
 

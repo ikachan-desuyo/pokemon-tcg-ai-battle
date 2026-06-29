@@ -67,6 +67,8 @@ class DeckPlan:
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
     switch_cards: tuple[int, ...] = ()        # 入替系(例:ポケモンいれかえ)。攻撃役を前に出す必要がある時のみ使用
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
+    strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
+    setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
@@ -141,10 +143,12 @@ class DeckBot(Bot):
             for i in g[OptionType.PLAY]:
                 if self._hand_id(hand, options[i].index) == LILLIE:
                     return [i]
+        # 攻撃役を前に出す（現アクティブが攻撃不可＝壁等でも、退かして攻撃役を前進させる）。
+        # ※以前は ATTACK 肢がある時しか発火せず、エネ0の壁が居座る不具合があった。
+        if (self.plan.reposition and OptionType.RETREAT in g
+                and self._should_reposition(me)):
+            return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACK in g:
-            if (self.plan.reposition and OptionType.RETREAT in g
-                    and self._should_reposition(me)):
-                return [g[OptionType.RETREAT][0]]
             return [self._best_attack(g[OptionType.ATTACK], options)]
         if OptionType.END in g:
             return [g[OptionType.END][0]]
@@ -311,6 +315,11 @@ class DeckBot(Bot):
                 return [g]
         ctx = sel.context
         if isinstance(ctx, SelectContext) and ctx == SelectContext.SETUP_ACTIVE_POKEMON:
+            # 先攻はT1攻撃不可 → 開幕は高HPの壁(エースバーン等)を前に置き、攻撃役はベンチで育てる
+            if self.plan.go_first and self.plan.setup_wall:
+                wall = self._first_of(sel, self.plan.setup_wall)
+                if wall is not None:
+                    return [wall]
             pref = self._first_of(sel, self.plan.attackers)  # 進化前が居れば前に
             if pref is not None:
                 return [pref]
@@ -535,8 +544,10 @@ class DeckBot(Bot):
         hand = (me.get("hand") or []) if me else []
         if not self.deck_counts:  # 構成不明 → 従来の保守的条件
             return not (self._has_key(hand) or len(hand) >= 4)
-        if self._has_key(hand):
-            return False  # 抱えるキー(メガ/ヒトデ等)は山に戻さず先に展開
+        blocked = (self._has_key(hand) if self.plan.strict_lillie_guard
+                   else self._has_deployable_key(hand))
+        if blocked:
+            return False  # キーは山に戻さない（既定=この番に展開できるキーのみ／strict=全キー）
         prizes_left = len(me.get("prize") or []) if me else 6
         draw_n = 8 if prizes_left >= 6 else 6
         if len(hand) >= draw_n:
@@ -636,6 +647,36 @@ class DeckBot(Bot):
     def _has_key(self, hand) -> bool:
         keys = self.plan.key_cards or self.plan.attackers
         return any(c.get("id") in keys for c in hand)
+
+    def _has_deployable_key(self, hand) -> bool:
+        """この番に実際に使える(展開できる)キー札が手札にあるか。
+        ・たね攻撃役: ベンチに空きがあれば出せる
+        ・進化攻撃役: 場に進化元のたね攻撃役が居れば進化できる
+        詰まったキー(進化元不在の進化先・ベンチ満杯のたね)は対象外＝リーリエで戻してよい。"""
+        keys = set(self.plan.key_cards or self.plan.attackers)
+        me = self._me()
+        if not me:
+            return False
+        spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
+        in_play_basic_attacker = any(
+            sp and sp.get("id") in self.plan.attackers
+            and (self._cardinfo.get(sp.get("id")) and self._cardinfo[sp.get("id")].is_basic)
+            for sp in spots)
+        bench = [s for s in (me.get("bench") or []) if s]
+        bench_space = len(bench) < (me.get("benchMax") or 5)
+        for cd in hand:
+            cid = cd.get("id")
+            if cid not in keys:
+                continue
+            info = self._cardinfo.get(cid)
+            if not info:
+                continue
+            if info.is_basic:
+                if bench_space:
+                    return True
+            elif in_play_basic_attacker:
+                return True
+        return False
 
     def _opt_card_id(self, op: Option):
         if op.card_id is not None:

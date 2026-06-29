@@ -20,6 +20,7 @@ PLAN = DeckPlan(
     recover_cards=(1097,),         # 夜タンカは回収価値がある時のみ
     switch_cards=(1123,),          # いれかえは攻撃役を前に出す時のみ
     smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.026）
+    strict_lillie_guard=True,      # コンボ素材を抱えるため、キー所持時はリーリエ抑制（緩和は -0.049）
 )
 
 
