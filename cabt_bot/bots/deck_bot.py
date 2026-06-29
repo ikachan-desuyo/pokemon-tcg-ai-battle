@@ -62,6 +62,9 @@ class DeckPlan:
     volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
+    recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
+    switch_cards: tuple[int, ...] = ()        # 入替系(例:ポケモンいれかえ)。攻撃役を前に出す必要がある時のみ使用
+    smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
@@ -156,6 +159,12 @@ class DeckBot(Bot):
         # 引きずり出し系(ボス等): KO(サイド獲得)を生む時のみ
         if cid in self.plan.boss_cards:
             return 62 if self._should_play_boss() else None
+        # 回収系(夜のタンカ等): トラッシュに回収価値がある時のみ（無駄打ち防止）
+        if cid in self.plan.recover_cards:
+            return 50 if self._has_recover_target() else None
+        # 入替系(ポケモンいれかえ等): 攻撃役を前に出す必要がある時のみ
+        if cid in self.plan.switch_cards:
+            return 64 if self._should_switch() else None
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if cid in self.plan.attackers:   # 進化前/アタッカーをベンチに置くのは重要
@@ -317,6 +326,48 @@ class DeckBot(Bot):
                     return True
         return False
 
+    def _has_recover_target(self) -> bool:
+        """夜のタンカ等: トラッシュに回収する価値があるか。
+        ①死んだアタッカー/キーがトラッシュに居る ②前のアタッカーがエネ0でトラッシュに基本エネがある。"""
+        me = self._me()
+        if not me:
+            return False
+        discard = me.get("discard") or []
+        keys = set(self.plan.attackers) | set(self.plan.key_cards)
+        if any(d.get("id") in keys for d in discard):
+            return True
+        act = (me.get("active") or [None])[0]
+        if (act and act.get("id") in self.plan.attackers
+                and not (act.get("energies") or [])):
+            if any((d.get("id") or 99) < 10 for d in discard):  # 基本エネ(小ID)
+                return True
+        return False
+
+    def _should_switch(self) -> bool:
+        """入替系: バトル場が攻撃役(進化前含む)でなく、ベンチに攻撃役が居る時のみ。"""
+        me = self._me()
+        if not me or not self.plan.attackers:
+            return False
+        act = (me.get("active") or [None])[0]
+        if not act or act.get("id") in self.plan.attackers:
+            return False  # 場が空 or 既に攻撃役が前
+        for sp in me.get("bench") or []:
+            if sp and sp.get("id") in self.plan.attackers:
+                return True
+        return False
+
+    def _take_rank(self, op: Option) -> int:
+        """取得(サーチ/ポケギア等)時のカード評価。状況依存サポートは今役立つ時だけ高評価。"""
+        cid = self._opt_card_id(op)
+        hand = (self._me() or {}).get("hand") or []
+        if cid in self.plan.boss_cards:
+            return 200 if self._should_play_boss() else 3
+        if cid in self.plan.heal_return_cards:
+            return 190 if self._attacker_damaged() else 3
+        if cid == LILLIE:
+            return 120 if not (self._has_key(hand) or len(hand) >= 4) else 6
+        return self._opt_value(op)
+
     def _should_reposition(self, me) -> bool:
         if not me or not self.plan.attackers:
             return False
@@ -427,7 +478,9 @@ class DeckBot(Bot):
         k = max(0, min(k, n))
         if k == 0:
             return []
-        ranked = sorted(range(n), key=lambda i: self._opt_value(sel.options[i]),
+        keyfn = (self._take_rank if (prefer_high and self.plan.smart_take)
+                 else self._opt_value)
+        ranked = sorted(range(n), key=lambda i: keyfn(sel.options[i]),
                         reverse=prefer_high)
         return sorted(ranked[:k])
 
