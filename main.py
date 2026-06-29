@@ -25,7 +25,8 @@ for _p in _CANDIDATES:
 _HERE = _CANDIDATES[0]
 
 from cabt_bot import Observation
-from cabt_bot.bots import HeuristicBot, SearchBot
+from cabt_bot.bots import HeuristicBot
+from cabt_bot.bots.deck_registry import MegaStarmiePlanBot
 
 
 def read_deck_csv() -> list[int]:
@@ -52,10 +53,10 @@ def _load_decklist() -> list[int]:
         return []
 
 
-# SearchBot は cg(エンジン)があれば先読み探索、無ければ内部で HeuristicBot に委譲。
-# 生 obs_dict を取り、常に合法手を返す。
+# 提出デッキ(MegaStarmie)を理想的に回す専用 DeckBot。検証で SearchBot より
+# 高速かつ同等以上（探索は天井を破れず激遅=10分制限のリスク）だったため採用。
 try:
-    BOT = SearchBot(_load_decklist())
+    BOT = MegaStarmiePlanBot()
 except Exception:
     BOT = HeuristicBot()
 
@@ -75,8 +76,6 @@ def agent(obs_dict: dict, *_args) -> list[int]:
     try:
         if not obs_dict.get("select"):
             return read_deck_csv()  # initial deck selection
-        if isinstance(BOT, SearchBot):
-            return BOT(obs_dict)
         return BOT.select(Observation.from_dict(obs_dict))
     except Exception:
         return _fallback(obs_dict)
