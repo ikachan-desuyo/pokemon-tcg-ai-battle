@@ -30,7 +30,8 @@ JP_CSV = ROOT / "input_data" / "extracted" / "JP_Card_Data.csv"
 EN_CSV = ROOT / "data" / "cards.csv"
 
 AREA = {1: "山", 2: "手札", 3: "トラッシュ", 4: "バトル場", 5: "ベンチ",
-        6: "サイド", 7: "スタジアム"}
+        6: "サイド", 7: "スタジアム", 8: "エネ", 9: "どうぐ", 10: "進化前",
+        11: "プレイヤー", 12: "確認中"}
 
 
 def load_names() -> dict[int, str]:
@@ -164,36 +165,41 @@ def record(deck0, deck1, names, atk, kinds, max_steps=6000):
     if obs is None:
         raise RuntimeError("battle_start に失敗（デッキが不正？）")
 
-    state_by_turn: dict[int, dict] = {}
-    events_by_turn: dict[int, list] = {}
-    owner_by_turn: dict[int, int] = {}
     # 手札は手番側(自分視点)だけ実物が見える → 見えた時点の手札を保持
     hand_by_player: dict[int, list] = {0: [], 1: []}
     result = {"winner": -1, "reason": None}
+    frames: list[dict] = []   # 1処理(意思決定/効果解決)ごとのフレーム
+    owner = None
+    prev_key = None
     try:
         for _ in range(max_steps):
             cur = obs.get("current")  # 生 dict（全要素 plain）
             turn = cur["turn"] if cur else 0
+            step_events: list = []
             for L in (obs.get("logs") or []):
                 if L.get("type") == 2:  # TURN_START
-                    owner_by_turn[turn] = L.get("playerIndex")
+                    owner = L.get("playerIndex")
                 if L.get("type") == 23:
                     result = {"winner": L.get("result"), "reason": L.get("reason")}
                 n = narrate(L, names, atk)
                 if n is not None:
-                    events_by_turn.setdefault(turn, []).append(n)
+                    step_events.append(n)
             if cur is not None:
                 for pi in (0, 1):
                     pl = cur["players"][pi]
                     h = pl.get("hand") or []
-                    # 手札が完全に見えている（公開）ときだけ更新。相手は [] のまま枚数のみ
-                    if len(h) == pl.get("handCount", -1):
+                    if len(h) == pl.get("handCount", -1):  # 公開時のみ更新
                         hand_by_player[pi] = [
                             {"n": names.get(c.get("id"), f"#{c.get('id')}"),
                              "k": kinds.get(c.get("id"), "item")} for c in h]
                 s0 = _snap(cur["players"][0], names); s0["handCards"] = list(hand_by_player[0])
                 s1 = _snap(cur["players"][1], names); s1["handCards"] = list(hand_by_player[1])
-                state_by_turn[turn] = {"p0": s0, "p1": s1}
+                key = json.dumps([s0, s1], ensure_ascii=False)
+                # 盤面が変化したか、イベントがあった処理だけをフレーム化（無変化の空選択は省く）
+                if step_events or key != prev_key:
+                    frames.append({"turn": turn, "owner": owner,
+                                   "p0": s0, "p1": s1, "events": step_events})
+                    prev_key = key
                 if cur["result"] != -1:
                     break
             sel_data = obs.get("select")
@@ -208,16 +214,6 @@ def record(deck0, deck1, names, atk, kinds, max_steps=6000):
             obs = battle_select(sel)
     finally:
         battle_finish()
-
-    frames = []
-    for turn in sorted(state_by_turn):
-        s = state_by_turn[turn]
-        frames.append({
-            "turn": turn,
-            "owner": owner_by_turn.get(turn),
-            "p0": s["p0"], "p1": s["p1"],
-            "events": events_by_turn.get(turn, []),
-        })
     return frames, result
 
 
@@ -261,6 +257,9 @@ h1{font-size:15px;margin:0 0 6px}
 .ownerbadge{font-size:10px;color:#0b0f18;background:var(--acc);border-radius:8px;padding:1px 6px;margin-left:6px}
 aside{background:var(--panel);border-radius:10px;padding:10px;align-self:start;position:sticky;top:64px;max-height:80vh;overflow:auto}
 aside h3{font-size:13px;margin:0 0 6px}
+.evgrp{padding:3px 6px;margin:2px 0;border-radius:6px;border-left:3px solid transparent}
+.evgrp.cur{background:#0b1730;border-left-color:var(--acc)}
+.evgrp.past{opacity:.62}
 .ev{padding:2px 0;font-size:13px;border-bottom:1px solid #222b3f}
 .ev.turn{color:var(--acc);font-weight:600;border:0;margin-top:6px}
 .ev.attack{color:#fca5a5} .ev.dmg{color:#fda4af;padding-left:8px}
@@ -293,7 +292,7 @@ input[type=range]{flex:1}
       <input type="range" id="slider" min="0" value="0">
     </div>
   </div>
-  <aside><h3>このターンのログ</h3><div id="log"></div></aside>
+  <aside><h3>進行ログ（処理ごと）</h3><div id="log"></div></aside>
 </div>
 <script>
 const R = __PAYLOAD__;
@@ -332,10 +331,18 @@ function render(){
   side(f.p0,'act0','bench0','m0','hand0');
   $('ob1').innerHTML = f.owner===1? '<span class="ownerbadge">手番</span>':'';
   $('ob0').innerHTML = f.owner===0? '<span class="ownerbadge">手番</span>':'';
-  $('log').innerHTML = (f.events.length? f.events : [['mut','（イベントなし）']])
-     .map(e=>'<div class="ev '+e[0]+'">'+e[1].replace(/</g,'&lt;')+'</div>').join('');
-  const owner = f.owner==null? '' : ('　手番: P'+f.owner);
-  $('tc').textContent = 'Turn '+f.turn+' / '+F[F.length-1].turn+owner;
+  // 累積ログ：処理を1つずつ積み上げ、現ステップを強調して自動スクロール
+  let lg='';
+  for(let k=0;k<=i;k++){
+    const fr=F[k];
+    const evs = fr.events.length? fr.events : [['move','（盤面更新）']];
+    lg += '<div class="evgrp '+(k===i?'cur':'past')+'"'+(k===i?' id="curgrp"':'')+'>'
+        + evs.map(e=>'<div class="ev '+e[0]+'">'+e[1].replace(/</g,'&lt;')+'</div>').join('')
+        + '</div>';
+  }
+  $('log').innerHTML = lg;
+  const cg=document.getElementById('curgrp'); if(cg) cg.scrollIntoView({block:'nearest'});
+  $('tc').textContent = 'ステップ '+(i+1)+'/'+F.length+' ・ Turn '+f.turn+(f.owner==null?'':' (手番 P'+f.owner+')');
   $('slider').value = i;
   $('prev').disabled = i<=0; $('next').disabled = i>=F.length-1;
 }
@@ -381,7 +388,8 @@ def main() -> int:
         ROOT / "replays" / f"{Path(args.deck0).stem}_vs_{Path(args.deck1).stem}.html")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(build_html(frames, result, args.deck0, args.deck1), encoding="utf-8")
-    print(f"✅ {out}  ({len(frames)}ターン, 勝者P{result['winner']})")
+    last_turn = frames[-1]["turn"] if frames else 0
+    print(f"✅ {out}  ({len(frames)}ステップ / {last_turn}ターン, 勝者P{result['winner']})")
     return 0
 
 
