@@ -1,4 +1,5 @@
 from .adaptive_mega_starmie_bot import AdaptiveMegaStarmieBot
+from .archaludon_bot import ArchaludonBot
 from .base import Bot
 from .deck_bot import DeckBot, DeckPlan
 from .dragapult_bot import DragapultBot
@@ -17,5 +18,5 @@ __all__ = [
     "Bot", "DeckBot", "DeckPlan", "HeuristicBot", "RandomBot", "SearchBot",
     "MegaStarmieBot", "MegaStarmieSpreadBot", "AdaptiveMegaStarmieBot",
     "DragapultBot", "MegaLopunnyBot", "MegaLucarioBot", "IwapaBot", "MegaYukinoohBot",
-    "MegaGardevoirBot",
+    "MegaGardevoirBot", "ArchaludonBot",
 ]
