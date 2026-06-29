@@ -223,7 +223,7 @@ HTML_TMPL = r"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 :root{--bg:#0f1420;--panel:#1b2233;--ink:#e8edf6;--mut:#8a96ad;--you:#2563eb;--opp:#b91c1c;
 --hp:#22c55e;--hpl:#374151;--card:#283246;--acc:#f59e0b}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
+body{margin:0;padding-bottom:64px;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
 header{padding:10px 16px;background:#0b0f18;border-bottom:1px solid #222b3f;position:sticky;top:0;z-index:5}
 h1{font-size:15px;margin:0 0 6px}
 .sub{color:var(--mut);font-size:12px}
@@ -237,9 +237,11 @@ h1{font-size:15px;margin:0 0 6px}
 .meta{color:var(--mut);font-size:12px;font-weight:400}
 .pips{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}
 .pip{width:9px;height:9px;border-radius:50%;background:var(--acc)}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-.card{background:var(--card);border-radius:8px;padding:8px;min-width:120px;flex:0 0 auto}
-.card.active{border:1px solid var(--acc);min-width:170px}
+/* ステップ移動で枠サイズが変わらないよう、行は折り返さず固定高さ＋横スクロール */
+.row{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;min-height:90px;align-items:flex-start}
+#act0,#act1{min-height:104px}
+.card{background:var(--card);border-radius:8px;padding:8px;width:130px;min-height:84px;flex:0 0 auto}
+.card.active{border:1px solid var(--acc);width:190px;min-height:96px}
 .card .nm{font-weight:600;font-size:13px;margin-bottom:4px}
 .card.active .nm{font-size:15px}
 .hpbar{height:7px;background:var(--hpl);border-radius:4px;overflow:hidden;margin:3px 0}
@@ -249,8 +251,8 @@ h1{font-size:15px;margin:0 0 6px}
 .e{color:#fde68a} .tool{color:#a5b4fc}
 .empty{color:var(--mut);font-style:italic;padding:6px}
 .benchlbl{font-size:11px;color:var(--mut);margin:6px 0 2px}
-.hand{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
-.chip{background:#1f2940;border:1px solid #3a4a66;border-radius:6px;padding:2px 7px;font-size:12px}
+.hand{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-top:2px;min-height:28px;align-items:center}
+.chip{background:#1f2940;border:1px solid #3a4a66;border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap;flex:0 0 auto}
 .chip.poke{border-left:3px solid var(--acc)} .chip.energy{border-left:3px solid #fde68a}
 .chip.sup{border-left:3px solid #93c5fd} .chip.item{border-left:3px solid #86efac}
 .hand-hidden{color:var(--mut);font-size:12px;font-style:italic}
@@ -266,7 +268,9 @@ aside h3{font-size:13px;margin:0 0 6px}
 .ev.evolve{color:#86efac} .ev.attach{color:#fde68a} .ev.play{color:#93c5fd}
 .ev.result{color:#fff;background:#334155;border-radius:6px;padding:4px 6px;margin-top:6px;font-weight:700}
 .ev.draw,.ev.move{color:var(--mut)}
-.ctrl{display:flex;gap:8px;align-items:center;margin-top:8px}
+/* コントロールは画面下部に固定（盤面の高さ変化に左右されず常に同じ位置） */
+.ctrl{display:flex;gap:8px;align-items:center;position:fixed;left:0;right:0;bottom:0;z-index:10;
+  padding:10px 16px;background:#0b0f18;border-top:1px solid #222b3f}
 button{background:#243049;color:var(--ink);border:1px solid #344056;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:14px}
 button:hover{background:#2d3b58} button:disabled{opacity:.4;cursor:default}
 input[type=range]{flex:1}
