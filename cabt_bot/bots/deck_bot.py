@@ -72,6 +72,8 @@ class DeckPlan:
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
     energy_supporters: tuple[int, ...] = ()   # エネ補給サポ(例:トウコ)。進化アタッカーが居てエネ切れ＝攻撃不可の時に優先して打つ
     eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
+    setup_attack: int = 0                     # 加速/準備技のattackId(例:あふれるねがい)。火力が弱い間はこれで盤面エネを育てる
+    setup_attack_until: int = 0               # 盤面エネがこの数未満なら setup_attack を優先（以上なら火力技へ移行）
     sacrifice_abilities: tuple[int, ...] = () # 自滅特性(例:カースドボム)。ベンチ backup有り＆相手をKOできる時のみ使う
     sacrifice_damage: dict = field(default_factory=dict)  # {特性カードid: 与ダメージ} 自滅特性のKO判定用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
@@ -283,12 +285,44 @@ class DeckBot(Bot):
             ko = self._lethal_choice(idxs, options)
             if ko is not None:
                 return ko
+        # 火力技がまだ弱い間は加速/準備技(例:あふれるねがい)を優先して盤面エネを増やす
+        if self.plan.setup_attack:
+            s = self._setup_attack_choice(idxs, options)
+            if s is not None:
+                return s
         for nm in self.plan.preferred_attacks:
             aid = self._attack_name_ids().get(nm)
             for i in idxs:
                 if aid and options[i].attack_id == aid:
                     return i
         return max(idxs, key=lambda i: self._dmg(options[i]))
+
+    def _setup_attack_choice(self, idxs, options):
+        """加速/準備技(setup_attack)が払えて、①ベンチに加速先が居る ②盤面エネが閾値未満 なら、それを選ぶ。
+        ＝メガシンフォニア等の“盤面エネ×N”火力を、撃つ前に育てる。"""
+        si = next((i for i in idxs if options[i].attack_id == self.plan.setup_attack), None)
+        if si is None:
+            return None
+        me = self._me()
+        if not me:
+            return None
+        if not [s for s in (me.get("bench") or []) if s]:
+            return None  # 加速先(ベンチ)が無い
+        if self._board_energy_count() < self.plan.setup_attack_until:
+            return si
+        return None
+
+    def _board_energy_count(self) -> int:
+        """自分の場(active+bench)に付いているエネ総数。"""
+        me = self._me()
+        if not me:
+            return 0
+        n = 0
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if not sp:
+                continue
+            n += len(sp.get("energyCards") or sp.get("energies") or [])
+        return n
 
     def _lethal_choice(self, idxs, options):
         """相手バトル場を倒せる技があれば、その中で最大ダメージを選ぶ。"""
@@ -616,21 +650,18 @@ class DeckBot(Bot):
         return self._hyp_at_least1(pool, succ, n)
 
     def _attacker_needs_energy(self) -> bool:
-        """進化アタッカーが場に居て攻撃できない(エネ0)＆手札にもエネが無い＝エネ補給が要る。"""
+        """バトル場のアタッカーが今のエネでは攻撃できず、手札にもエネが無い＝エネ補給が要る。
+        進化/たね問わず「払えるワザが無い(=_active_attack_potential 0)」で判定（基本メガにも対応）。"""
         me = self._me()
         if not me:
             return False
         if any(self._is_energy(c.get("id")) for c in (me.get("hand") or [])):
             return False  # 手札にエネあり→直接付けられるので補給サポ不要
-        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
-            if not sp or sp.get("id") not in self.plan.attackers:
-                continue
-            info = self._cardinfo.get(sp.get("id"))
-            if info and info.is_basic:
-                continue  # 進化アタッカーのみ（殴れる本命）
-            if not (sp.get("energies") or []):
-                return True  # 進化アタッカーがエネ0＝攻撃不可
-        return False
+        act = (me.get("active") or [None])[0]
+        if not act or act.get("id") not in self.plan.attackers:
+            return False  # バトル場が攻撃役でない（壁等）なら補給サポより前進等が先
+        dmg, _ = self._active_attack_potential()
+        return dmg <= 0  # 今のエネで撃てるワザが無い＝補給が要る
 
     def _attacker_in_play(self) -> bool:
         me = self._me()

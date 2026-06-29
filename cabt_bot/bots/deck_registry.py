@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from .deck_bot import DeckBot, DeckPlan
 from .dragapult_bot import DragapultBot
+from .gardevoir_bot import MegaGardevoirBot
 from .iwapa_bot import IwapaBot
 from .lopunny_bot import MegaLopunnyBot
 from .lucario_bot import MegaLucarioBot
@@ -70,4 +71,5 @@ DECK_BOTS: dict[str, type] = {
     "megaruka": MegaLucarioBot,
     "iwapa": IwapaBot,
     "sample_deck": MegaYukinoohBot,
+    "gardevoir": MegaGardevoirBot,
 }
