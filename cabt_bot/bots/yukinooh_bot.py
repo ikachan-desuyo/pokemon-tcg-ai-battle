@@ -17,6 +17,7 @@ PLAN = DeckPlan(
     lethal=True,
     smart_gust=True,   # A/B(80戦) +0.029
     reposition=True,   # A/B +0.077
+    est_var_damage=True,  # 可変技(アバランチハンマー=水×100)を正しく評価＝手札でベストの攻撃選択
 )
 
 
