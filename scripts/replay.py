@@ -274,7 +274,9 @@ aside h3{font-size:13px;margin:0 0 6px}
 button{background:#243049;color:var(--ink);border:1px solid #344056;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:14px}
 button:hover{background:#2d3b58} button:disabled{opacity:.4;cursor:default}
 input[type=range]{flex:1}
-.tcount{font-variant-numeric:tabular-nums;min-width:120px;text-align:center}
+/* 幅を固定し、テキスト長で隣のボタンが動かないようにする */
+.tcount{font-variant-numeric:tabular-nums;flex:0 0 300px;width:300px;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .win-you{color:#60a5fa} .win-opp{color:#f87171}
 </style></head><body>
 <header>
