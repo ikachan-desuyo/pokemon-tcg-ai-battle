@@ -27,5 +27,39 @@ PLAN = DeckPlan(
 )
 
 
+METAL = 8        # 基本【鋼】エネルギー
+DURALUDON = 169  # ジュラルドン
+ARCH_EX = 190    # ブリジュラスex
+
+
 class ArchaludonBot(DeckBot):
     plan = PLAN
+
+    def _want_metal_in_discard(self) -> bool:
+        """ごうきんビルド(進化時にトラッシュから鋼エネ2枚加速)の燃料を仕込むべきか。
+        進化線が育っており、手札に鋼エネが余り、トラッシュの鋼がまだ2枚未満なら、捨てて仕込む。"""
+        me = self._me()
+        if not me:
+            return False
+        spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
+        has_line = any(sp and sp.get("id") in (DURALUDON, ARCH_EX) for sp in spots) \
+            or any(c.get("id") in (DURALUDON, ARCH_EX) for c in (me.get("hand") or []))
+        if not has_line:
+            return False
+        hand_metal = sum(1 for c in (me.get("hand") or []) if c.get("id") == METAL)
+        disc_metal = sum(1 for c in (me.get("discard") or []) if c.get("id") == METAL)
+        return hand_metal >= 2 and disc_metal < 2
+
+    def _take(self, sel, prefer_high: bool, take_max: bool):
+        # 捨てる(give)場面では、ごうきんビルドの燃料として鋼エネを優先的にトラッシュへ送る。
+        if not prefer_high and self._want_metal_in_discard():
+            n = len(sel.options)
+            k = sel.max_count if take_max else sel.min_count
+            k = max(0, min(k, n))
+            if k > 0:
+                metal = [i for i in range(n) if self._opt_card_id(sel.options[i]) == METAL]
+                if metal:
+                    rest = sorted((i for i in range(n) if i not in metal),
+                                  key=lambda i: self._opt_value(sel.options[i]))
+                    return sorted((metal + rest)[:k])
+        return super()._take(sel, prefer_high, take_max)
