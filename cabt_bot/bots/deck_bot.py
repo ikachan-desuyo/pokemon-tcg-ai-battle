@@ -59,6 +59,8 @@ class DeckPlan:
     lethal: bool = False                      # 相手バトル場をKOできる技を優先
     skip_abilities: bool = False              # 特性を自動使用しない（自滅特性対策の検証用）
     hold_energies: tuple[int, ...] = ()       # これらのエネは energy_rules の付け先以外には貼らない（温存）
+    volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
+    heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
@@ -147,6 +149,9 @@ class DeckBot(Bot):
             if self._has_key(hand) or len(hand) >= 4:
                 return None
             return 28
+        # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
+        if cid in self.plan.heal_return_cards:
+            return 50 if self._attacker_damaged() else None
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if cid in self.plan.attackers:   # 進化前/アタッカーをベンチに置くのは重要
@@ -174,6 +179,12 @@ class DeckBot(Bot):
             # 温存指定エネは規則の付け先以外には貼らない（無駄付け回避）
             if energy in self.plan.hold_energies and rule == 0:
                 continue
+            # 番末トラッシュ系エネ: 規則の付け先 かつ 攻撃できる番の場(active,turn>1)のみ
+            # （基本ポケ/ベンチ/先攻T1への付与は番末に捨てられて丸損になるため抑止）
+            if energy in self.plan.volatile_energies:
+                turn = (self._cur or {}).get("turn", 99)
+                if rule == 0 or op.in_play_area != AreaType.ACTIVE or turn <= 1:
+                    continue
             key = (rule,
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
@@ -287,6 +298,20 @@ class DeckBot(Bot):
         if take:
             return self._take(sel, prefer_high=True, take_max=True)
         return self._take(sel, prefer_high=True, take_max=False)
+
+    def _attacker_damaged(self, min_damage: int = 100) -> bool:
+        """自分のアタッカー(plan.attackers)が min_damage 以上のダメージを負っているか。"""
+        cur = self._cur
+        if not cur:
+            return False
+        me = cur["players"][cur["yourIndex"]]
+        spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
+        for sp in spots:
+            if sp and sp.get("id") in self.plan.attackers:
+                hp, mhp = sp.get("hp"), sp.get("maxHp")
+                if hp is not None and mhp and hp <= mhp - min_damage:
+                    return True
+        return False
 
     def _should_reposition(self, me) -> bool:
         if not me or not self.plan.attackers:
