@@ -15,7 +15,9 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
+from math import comb
 
 from .base import Bot
 from ..cards import load_cards
@@ -73,13 +75,17 @@ class DeckPlan:
 class DeckBot(Bot):
     plan: DeckPlan = DeckPlan(name="default")
 
-    def __init__(self, plan: DeckPlan | None = None) -> None:
+    def __init__(self, plan: DeckPlan | None = None, decklist=None) -> None:
         if plan is not None:
             self.plan = plan
         try:
             self._cardinfo = load_cards()
         except Exception:
             self._cardinfo = {}
+        # 自分のデッキ構成（提出時の60枚）。あれば対戦中に山札の残り構成→確率を計算できる。
+        self.deck_counts = Counter(int(x) for x in decklist) if decklist else None
+        self._energy_ids = ({cid for cid in self.deck_counts if self._is_energy(cid)}
+                            if self.deck_counts else set())
         self._atk_dmg = None
         self._atk_name = None
         self._atk_est = None
@@ -150,9 +156,7 @@ class DeckBot(Bot):
 
     def _play_score(self, cid, hand):
         if cid == LILLIE:
-            if self._has_key(hand) or len(hand) >= 4:
-                return None
-            return 28
+            return 60 if self._should_use_lillie() else None
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
         if cid in self.plan.heal_return_cards:
             return 50 if self._attacker_damaged() else None
@@ -423,8 +427,98 @@ class DeckBot(Bot):
         return base * 2 if (weak and my_type and weak == my_type and not ign) else base
 
     def _prize_value(self, cid) -> int:
+        """KOされた時に相手が取るサイド枚数。メガex=3, ex=2, それ以外=1。"""
         c = self._cardinfo.get(cid)
-        return 2 if (c and "ex" in (c.rule or "").lower()) else 1
+        rule = (c.rule or "").lower() if c else ""
+        if "mega" in rule and "ex" in rule:
+            return 3
+        return 2 if "ex" in rule else 1
+
+    # ===== 確率（対戦中に分かっている情報から計算）=====
+    def _is_energy(self, cid) -> bool:
+        c = self._cardinfo.get(cid)
+        return bool(c and c.stage and c.stage.endswith("Energy"))
+
+    def _seen_counts(self, include_hand: bool) -> Counter:
+        """山札の外で見えているカード枚数（decklist から引くと山＋サイドの残り構成が出る）。"""
+        me = self._me()
+        c: Counter = Counter()
+        if not me:
+            return c
+        if include_hand:
+            for cd in me.get("hand") or []:
+                c[cd.get("id")] += 1
+        for cd in (me.get("discard") or []) + (me.get("lostZone") or me.get("lost") or []):
+            c[cd.get("id")] += 1
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if not sp:
+                continue
+            c[sp.get("id")] += 1
+            for key in ("preEvolution", "energyCards", "tools"):
+                for cc in sp.get(key) or []:
+                    c[cc.get("id")] += 1
+        return c
+
+    @staticmethod
+    def _hyp_at_least1(pop: int, succ: int, n: int) -> float:
+        """母集団 pop 枚(成功 succ 枚)から n 枚引いて成功を1枚以上引く確率（超幾何）。"""
+        if succ <= 0 or n <= 0 or pop <= 0:
+            return 0.0
+        n = min(n, pop)
+        if pop - succ < n:
+            return 1.0
+        return 1.0 - comb(pop - succ, n) / comb(pop, n)
+
+    def _p_draw(self, success_ids, n: int, include_hand: bool) -> float:
+        """山(＋サイド)から n 枚引いて success_ids のカードを1枚以上引く確率。
+        include_hand=True は「手札を山に戻してから引く」(リーリエ)用＝手札も母集団に含む。
+        decklist 未提供なら -1（呼び出し側は従来ロジックにフォールバック）。"""
+        if not self.deck_counts:
+            return -1.0
+        me = self._me()
+        if not me:
+            return -1.0
+        deck_n = me.get("deckCount") or 0
+        prize_n = len(me.get("prize") or [])
+        hand_n = len(me.get("hand") or [])
+        pool = deck_n + prize_n + (hand_n if include_hand else 0)
+        seen = self._seen_counts(include_hand=not include_hand)
+        succ = sum(max(0, self.deck_counts.get(cid, 0) - seen.get(cid, 0))
+                   for cid in success_ids)
+        return self._hyp_at_least1(pool, succ, n)
+
+    def _attacker_in_play(self) -> bool:
+        me = self._me()
+        if not me:
+            return False
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if sp and sp.get("id") in self.plan.attackers:
+                return True
+        return False
+
+    def _should_use_lillie(self) -> bool:
+        """リーリエの決心: 手札を山に戻して6枚(早期=サイド6なら8枚)引く。
+        キー札は温存し、引き直しで純増 or 必要資源(エネ/アタッカー)を高確率で引ける時に使う。"""
+        me = self._me()
+        hand = (me.get("hand") or []) if me else []
+        if not self.deck_counts:  # 構成不明 → 従来の保守的条件
+            return not (self._has_key(hand) or len(hand) >= 4)
+        if self._has_key(hand):
+            return False  # 抱えるキー(メガ/ヒトデ等)は山に戻さず先に展開
+        prizes_left = len(me.get("prize") or []) if me else 6
+        draw_n = 8 if prizes_left >= 6 else 6
+        if len(hand) >= draw_n:
+            return False  # 引き直すと純減＝他にやることがある
+        if len(hand) <= draw_n - 2:
+            return True   # 純増（特に未KO早期の8枚ドロー）
+        hand_energy = sum(1 for cd in hand if self._is_energy(cd.get("id")))
+        if hand_energy == 0 and self._attacker_in_play():
+            if self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55:
+                return True  # エネ枯れ→引き直しで高確率にエネを引ける
+        if not self._attacker_in_play():
+            if self._p_draw(set(self.plan.attackers), draw_n, include_hand=True) >= 0.55:
+                return True  # アタッカー不在→高確率に引ける
+        return False
 
     def _should_play_boss(self) -> bool:
         """ボスは『前を倒せない×ベンチにKO可能あり』または『より大きなサイドを取れる』時のみ。"""

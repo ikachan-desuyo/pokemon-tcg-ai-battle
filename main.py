@@ -56,7 +56,7 @@ def _load_decklist() -> list[int]:
 # 提出デッキ(MegaStarmie)を理想的に回す専用 DeckBot。検証で SearchBot より
 # 高速かつ同等以上（探索は天井を破れず激遅=10分制限のリスク）だったため採用。
 try:
-    BOT = MegaStarmiePlanBot()
+    BOT = MegaStarmiePlanBot(decklist=_load_decklist())
 except Exception:
     BOT = HeuristicBot()
 

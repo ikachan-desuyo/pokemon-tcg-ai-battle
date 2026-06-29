@@ -96,7 +96,12 @@ def make_agent(deck_csv: str):
     from cabt_bot.models import Observation
     stem = Path(deck_csv).stem
     bot_cls = DECK_BOTS.get(stem, HeuristicBot)
-    bot = bot_cls()
+    from cabt_bot.bots.deck_bot import DeckBot
+    if isinstance(bot_cls, type) and issubclass(bot_cls, DeckBot):
+        deck = [int(x) for x in Path(deck_csv).read_text().split() if x.strip()]
+        bot = bot_cls(decklist=deck)  # 対戦中の確率計算のため自デッキ構成を渡す
+    else:
+        bot = bot_cls()
     return bot, (lambda obs: bot.select(Observation.from_dict(obs)))
 
 
