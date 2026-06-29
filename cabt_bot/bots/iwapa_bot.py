@@ -15,6 +15,9 @@ PLAN = DeckPlan(
     play_priority={344: 82, 112: 84, 970: 70},  # イシズマイ/マシマシラ/キチキギス
     card_values={345: 100, 112: 85, 344: 70},
     est_var_damage=True,   # 可変ダメージ技を評価（A/Bで +0.082）
+    boss_cards=(1182,),            # ボスはKO時のみ
+    recover_cards=(1097,),         # 夜タンカは回収価値がある時のみ
+    smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.042）
 )
 
 

@@ -17,6 +17,8 @@ PLAN = DeckPlan(
     card_values={678: 100, 333: 78, 674: 70},
     reposition=True,   # 攻撃役を前に出してから殴る（A/B(80戦) +0.035）
     heal_return_cards=(1229,),  # ミツルは負傷時のみ（無傷使用＝エネ全戻しで有害。Starmieと同パターン）
+    recover_cards=(1097,),         # 夜タンカは回収価値がある時のみ
+    smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.039）
 )
 
 

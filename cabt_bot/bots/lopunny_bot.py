@@ -18,6 +18,10 @@ PLAN = DeckPlan(
     lethal=True,
     smart_gust=True,   # KOしやすい相手を引きずり出す（A/B +0.050）
     reposition=True,   # 攻撃役を前に出してから殴る（A/B(80戦) +0.038）
+    boss_cards=(1182,),            # ボスはKO時のみ
+    recover_cards=(1097,),         # 夜タンカは回収価値がある時のみ
+    switch_cards=(1123,),          # いれかえは攻撃役を前に出す時のみ
+    smart_take=True,               # ポケギアの取得を効果×盤面で選ぶ（共通ノブ A/B +0.038）
 )
 
 
