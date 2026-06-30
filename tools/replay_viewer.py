@@ -167,24 +167,45 @@ def build(replay_path):
     names = [a.get("Name", f"P{i}") for i, a in enumerate(agents)] or ["P0", "P1"]
     raw = []
     last_cur = None
+    last_act = 0
     prev_logs = None
+    hand_cards = [[], []]   # 各プレイヤーの最後に判明した手札(本人ACTIVE時に更新)。常時表示用。
     for st in steps:
-        obs = st[0]["observation"]
+        # status=="ACTIVE" のエージェントが行動者。その視点(本人手札可視・逐次更新)を盤面/ログ/手番に採用。
+        # ＝P0もP1も自分の手番中は1手ずつ進行し、相手の手番中は潰さず本人視点で詳細表示できる。
+        if len(st) > 1 and st[1].get("status") == "ACTIVE" and st[0].get("status") != "ACTIVE":
+            act_idx = 1
+        elif st[0].get("status") == "ACTIVE":
+            act_idx = 0
+        else:
+            act_idx = last_act
+        last_act = act_idx
+        obs = st[act_idx]["observation"]
         cur = obs.get("current") or last_cur
         if obs.get("current"):
             last_cur = obs["current"]
-        # リプレイは同じlogsを連続stepで繰り返す（サブ決定ごとに再掲）。前stepと同一なら重複なので捨てる。
+            # 行動中プレイヤーの手札(自視点で中身が見える)を記録＝以後その手札を常時表示。
+            me = obs["current"]["players"][act_idx]
+            hand_cards[act_idx] = [cname(c.get("id") if isinstance(c, dict) else c)
+                                   for c in (me.get("hand") or [])]
         raw_logs = obs.get("logs") or []
         logs = [] if raw_logs == prev_logs else [_fmt_log(lg) for lg in raw_logs]
         prev_logs = raw_logs
         view = None
         if cur:
+            # players は絶対index([0]=P0,[1]=P1)。両者の手札を常時表示(各自の最後に判明した手札)。
+            # 枚数バッジも表示中の手札に合わせて整合させる。
+            pv = [_player(cur["players"][0]), _player(cur["players"][1])]
+            for pi in (0, 1):
+                if hand_cards[pi]:
+                    pv[pi]["handCards"] = hand_cards[pi]
+                    pv[pi]["hand"] = len(hand_cards[pi])
             view = {
                 "turn": cur.get("turn"),
-                "active_player": cur.get("yourIndex"),
+                "active_player": cur.get("yourIndex", act_idx),
                 "result": cur.get("result"),
                 "stadium": _stadium_name(cur.get("stadium")),
-                "players": [_player(cur["players"][0]), _player(cur["players"][1])],
+                "players": pv,
             }
         raw.append((view, logs))
     # 盤面(view)が同一の連続stepは1フレームに統合し、その間のイベントログをまとめる
@@ -283,7 +304,7 @@ function slot(s, isActive){{
     <div class="meta">HP ${{s.hp}}/${{s.maxHp}}</div>
     <div class="hpbar ${{low}}"><i style="width:${{pct}}%"></i></div>${{ene}}${{tool}}</div>`;
 }}
-function half(p, who, mine, activeTurn){{
+function half(p, who, mine, activeTurn, flip){{
   const act = p.active ? `<div class="lab">バトル場</div><div class="row">${{slot(p.active,true)}}</div>` : '<div class="empty">バトル場 なし</div>';
   const bench = p.bench.length ? `<div class="lab">ベンチ (${{p.bench.length}})</div><div class="row">${{p.bench.map(b=>slot(b,false)).join('')}}</div>` : '<div class="empty">ベンチ なし</div>';
   const st = p.status.length ? `<span class="badge" style="color:#ff9c9c">${{p.status.join(',')}}</span>`:'';
@@ -293,8 +314,10 @@ function half(p, who, mine, activeTurn){{
   else if(p.hand>0)
     hand = `<div class="lab">手札 (${{p.hand}})</div><div class="hand">${{Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}}</div>`;
   else hand = '';
-  return `<div class="phead"><div class="nm">${{mine?'▼ ':''}}${{who}} ${{activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}}${{st}}</div>
-    <div><span class="prizes">サイド ${{p.prize}}</span><span class="badge">手札 ${{p.hand}}</span><span class="badge">山 ${{p.deck}}</span><span class="badge">トラ ${{p.discard}}</span></div></div>${{act}}${{bench}}${{hand}}`;
+  const head = `<div class="phead"><div class="nm">${{mine?'▼ ':''}}${{who}} ${{activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}}${{st}}</div>
+    <div><span class="prizes">サイド ${{p.prize}}</span><span class="badge">手札 ${{p.hand}}</span><span class="badge">山 ${{p.deck}}</span><span class="badge">トラ ${{p.discard}}</span></div></div>`;
+  // flip(相手側): 手札→ベンチ→バトル場 の順でバトル場を中央(P0側)に向ける
+  return flip ? `${{head}}${{hand}}${{bench}}${{act}}` : `${{head}}${{act}}${{bench}}${{hand}}`;
 }}
 function render(){{
   const step = DATA.steps[idx];
@@ -305,8 +328,8 @@ function render(){{
     $('#turnbar').innerHTML = `<span class="who">ターン ${{v.turn}}</span> — 手番: <b style="color:#ffcf5c">${{NAMES[ap]||('P'+ap)}}</b>`
       + (v.stadium?` <span class="badge">スタジアム: ${{v.stadium}}</span>`:'')
       + (v.result!=null && v.result!=-1?` <span class="badge l-result">結果: ${{NAMES[v.result]||('P'+v.result)}} の勝ち</span>`:'');
-    $('#opp').innerHTML = half(v.players[1], NAMES[1]||'P1', false, ap===1);
-    $('#me').innerHTML  = half(v.players[0], NAMES[0]||'P0', true, ap===0);
+    $('#opp').innerHTML = half(v.players[1], NAMES[1]||'P1', false, ap===1, true);
+    $('#me').innerHTML  = half(v.players[0], NAMES[0]||'P0', true, ap===0, false);
   }}
   $('#logs').innerHTML = step.logs.length
     ? step.logs.map(([k,t])=>`<div class="logitem l-${{k}}">${{t}}</div>`).join('')
