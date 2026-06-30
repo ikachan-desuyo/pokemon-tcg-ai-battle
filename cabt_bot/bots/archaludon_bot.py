@@ -59,6 +59,7 @@ class ArchaludonBot(DeckBot):
     def _pick_attach(self, idxs, options, hand, me):
         # active が既に攻撃可能(鋼3個)なら、余剰の鋼エネはベンチの攻撃役に貼って次の番に備える。
         # (active への重ね貼りは無駄。ベンチ育成でKO後の再加速を速める)
+        # ※被ダメしたactiveはレイジングハンマー(80+被ダメ)の最高火力役なので、エネは奪わない。
         active = (me.get("active") or [None])[0]
         if active and self._metal_on(active) >= self.ATTACK_COST:
             cand = []
@@ -148,9 +149,18 @@ class ArchaludonBot(DeckBot):
 
     def _opt_value(self, opt) -> float:
         v = super()._opt_value(opt)
-        # ベンチが薄い時は、唯一のたねであるジュラルドンを最優先で確保・展開する
-        # (サーチで進化先を優先して掴み、バックアップを作らず donk 負けするのを防ぐ)。
-        if self._opt_card_id(opt) == DURALUDON and self._bench_thin():
+        cid = self._opt_card_id(opt)
+        me = self._me() or {}
+        hand = me.get("hand") or []
+        has_ex = self._count_in_play(ARCH_EX) >= 1 or any(c.get("id") == ARCH_EX for c in hand)
+        dura_avail = self._count_in_play(DURALUDON) + sum(1 for c in hand if c.get("id") == DURALUDON)
+        # 攻撃役(ブリジュラスex)が場にも手札にも無く、進化元のジュラルドンは居る
+        # → 進化先を最優先でサーチ(復旧プラン: たねを並べても攻撃役にならないと勝てない)。
+        if cid == ARCH_EX and not has_ex and dura_avail >= 1:
+            v += 60
+        # ベンチが薄く、ジュラルドンがまだ2体未満の時だけ、たねを確保(donk/展開不足を防ぐ)。
+        # 既に2体あるなら3体目より進化先や他パーツを優先(GAME2の事故=3体目を掴む を是正)。
+        elif cid == DURALUDON and self._bench_thin() and dura_avail < 2:
             v += 50
         return v
 
