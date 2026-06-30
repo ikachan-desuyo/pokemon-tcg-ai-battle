@@ -57,11 +57,15 @@ def encode_state(cur, who):
     ]
 
 
-def collect(games):
-    """色々な対面で(状態, そのプレイヤーが勝ったか)を両者視点で収集＝多様＆バランス。"""
+def collect(games, general=False):
+    """色々な対面で(状態, そのプレイヤーが勝ったか)を両者視点で収集＝多様＆バランス。
+    general=True: 全デッキをP0に据えた多デッキ均衡データ(汎用な価値関数のため)。"""
     field = [o for o in R.DECK_BOTS if o not in ("gardevoir",)]
     X, y = [], []
-    pairs = [("deck", o) for o in field if o != "deck"] + [("deck", "deck")]
+    if general:
+        pairs = [(a, b) for a in field for b in field if a != b]
+    else:
+        pairs = [("deck", o) for o in field if o != "deck"] + [("deck", "deck")]
     gi = 0
     while gi < games:
         for me_s, opp_s in pairs:
@@ -122,9 +126,11 @@ def save_model(path, w, b, mu, sd):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--games", type=int, default=120)
-    ap.add_argument("--save", default="out/value_model.json"); a = ap.parse_args()
-    print(f"自己対戦で状態を収集中... ({a.games}試合)")
-    X, y = collect(a.games)
+    ap.add_argument("--save", default="out/value_model.json")
+    ap.add_argument("--general", action="store_true", help="全デッキをP0にした汎用データ")
+    a = ap.parse_args()
+    print(f"自己対戦で状態を収集中... ({a.games}試合, general={a.general})")
+    X, y = collect(a.games, a.general)
     n = len(y); split = int(n * 0.8)
     idx = np.arange(n); rng = np.random.default_rng(0); rng.shuffle(idx)
     tr, te = idx[:split], idx[split:]
