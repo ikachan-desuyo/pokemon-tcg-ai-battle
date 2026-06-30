@@ -36,7 +36,24 @@ header b{font-size:15px} .dim{color:var(--dim)}
 #ctrl{display:flex;gap:8px;align-items:center;flex:1} #slider{flex:1}
 button{background:#243049;color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font-size:13px}
 button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+#tabbar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:8;background:var(--panel);border-top:1px solid var(--line)}
+#tabbar button{flex:1;border:none;border-radius:0;padding:12px;font-size:15px;background:transparent}
+#tabbar button.on{background:#2e3c5a;color:#ffcf5c;font-weight:700}
+@media (max-width:760px){
+  #wrap{grid-template-columns:1fr;height:calc(100vh - 100px)}
+  #side{border-left:none;border-top:1px solid var(--line)}
+  #board.hidden,#side.hidden{display:none}
+  #board,#side{height:100%}
+  #tabbar{display:flex}
+  .slot{width:calc(50% - 6px)}
+  header{gap:8px;padding:8px 10px}
+  header b{font-size:14px} header .dim{font-size:11px}
+  #ctrl{order:3;flex-basis:100%}
+  .hand .chip{font-size:12px;padding:4px 9px}
+  button{padding:8px 12px}
+}
 #drop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:var(--bg);z-index:10;text-align:center;padding:20px}
+@media (max-width:760px){#dropbox{padding:32px 22px}#dropbox h1{font-size:18px}}
 #drop.hide{display:none}
 #dropbox{border:2px dashed var(--line);border-radius:16px;padding:48px 60px;background:var(--panel);max-width:560px}
 #dropbox h1{font-size:20px;margin:0 0 8px} #dropbox p{color:var(--dim);margin:6px 0}
@@ -67,6 +84,10 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
     <div id="opp" class="side-half half-opp"></div>
     <div id="me" class="side-half half-me"></div></div>
   <div id="side"><div class="lab">このステップのイベント</div><div id="logs"></div></div>
+</div>
+<div id="tabbar">
+  <button data-tab="board" class="on">📋 盤面</button>
+  <button data-tab="side">📜 ログ</button>
 </div>
 
 <script src="cards-data.js"></script>
@@ -194,10 +215,16 @@ function render(){
   $('#logs').innerHTML=step.logs.length?step.logs.map(([k,t])=>`<div class="logitem l-${k}">${t}</div>`).join(''):'<div class="empty">（イベントなし）</div>';
 }
 function go(n){idx=Math.max(0,Math.min(DATA.steps.length-1,n));render();}
+function setTab(t){
+  $('#board').classList.toggle('hidden',t!=='board');
+  $('#side').classList.toggle('hidden',t!=='side');
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+}
 function load(d){
   try{DATA=build(d);}catch(e){$('#err').textContent='読み込みエラー: '+e.message;return;}
   idx=0;
   $('#drop').classList.add('hide');$('#hdr').style.display='flex';$('#wrap').style.display='grid';
+  setTab('board');
   $('#epi').textContent='ep '+(DATA.episode||'');
   $('#slider').max=DATA.steps.length-1;
   $('#outcome').innerHTML=(DATA.winner!=null)
@@ -210,6 +237,12 @@ $('#file2').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);};
 $('#prev').onclick=()=>go(idx-1);$('#next').onclick=()=>go(idx+1);
 $('#slider').oninput=e=>go(+e.target.value);
 document.onkeydown=e=>{if(!DATA)return;if(e.key==='ArrowLeft')go(idx-1);if(e.key==='ArrowRight')go(idx+1);};
+document.querySelectorAll('#tabbar button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+// スワイプで前後移動(スマホ)
+let tsx=null,tsy=null;
+$('#board').addEventListener('touchstart',e=>{tsx=e.touches[0].clientX;tsy=e.touches[0].clientY;},{passive:true});
+$('#board').addEventListener('touchend',e=>{if(tsx==null)return;const dx=e.changedTouches[0].clientX-tsx,dy=e.changedTouches[0].clientY-tsy;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)go(idx+(dx<0?1:-1));tsx=null;},{passive:true});
 const dz=$('#drop');
 dz.ondragover=e=>{e.preventDefault();};
 dz.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);};
