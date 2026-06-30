@@ -37,19 +37,31 @@ header b{font-size:15px} .dim{color:var(--dim)}
 button{background:#243049;color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font-size:13px}
 button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--line);border-radius:4px;padding:0 5px}
 #tabbar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:8;background:var(--panel);border-top:1px solid var(--line)}
-#tabbar button{flex:1;border:none;border-radius:0;padding:12px;font-size:15px;background:transparent}
+#tabbar button{flex:1;border:none;border-radius:0;padding:11px 4px;font-size:15px;background:transparent}
+#tabbar #bprev,#tabbar #bnext{flex:0 0 56px;font-size:18px;color:#ffcf5c}
 #tabbar button.on{background:#2e3c5a;color:#ffcf5c;font-weight:700}
 @media (max-width:760px){
-  #wrap{grid-template-columns:1fr;height:calc(100vh - 100px)}
+  html,body{overflow:hidden;height:100%}
+  header{position:sticky;top:0;z-index:9;gap:6px;padding:6px 10px}
+  header b{font-size:13px} header .dim{font-size:10px}
+  #ctrl{order:3;flex-basis:100%;gap:6px}
+  #prev,#next{display:none}             /* 前/次は下バーに集約 */
+  #wrap{grid-template-columns:1fr;height:calc(100vh - 84px - 46px)} /* header & 下バー分を除く */
   #side{border-left:none;border-top:1px solid var(--line)}
   #board.hidden,#side.hidden{display:none}
-  #board,#side{height:100%}
+  #board,#side{height:100%;overflow:auto}
+  #board{padding:8px}
   #tabbar{display:flex}
-  .slot{width:calc(50% - 6px)}
-  header{gap:8px;padding:8px 10px}
-  header b{font-size:14px} header .dim{font-size:11px}
-  #ctrl{order:3;flex-basis:100%}
-  .hand .chip{font-size:12px;padding:4px 9px}
+  /* コンパクト盤面: スクロールせず1画面に収める */
+  .side-half{padding:6px;margin-bottom:6px}
+  #turnbar{margin:2px 0 6px;padding:5px 9px;font-size:12px}
+  .lab{margin:3px 0 3px;font-size:9px}
+  .row{gap:5px}
+  .slot{width:76px;padding:4px}
+  .slot .cn{font-size:10px;margin-bottom:1px}
+  .slot .meta{font-size:9px} .hpbar{height:4px;margin:2px 0}
+  .hand{gap:3px} .hand .chip{font-size:10px;padding:2px 5px}
+  .phead{font-size:11px} .badge{padding:0 5px;margin-left:3px}
   button{padding:8px 12px}
 }
 #drop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:var(--bg);z-index:10;text-align:center;padding:20px}
@@ -86,8 +98,10 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <div id="side"><div class="lab">このステップのイベント</div><div id="logs"></div></div>
 </div>
 <div id="tabbar">
+  <button id="bprev">◀</button>
   <button data-tab="board" class="on">📋 盤面</button>
   <button data-tab="side">📜 ログ</button>
+  <button id="bnext">▶</button>
 </div>
 
 <script src="cards-data.js"></script>
@@ -237,7 +251,8 @@ $('#file2').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);};
 $('#prev').onclick=()=>go(idx-1);$('#next').onclick=()=>go(idx+1);
 $('#slider').oninput=e=>go(+e.target.value);
 document.onkeydown=e=>{if(!DATA)return;if(e.key==='ArrowLeft')go(idx-1);if(e.key==='ArrowRight')go(idx+1);};
-document.querySelectorAll('#tabbar button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.querySelectorAll('#tabbar [data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+$('#bprev').onclick=()=>go(idx-1); $('#bnext').onclick=()=>go(idx+1);
 // スワイプで前後移動(スマホ)
 let tsx=null,tsy=null;
 $('#board').addEventListener('touchstart',e=>{tsx=e.touches[0].clientX;tsy=e.touches[0].clientY;},{passive:true});
