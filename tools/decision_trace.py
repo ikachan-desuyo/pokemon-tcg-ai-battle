@@ -48,7 +48,9 @@ def trace_select(bot, parsed, cur, rs):
             sc = bot._play_score(cid, hand) if cid is not None else None
             mark = " ★選択" if i == chosen else ""
             scs = "却下(None)" if sc is None else f"score={sc}"
-            out.append(f"      {nm(cid)}: {scs}{mark}")
+            why = bot.explain_play(cid) if (cid is not None and hasattr(bot, "explain_play")) else ""
+            whys = f"  ←{why}" if why else ""
+            out.append(f"      {nm(cid)}: {scs}{mark}{whys}")
     # 選択がプレイ/攻撃でない場合(ATTACH/EVOLVE/END等)も一応表示
     if chosen is not None and not (atk_opts or play_opts):
         op = opts[chosen]; t = OT.get(op.get("type"), op.get("type"))
@@ -58,12 +60,12 @@ def trace_select(bot, parsed, cur, rs):
         out.append(f"  [{t}] {d} ★選択")
     return out, ch
 
-def run(games=2):
-    d = load("archaludon"); opp_deck = load("deck")
+def run(games=2, me_stem="archaludon", opp_stem="deck"):
+    d = load(me_stem); opp_deck = load(opp_stem)
     for game in range(games):
-        bot = R.DECK_BOTS["archaludon"](decklist=d); opp = R.DECK_BOTS["deck"]()
+        bot = R.DECK_BOTS[me_stem](decklist=d); opp = R.DECK_BOTS[opp_stem]()
         obs, sd = battle_start(d, opp_deck); steps = 0; res = None; lastturn = -1
-        print(f"\n{'='*72}\nGAME {game+1}  自=Archaludon vs 敵=MegaStarmie\n{'='*72}")
+        print(f"\n{'='*72}\nGAME {game+1}  自={me_stem} vs 敵={opp_stem}\n{'='*72}")
         while obs is not None and steps < 1500:
             o = to_observation_class(obs); st = o.current; cur = obs.get("current")
             if st and st.result != -1: res = st.result; break
@@ -90,4 +92,9 @@ def run(games=2):
         print(f"\n>>> 結果: {'自勝ち' if res==0 else '敵勝ち' if res==1 else '?'}")
 
 if __name__ == "__main__":
-    run(2)
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--me", default="archaludon"); ap.add_argument("--opp", default="deck")
+    ap.add_argument("--games", type=int, default=2)
+    a = ap.parse_args()
+    run(a.games, a.me, a.opp)

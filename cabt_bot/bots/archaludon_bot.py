@@ -108,9 +108,9 @@ class ArchaludonBot(DeckBot):
         spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
         return sum(1 for s in spots if s and s.get("id") == cid)
 
-    def _missing_piece_value(self) -> int:
-        """サーチで今得られると価値が高い『欠けているピース』の評価値(depth-1近似)。
-        ＝『使った後に何が可能になるか』で札を評価する(GPTレビュー: 結果志向)。"""
+    def _missing_piece(self) -> tuple[int, str]:
+        """サーチで今得られると価値が高い『欠けているピース』の(評価値, 理由)を返す(depth-1近似)。
+        ＝『使った後に何が可能になるか』で札を評価する(GPTレビュー: 結果志向＋Explainability)。"""
         me = self._me() or {}
         hand = me.get("hand") or []
         has_ex = self._count_in_play(ARCH_EX) >= 1 or any(c.get("id") == ARCH_EX for c in hand)
@@ -118,14 +118,30 @@ class ArchaludonBot(DeckBot):
         has_reli = self._count_in_play(RELICANTH) >= 1 or any(c.get("id") == RELICANTH for c in hand)
         n = sum(1 for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s)
         if dura == 0 and not has_ex:
-            return 120                 # 進化線が皆無=最優先(たね確保→攻撃役へ)
+            return 120, "進化線が皆無→たね確保が最優先"
         if not has_ex and dura >= 1:
-            return 115                 # exをサーチ→進化→Metal Defenderへ(最重要)
+            return 115, "攻撃役ブリジュラスex未所持→exを確保し進化→Metal Defenderへ"
         if not has_reli:
-            return 95                  # ジーランス(レイジング/Hammer Inのエンジン)
+            return 95, "ジーランス未所持→レイジング/Hammer Inのエンジン確保"
         if n < 3:
-            return 75                  # ベンチ薄い→バックアップ確保
-        return 40                      # 揃っている→低い
+            return 75, "ベンチが薄い→バックアップ確保"
+        return 40, "主要ピースは揃っている→低価値"
+
+    def _missing_piece_value(self) -> int:
+        return self._missing_piece()[0]
+
+    def explain_play(self, cid: int) -> str:
+        """そのカードを今プレイする評価の『理由』を返す(Explainability用)。"""
+        if cid in (ULTRA_BALL, DRAYTON):
+            v, why = self._missing_piece()
+            return f"結果志向:{why}"
+        if cid == RELICANTH:
+            return "場に既にジーランス→重複は無価値" if self._count_in_play(RELICANTH) >= 1 else "エンジン(きおくにもぐる)を設置"
+        if cid == JUDGE:
+            return "手札妨害(自分が損せず相手の手札が多い時のみ)"
+        if cid == POKE_PAD:
+            return "ルール無しポケサーチ(盤面が揃えば温存)"
+        return ""
 
     def _play_score(self, cid, hand):
         # ハイパボ(ポケモンサーチ): 静的でなく『何を持ってこられるか』で評価(結果志向=depth-1)。
