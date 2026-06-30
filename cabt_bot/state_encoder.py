@@ -120,6 +120,66 @@ FEATURES = [
 ]
 
 
+def _poke_feat(sp, opp_weak):
+    """1体のポケモンを能力ベクトルへ(デッキ非依存)。opp_weak=相手activeの弱点(自分が突けるか)。"""
+    if not sp:
+        return [0.0] * 9
+    cp = caps(sp.get("id"))
+    hp = sp.get("hp", 0); mhp = sp.get("maxHp") or cp["hp"] or 1
+    ec = sp.get("energyCards") or []
+    return [
+        hp / mhp if mhp else 0.0,
+        cp["max_dmg"] / 200.0,
+        cp["min_cost"] / 3.0,
+        cp["evo"] / 2.0,
+        float(cp["has_ability"]),
+        cp["pv"] / 3.0,
+        len(ec) / 4.0,
+        1.0 if cp["max_dmg"] >= 120 else 0.0,            # アタッカー級
+        1.0 if (opp_weak and cp["type"] == opp_weak) else 0.0,  # 弱点を突ける
+    ]
+
+
+def _agg_bench(bench, opp_weak):
+    """ベンチ各体を能力ベクトル化→mean+max+count で集約(DeepSets風・可変長対応)。"""
+    feats = [_poke_feat(b, opp_weak) for b in bench if b]
+    n = len(feats)
+    if not feats:
+        return [0.0] * 9 + [0.0] * 9 + [0.0]
+    import builtins
+    mean = [sum(col) / n for col in zip(*feats)]
+    mx = [builtins.max(col) for col in zip(*feats)]
+    return mean + mx + [n / 5.0]
+
+
+def _side_energy(p):
+    act = (p.get("active") or [None])[0]
+    bench = [b for b in (p.get("bench") or []) if b]
+    return (len(act.get("energyCards") or []) if act else 0) + sum(len(b.get("energyCards") or []) for b in bench)
+
+
+# v2: 全盤面(active+各ベンチ)を能力ベクトル化し集約＝DeepSets風の固定長。汎用価値モデル用。
+FEATURES_V2_DIM = (9 + 19) * 2 + 7  # 各サイド: active9 + bench(mean9+max9+count1) ; globals7
+
+
+def encode_state_v2(cur, who):
+    me = cur["players"][who]; op = cur["players"][1 - who]
+    ma = (me.get("active") or [None])[0]; oa = (op.get("active") or [None])[0]
+    my_weak = caps(ma["id"])["weak"] if ma else ""
+    opp_weak = caps(oa["id"])["weak"] if oa else ""
+    mb = [b for b in (me.get("bench") or []) if b]; ob = [b for b in (op.get("bench") or []) if b]
+    mpz = len(me.get("prize") or []) or 6; opz = len(op.get("prize") or []) or 6
+    f = []
+    f += _poke_feat(ma, opp_weak) + _agg_bench(mb, opp_weak)   # 自分(相手弱点を突けるか)
+    f += _poke_feat(oa, my_weak) + _agg_bench(ob, my_weak)     # 相手
+    my_hand = me.get("handCount", len(me.get("hand") or []))
+    opp_hand = op.get("handCount", len(op.get("hand") or []))
+    f += [cur.get("turn", 0) / 12.0, mpz / 6.0, opz / 6.0,
+          my_hand / 10.0, opp_hand / 10.0,
+          _side_energy(me) / 15.0, _side_energy(op) / 15.0]
+    return f
+
+
 def encode_state(cur, who):
     me = cur["players"][who]; op = cur["players"][1 - who]
     ma, mb, mpz = _board(me); oa, ob, opz = _board(op)
