@@ -41,6 +41,7 @@ DURALUDON = 169  # ジュラルドン
 ARCH_EX = 190    # ブリジュラスex
 RELICANTH = 57   # ジーランス(特性きおくにもぐる)
 POKE_PAD = 1152  # ポケパッド(ルール無しポケモンをサーチ)
+JUDGE = 1213     # ジャッジマン(おたがい手札を山札に戻し4枚引く=手札妨害)
 RAGING_HAMMER = 224  # レイジングハンマー(ジュラルドンのワザ): 80＋自分に乗ったダメージ量
 
 
@@ -106,6 +107,16 @@ class ArchaludonBot(DeckBot):
         return sum(1 for s in spots if s and s.get("id") == cid)
 
     def _play_score(self, cid, hand):
+        # ジャッジマン(手札妨害): 自分の手札が多い時に使うと自分の手札も捨てる損。
+        # 自分の手札が少なく(プレイ後に山札に戻る枚数<=4で実質減らない=4枚引き直し)、
+        # かつ相手の手札が多い(妨害価値あり)時だけ使う＝「目的のために使う」。
+        if cid == JUDGE:
+            me = self._me() or {}
+            cur = self._cur or {}
+            opp = (cur.get("players") or [None, None])[1 - cur.get("yourIndex", 0)] if cur else {}
+            my_after = len(me.get("hand") or []) - 1   # ジャッジ自身を除いた戻り枚数
+            opp_hand = len((opp or {}).get("hand") or [])
+            return 60 if (my_after <= 4 and opp_hand >= 5) else None
         # ジーランスは特性(きおくにもぐる)が重複しないため、場に1匹で十分。
         # 既に場に居るなら出さない(2匹目以降はベンチ枠とテンポの無駄＝GPTレビュー指摘)。
         if cid == RELICANTH:
