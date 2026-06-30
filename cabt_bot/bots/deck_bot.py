@@ -220,8 +220,11 @@ class DeckBot(Bot):
     def _play_score(self, cid, hand):
         if cid == LILLIE:
             return None  # リーリエは展開・進化・エネ付けを終えた後（_main後段）で判断する
-        # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ
+        # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
+        # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
+            if self._active_lethal_now():
+                return None
             return 50 if self._attacker_damaged() else None
         # エネ補給サポ(トウコ等): 進化アタッカーが居て攻撃できない(エネ切れ)なら優先＝攻撃を早める
         if cid in self.plan.energy_supporters and self._attacker_needs_energy():
@@ -713,6 +716,17 @@ class DeckBot(Bot):
             return False                       # ベンチにKOできる相手なし → 打たない
         if not can_ko_active:
             return True                        # 前を倒せない → ベンチのKO対象を引っ張る
+        # 相手の主力アタッカーの進化前(発展中の脅威)がベンチでKO可能で、前が主力でない(脅威が低い)なら、
+        # サイド数が同等でもボスで進化前を狩る＝主力の発展を阻害。ただし前を倒して勝ち切れるなら覆さない。
+        me = cur["players"][cur["yourIndex"]]
+        my_prizes_left = sum(1 for x in (me.get("prize") or []) if x) or 6
+        key_pre_koable = any(
+            self._eff_dmg(dmg, ign, sp.get("id")) >= (sp.get("hp") or 9999)
+            for sp in self._opp_key_preevo_spots())
+        if (key_pre_koable
+                and _line_threat(act.get("id")) < (self._opp_main_line or 0)
+                and my_prizes_left > active_val):
+            return True
         return best_bench > active_val         # 前は倒せるが、より大きなサイドを優先
 
     def _ko_gust_pick(self, sel):
