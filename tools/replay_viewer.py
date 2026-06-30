@@ -44,7 +44,9 @@ except Exception:
 # エネルギータイプの日本語表記
 _ETYPE_JP = {0: "無", 1: "草", 2: "炎", 3: "水", 4: "雷", 5: "超",
              6: "闘", 7: "悪", 8: "鋼", 9: "竜", 10: "虹", 11: "悪超"}
-AREA = {int(a): a.name for a in AreaType}
+_AREA_JP = {1: "山札", 2: "手札", 3: "トラッシュ", 4: "バトル場", 5: "ベンチ", 6: "サイド",
+            7: "スタジアム", 8: "エネルギー", 9: "どうぐ", 10: "進化前", 11: "プレイヤー", 12: "確認中"}
+AREA = {int(a): _AREA_JP.get(int(a), a.name) for a in AreaType}
 ETYPE = {int(e): _ETYPE_JP.get(int(e), e.name) for e in EnergyType}
 
 
@@ -105,6 +107,8 @@ def _fmt_log(lg):
         return ("turn", f"■ {who} ターン終了")
     if t == LogType.SHUFFLE:
         return ("misc", f"{who} 山札シャッフル")
+    if t == LogType.HAS_BASIC_POKEMON:
+        return ("misc", f"{who} たねポケモン確認")
     if t == LogType.DRAW:
         return ("draw", f"{who} ドロー: {cn('cardId')}")
     if t == LogType.DRAW_REVERSE:
@@ -143,6 +147,17 @@ def _fmt_log(lg):
     return ("misc", f"{who} [{LogType(t).name if t in LogType._value2member_map_ else t}]")
 
 
+def _collapse(logs):
+    """連続する同一イベント(例: 相手の7枚ドロー, サイド6枚セット)を『×N』に集約して冗長表示を防ぐ。"""
+    out = []
+    for k, t in logs:
+        if out and out[-1][0] == k and out[-1][1] == t:
+            out[-1][2] += 1
+        else:
+            out.append([k, t, 1])
+    return [[k, (f"{t} ×{n}" if n > 1 else t)] for k, t, n in out]
+
+
 def build(replay_path):
     d = json.load(open(replay_path, encoding="utf-8"))
     steps = d["steps"]
@@ -150,12 +165,16 @@ def build(replay_path):
     names = [a.get("Name", f"P{i}") for i, a in enumerate(agents)] or ["P0", "P1"]
     raw = []
     last_cur = None
+    prev_logs = None
     for st in steps:
         obs = st[0]["observation"]
         cur = obs.get("current") or last_cur
         if obs.get("current"):
             last_cur = obs["current"]
-        logs = [_fmt_log(lg) for lg in (obs.get("logs") or [])]
+        # リプレイは同じlogsを連続stepで繰り返す（サブ決定ごとに再掲）。前stepと同一なら重複なので捨てる。
+        raw_logs = obs.get("logs") or []
+        logs = [] if raw_logs == prev_logs else [_fmt_log(lg) for lg in raw_logs]
+        prev_logs = raw_logs
         view = None
         if cur:
             view = {
@@ -177,6 +196,7 @@ def build(replay_path):
             out_steps.append({"_key": key, "view": view, "logs": list(logs)})
     for n, f in enumerate(out_steps):
         f.pop("_key"); f["i"] = n
+        f["logs"] = _collapse(f["logs"])
     rewards = d.get("rewards") or []
     winner = None
     if len(rewards) == 2 and rewards[0] != rewards[1]:
