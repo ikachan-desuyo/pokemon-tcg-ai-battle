@@ -6,24 +6,56 @@
   python tools/replay_viewer.py input_data/submission_replay/82775814.json
   → out/replay_82775814.html を生成（ブラウザで開く）
 """
-import sys, os, json, argparse
+import sys, os, json, csv, re, argparse
 sys.path.insert(0, ".")
 from cabt_bot import load_cards
 from cabt_bot.enums import AreaType, LogType, EnergyType
-try:
-    from cg.api import all_attack
-    ATK = {a.attackId: a.name for a in all_attack()}
-except Exception:
-    ATK = {}
 
 C = load_cards()
+_JP_CSV = "input_data/extracted/JP_Card_Data.csv"
+
+# 日本語カード名 + 技名(ワザ名)を JP_Card_Data.csv から読む（英語名でなく日本語で表示する）
 NAME = {cid: (getattr(c, "name", None) or f"#{cid}") for cid, c in C.items()}
+_JP_ATK_BY_DMG = {}   # (cardId, damage) -> 日本語ワザ名
+try:
+    for r in csv.DictReader(open(_JP_CSV, encoding="utf-8")):
+        cid = int(r["カード ID"]); nm = (r.get("カード名") or "").strip()
+        if nm:
+            NAME[cid] = nm
+        wn = (r.get("ワザ名") or "").strip()
+        if wn and wn != "n/a":
+            m = re.match(r"(\d+)", (r.get("ダメージ") or "").strip())
+            dmg = int(m.group(1)) if m else 0
+            _JP_ATK_BY_DMG[(cid, dmg)] = wn
+except Exception:
+    pass
+
+# attackId -> ダメージ（ログの attackId を (cardId,damage) 経由で日本語ワザ名に橋渡し）
+_ATK_DMG = {}
+_ATK_EN = {}
+try:
+    from cg.api import all_attack
+    for a in all_attack():
+        _ATK_DMG[a.attackId] = getattr(a, "damage", 0) or 0
+        _ATK_EN[a.attackId] = a.name
+except Exception:
+    pass
+
+# エネルギータイプの日本語表記
+_ETYPE_JP = {0: "無", 1: "草", 2: "炎", 3: "水", 4: "雷", 5: "超",
+             6: "闘", 7: "悪", 8: "鋼", 9: "竜", 10: "虹", 11: "悪超"}
 AREA = {int(a): a.name for a in AreaType}
-ETYPE = {int(e): e.name for e in EnergyType}
+ETYPE = {int(e): _ETYPE_JP.get(int(e), e.name) for e in EnergyType}
 
 
 def cname(cid):
     return NAME.get(cid, f"#{cid}")
+
+
+def aname(card_id, attack_id):
+    """ログの (cardId, attackId) を日本語ワザ名に。突合不能なら英語名→技#id。"""
+    jp = _JP_ATK_BY_DMG.get((card_id, _ATK_DMG.get(attack_id)))
+    return jp or _ATK_EN.get(attack_id) or f"技#{attack_id}"
 
 
 def _spot(s):
@@ -96,7 +128,7 @@ def _fmt_log(lg):
     if t == LogType.MOVE_ATTACHED:
         return ("attach", f"{who} 付帯カード移動: {cn('cardId')}")
     if t == LogType.ATTACK:
-        return ("attack", f"⚔ {who} 攻撃: {cname(lg.get('cardId'))} 〔{ATK.get(lg.get('attackId'),'技#'+str(lg.get('attackId')))}〕")
+        return ("attack", f"⚔ {who} 攻撃: {cname(lg.get('cardId'))} 〔{aname(lg.get('cardId'), lg.get('attackId'))}〕")
     if t == LogType.HP_CHANGE:
         v = lg.get("value") or 0
         if v < 0:
@@ -116,9 +148,9 @@ def build(replay_path):
     steps = d["steps"]
     agents = d.get("info", {}).get("Agents", [])
     names = [a.get("Name", f"P{i}") for i, a in enumerate(agents)] or ["P0", "P1"]
-    out_steps = []
+    raw = []
     last_cur = None
-    for i, st in enumerate(steps):
+    for st in steps:
         obs = st[0]["observation"]
         cur = obs.get("current") or last_cur
         if obs.get("current"):
@@ -133,7 +165,18 @@ def build(replay_path):
                 "stadium": _stadium_name(cur.get("stadium")),
                 "players": [_player(cur["players"][0]), _player(cur["players"][1])],
             }
-        out_steps.append({"i": i, "view": view, "logs": logs})
+        raw.append((view, logs))
+    # 盤面(view)が同一の連続stepは1フレームに統合し、その間のイベントログをまとめる
+    # ＝『次へ』で必ず盤面が動くようにする（サブ決定だけで盤面不変のstepを畳む）。
+    out_steps = []
+    for view, logs in raw:
+        key = json.dumps(view, ensure_ascii=False, sort_keys=True) if view else None
+        if out_steps and out_steps[-1]["_key"] == key:
+            out_steps[-1]["logs"].extend(logs)
+        else:
+            out_steps.append({"_key": key, "view": view, "logs": list(logs)})
+    for n, f in enumerate(out_steps):
+        f.pop("_key"); f["i"] = n
     rewards = d.get("rewards") or []
     winner = None
     if len(rewards) == 2 and rewards[0] != rewards[1]:
