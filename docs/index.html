@@ -1,0 +1,216 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cabt リプレイ・ビューア</title>
+<style>
+:root{--bg:#0f1420;--panel:#1a2233;--line:#2c3a55;--txt:#dde6f5;--dim:#8aa0c0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header b{font-size:15px} .dim{color:var(--dim)}
+#wrap{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 52px)}
+#board{padding:14px;overflow:auto} #side{border-left:1px solid var(--line);background:var(--panel);padding:12px;overflow:auto}
+.side-half{padding:10px;border-radius:10px;margin-bottom:10px}
+.half-opp{background:linear-gradient(180deg,#2a1620,#1a2233)} .half-me{background:linear-gradient(180deg,#16202a,#1a2233)}
+.phead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.phead .nm{font-weight:700} .badge{display:inline-block;background:#0c1322;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-left:6px}
+.prizes{color:#ffcf5c}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.slot{width:128px;background:#0e1626;border:1px solid var(--line);border-radius:9px;padding:7px}
+.slot.active{border-color:#ffcf5c;box-shadow:0 0 0 1px #ffcf5c55}
+.slot .cn{font-weight:700;font-size:12px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hpbar{height:6px;background:#33202a;border-radius:4px;overflow:hidden;margin:3px 0}
+.hpbar>i{display:block;height:100%;background:linear-gradient(90deg,#36d07a,#9fe860)}
+.hpbar.low>i{background:linear-gradient(90deg,#e85f5f,#f2a14e)}
+.meta{font-size:11px;color:var(--dim)} .ene{color:#7fd0ff} .tool{color:#d79bff}
+.lab{font-size:11px;color:var(--dim);margin:4px 0 6px;text-transform:uppercase;letter-spacing:.05em}
+.empty{color:#54627d;font-style:italic;padding:6px}
+.hand{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.chip{background:#10203a;border:1px solid #2c3a55;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap}
+.chip.back{background:#241622;border-color:#4a2a38;color:#a07585}
+#turnbar{margin:6px 0 12px;padding:8px 12px;border-radius:8px;background:#0c1322;border:1px solid var(--line)}
+#turnbar .who{font-weight:700}
+.logitem{padding:2px 6px;border-left:3px solid var(--line);margin:2px 0;border-radius:0 4px 4px 0;white-space:pre-wrap}
+.l-attack{border-color:#ff7a59;color:#ffd2c4} .l-dmg{border-color:#ff5f5f;color:#ff9c9c} .l-evolve{border-color:#9fe860}
+.l-play{border-color:#7fd0ff} .l-attach{border-color:#7fd0ff;color:#bfe6ff} .l-turn{border-color:#ffcf5c;color:#ffe6a0;font-weight:700}
+.l-result{border-color:#ffcf5c;color:#ffcf5c;font-weight:700} .l-heal{border-color:#36d07a;color:#9fe8b8} .l-draw,.l-move,.l-misc,.l-status{color:var(--dim)}
+#ctrl{display:flex;gap:8px;align-items:center;flex:1} #slider{flex:1}
+button{background:#243049;color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font-size:13px}
+button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+#drop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:var(--bg);z-index:10;text-align:center;padding:20px}
+#drop.hide{display:none}
+#dropbox{border:2px dashed var(--line);border-radius:16px;padding:48px 60px;background:var(--panel);max-width:560px}
+#dropbox h1{font-size:20px;margin:0 0 8px} #dropbox p{color:var(--dim);margin:6px 0}
+.filebtn{display:inline-block;background:#2e6cf0;color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:15px;cursor:pointer;margin-top:10px}
+#err{color:#ff9c9c;margin-top:10px}
+</style></head><body>
+<div id="drop"><div id="dropbox">
+  <h1>cabt リプレイ・ビューア</h1>
+  <p>Kaggle のエピソード(対戦ログ)JSON を選ぶと、盤面・手札・イベントをステップ再生できます。</p>
+  <p class="dim">JSONファイルをここにドラッグ&ドロップ、または↓から選択</p>
+  <label class="filebtn">ログJSONを選択<input id="file" type="file" accept=".json,application/json" hidden></label>
+  <div id="err"></div>
+</div></div>
+
+<header style="display:none" id="hdr">
+  <b>cabt リプレイ</b><span class="dim" id="epi"></span><span id="outcome"></span>
+  <div id="ctrl">
+    <button id="prev">◀ 前</button>
+    <input id="slider" type="range" min="0" value="0">
+    <button id="next">次 ▶</button>
+    <span id="pos" class="dim"></span>
+  </div>
+  <span class="dim">← → で移動</span>
+  <label class="filebtn" style="padding:5px 12px;font-size:12px;margin:0">別のログ<input id="file2" type="file" accept=".json" hidden></label>
+</header>
+<div id="wrap" style="display:none">
+  <div id="board"><div id="turnbar"></div>
+    <div id="opp" class="side-half half-opp"></div>
+    <div id="me" class="side-half half-me"></div></div>
+  <div id="side"><div class="lab">このステップのイベント</div><div id="logs"></div></div>
+</div>
+
+<script src="cards-data.js"></script>
+<script>
+const D = window.CARD_DATA || {name:{},atkByDmg:{},atkDmg:{},atkEn:{}};
+const AREA={1:"山札",2:"手札",3:"トラッシュ",4:"バトル場",5:"ベンチ",6:"サイド",7:"スタジアム",8:"エネルギー",9:"どうぐ",10:"進化前",11:"プレイヤー",12:"確認中"};
+const ETYPE={0:"無",1:"草",2:"炎",3:"水",4:"雷",5:"超",6:"闘",7:"悪",8:"鋼",9:"竜",10:"虹",11:"悪超"};
+const LT={SHUFFLE:0,HAS_BASIC:1,TURN_START:2,TURN_END:3,DRAW:4,DRAW_REV:5,MOVE:6,MOVE_REV:7,SWITCH:8,CHANGE:9,PLAY:10,ATTACH:11,EVOLVE:12,DEVOLVE:13,MOVE_ATT:14,ATTACK:15,HP:16,POISON:17,BURN:18,SLEEP:19,PARA:20,CONF:21,COIN:22,RESULT:23};
+const LTNAME={0:"SHUFFLE",1:"HAS_BASIC",2:"TURN_START",3:"TURN_END",5:"DRAW_REV",7:"MOVE_REV",13:"DEVOLVE",14:"MOVE_ATT",17:"POISON",18:"BURN",19:"SLEEP",20:"PARA",21:"CONF",22:"COIN",23:"RESULT"};
+const cid=x=>(typeof x==='object'&&x)?x.id:x;
+const cname=c=>D.name[c]||('#'+c);
+function aname(card,aid){const dmg=D.atkDmg[aid];const jp=D.atkByDmg[card+':'+dmg];return jp||D.atkEn[aid]||('技#'+aid);}
+
+function spot(s){if(!s)return null;const ec=s.energyCards||[];return{name:cname(s.id),id:s.id,hp:s.hp,maxHp:s.maxHp,
+  energy:ec.map(e=>cname(cid(e))),etypes:(s.energies||[]).map(t=>ETYPE[t]||t),tools:(s.tools||[]).map(t=>cname(cid(t)))};}
+function player(p){const hand=p.hand||[];return{prize:(p.prize||[]).length,hand:(p.handCount!=null?p.handCount:hand.length),
+  handCards:hand.map(c=>cname(cid(c))),deck:p.deckCount,discard:(p.discard||[]).length,
+  active:spot((p.active||[null])[0]),bench:(p.bench||[]).filter(b=>b).map(spot),
+  status:['poisoned','burned','asleep','paralyzed','confused'].filter(k=>p[k])};}
+function stadiumName(s){if(!s)return null;if(Array.isArray(s))s=s.length?s[0]:null;if(s&&typeof s==='object')s=s.id;return s!=null?cname(s):null;}
+
+function fmtLog(lg){
+  const t=lg.type, who="P"+lg.playerIndex;
+  const cn=k=>lg[k]!=null?cname(lg[k]):"?";
+  switch(t){
+    case LT.TURN_START:return["turn","▶ "+who+" ターン開始"];
+    case LT.TURN_END:return["turn","■ "+who+" ターン終了"];
+    case LT.SHUFFLE:return["misc",who+" 山札シャッフル"];
+    case LT.HAS_BASIC:return["misc",who+" たねポケモン確認"];
+    case LT.DRAW:return["draw",who+" ドロー: "+cn("cardId")];
+    case LT.DRAW_REV:return["draw",who+" ドロー(非公開)"];
+    case LT.MOVE:return["move",who+" "+cn("cardId")+": "+(AREA[lg.fromArea]||"?")+"→"+(AREA[lg.toArea]||"?")];
+    case LT.MOVE_REV:return["move",who+" 移動(非公開): "+(AREA[lg.fromArea]||"?")+"→"+(AREA[lg.toArea]||"?")];
+    case LT.SWITCH:return["move",who+" 入替: "+cname(lg.cardIdActive)+" ⇄ "+cname(lg.cardIdBench)];
+    case LT.CHANGE:return["move",who+" バトル場交代: "+cn("cardId")];
+    case LT.PLAY:return["play",who+" 使用: "+cn("cardId")];
+    case LT.ATTACH:return["attach",who+" エネ付与: "+cn("cardId")+" → "+cname(lg.cardIdTarget)];
+    case LT.EVOLVE:return["evolve",who+" 進化: "+cname(lg.cardIdTarget)+" → "+cn("cardId")];
+    case LT.DEVOLVE:return["evolve",who+" 退化: "+cn("cardId")];
+    case LT.MOVE_ATT:return["attach",who+" 付帯カード移動: "+cn("cardId")];
+    case LT.ATTACK:return["attack","⚔ "+who+" 攻撃: "+cname(lg.cardId)+" 〔"+aname(lg.cardId,lg.attackId)+"〕"];
+    case LT.HP:{const v=lg.value||0;return v<0?["dmg","   💥 "+cname(lg.cardId)+" に "+(-v)+" ダメージ"]:["heal","   ✚ "+cname(lg.cardId)+" HP +"+v];}
+    case LT.RESULT:return["result","★ 結果確定"];
+  }
+  if([LT.POISON,LT.BURN,LT.SLEEP,LT.PARA,LT.CONF].includes(t))return["status",who+" 状態異常: "+(LTNAME[t]||t)];
+  if(t===LT.COIN)return["misc",who+" コイン"];
+  return["misc",who+" ["+(LTNAME[t]||t)+"]"];
+}
+function collapse(logs){const out=[];for(const[k,tx]of logs){const last=out[out.length-1];
+  if(last&&last[0]===k&&last[2]===tx)last[1]++;else out.push([k,1,tx]);}
+  return out.map(([k,n,tx])=>[k,n>1?(tx+" ×"+n):tx]);}
+
+function build(d){
+  const steps=d.steps;
+  const agents=(d.info&&d.info.Agents)||[];
+  const names=agents.length?agents.map((a,i)=>a.Name||("P"+i)):["P0","P1"];
+  const raw=[]; let lastCur=null,lastAct=0,prevLogs=null; const hand=[[],[]]; const seen=new Set();
+  for(const st of steps){
+    let act;
+    if(st.length>1&&st[1].status==="ACTIVE"&&st[0].status!=="ACTIVE")act=1;
+    else if(st[0].status==="ACTIVE")act=0; else act=lastAct;
+    const changed=(act!==lastAct); lastAct=act;
+    const obs=st[act].observation;
+    let cur=obs.current||lastCur;
+    if(obs.current){lastCur=obs.current;
+      const me=obs.current.players[act];
+      hand[act]=(me.hand||[]).map(c=>cname(cid(c)));}
+    let rl=obs.logs||[];
+    if(changed){const starts=[];rl.forEach((lg,j)=>{if(lg.type===LT.TURN_START&&lg.playerIndex===act)starts.push(j);});
+      rl=starts.length?rl.slice(starts[starts.length-1]):[];}
+    const kept=[];
+    for(const lg of rl){let sig=null;
+      if(lg.serial!=null)sig=[lg.type,lg.playerIndex,lg.serial,lg.serialTarget,lg.fromArea,lg.toArea].join("|");
+      else if(lg.serialActive!=null)sig=[lg.type,lg.serialActive,lg.serialBench].join("|");
+      if(sig!=null){if(seen.has(sig))continue;seen.add(sig);}kept.push(lg);}
+    rl=kept;
+    const same=JSON.stringify(rl)===prevLogs; prevLogs=JSON.stringify(rl);
+    const logs=same?[]:rl.map(fmtLog);
+    let view=null;
+    if(cur){const pv=[player(cur.players[0]),player(cur.players[1])];
+      for(const pi of[0,1])if(hand[pi].length){pv[pi].handCards=hand[pi];pv[pi].hand=hand[pi].length;}
+      view={turn:cur.turn,active_player:(cur.yourIndex!=null?cur.yourIndex:act),result:cur.result,
+        stadium:stadiumName(cur.stadium),players:pv};}
+    raw.push([view,logs]);
+  }
+  // 盤面が同一の連続stepを1フレームに統合(ログをまとめる)
+  const frames=[];
+  for(const[view,logs]of raw){const key=view?JSON.stringify(view):null;
+    if(frames.length&&frames[frames.length-1]._key===key)frames[frames.length-1].logs.push(...logs);
+    else frames.push({_key:key,view,logs:logs.slice()});}
+  frames.forEach((f,n)=>{delete f._key;f.i=n;f.logs=collapse(f.logs);});
+  const rw=d.rewards||[]; let winner=null;
+  if(rw.length===2&&rw[0]!==rw[1])winner=rw[0]>rw[1]?0:1;
+  return{names,episode:(d.info&&d.info.EpisodeId),rewards:rw,winner,steps:frames};
+}
+
+let DATA=null, idx=0;
+const $=s=>document.querySelector(s);
+function slot(s,isAct){if(!s)return'';const pct=s.maxHp?Math.max(0,Math.round(100*s.hp/s.maxHp)):0;const low=pct<=33?'low':'';
+  const ene=s.energy.length?`<div class="meta ene">⚡${s.energy.length} <span class="dim">${s.etypes.join('·')}</span></div>`:'';
+  const tool=s.tools.length?`<div class="meta tool">🛠 ${s.tools.join(', ')}</div>`:'';
+  return `<div class="slot ${isAct?'active':''}"><div class="cn" title="${s.name}">${s.name}</div>
+    <div class="meta">HP ${s.hp}/${s.maxHp}</div><div class="hpbar ${low}"><i style="width:${pct}%"></i></div>${ene}${tool}</div>`;}
+function half(p,who,mine,activeTurn,flip){
+  const act=p.active?`<div class="lab">バトル場</div><div class="row">${slot(p.active,true)}</div>`:'<div class="empty">バトル場 なし</div>';
+  const bench=p.bench.length?`<div class="lab">ベンチ (${p.bench.length})</div><div class="row">${p.bench.map(b=>slot(b,false)).join('')}</div>`:'<div class="empty">ベンチ なし</div>';
+  const st=p.status.length?`<span class="badge" style="color:#ff9c9c">${p.status.join(',')}</span>`:'';
+  let hand;
+  if(p.handCards&&p.handCards.length)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${p.handCards.map(c=>`<span class="chip">${c}</span>`).join('')}</div>`;
+  else if(p.hand>0)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}</div>`;
+  else hand='';
+  const head=`<div class="phead"><div class="nm">${mine?'▼ ':''}${who} ${activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}${st}</div>
+    <div><span class="prizes">サイド ${p.prize}</span><span class="badge">手札 ${p.hand}</span><span class="badge">山 ${p.deck}</span><span class="badge">トラ ${p.discard}</span></div></div>`;
+  return flip?`${head}${hand}${bench}${act}`:`${head}${act}${bench}${hand}`;
+}
+function render(){
+  const step=DATA.steps[idx];const N=DATA.names;
+  $('#slider').value=idx;$('#pos').textContent=`${idx} / ${DATA.steps.length-1}`;
+  const v=step.view;
+  if(v){const ap=v.active_player;
+    $('#turnbar').innerHTML=`<span class="who">ターン ${v.turn}</span> — 手番: <b style="color:#ffcf5c">${N[ap]||('P'+ap)}</b>`
+      +(v.stadium?` <span class="badge">スタジアム: ${v.stadium}</span>`:'');
+    $('#opp').innerHTML=half(v.players[1],N[1]||'P1',false,ap===1,true);
+    $('#me').innerHTML=half(v.players[0],N[0]||'P0',true,ap===0,false);}
+  $('#logs').innerHTML=step.logs.length?step.logs.map(([k,t])=>`<div class="logitem l-${k}">${t}</div>`).join(''):'<div class="empty">（イベントなし）</div>';
+}
+function go(n){idx=Math.max(0,Math.min(DATA.steps.length-1,n));render();}
+function load(d){
+  try{DATA=build(d);}catch(e){$('#err').textContent='読み込みエラー: '+e.message;return;}
+  idx=0;
+  $('#drop').classList.add('hide');$('#hdr').style.display='flex';$('#wrap').style.display='grid';
+  $('#epi').textContent='ep '+(DATA.episode||'');
+  $('#slider').max=DATA.steps.length-1;
+  $('#outcome').innerHTML=(DATA.winner!=null)
+    ?`<span class="badge l-result">勝者: ${DATA.names[DATA.winner]}</span><span class="dim"> （${DATA.names[0]} ${DATA.rewards[0]} / ${DATA.names[1]} ${DATA.rewards[1]}）</span>`:'';
+  render();
+}
+function readFile(file){const r=new FileReader();r.onload=e=>{try{load(JSON.parse(e.target.result));}catch(err){$('#err').textContent='JSONの解析に失敗: '+err.message;}};r.readAsText(file);}
+$('#file').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);};
+$('#file2').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);};
+$('#prev').onclick=()=>go(idx-1);$('#next').onclick=()=>go(idx+1);
+$('#slider').oninput=e=>go(+e.target.value);
+document.onkeydown=e=>{if(!DATA)return;if(e.key==='ArrowLeft')go(idx-1);if(e.key==='ArrowRight')go(idx+1);};
+const dz=$('#drop');
+dz.ondragover=e=>{e.preventDefault();};
+dz.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);};
+</script></body></html>
