@@ -42,6 +42,7 @@ ARCH_EX = 190    # ブリジュラスex
 RELICANTH = 57   # ジーランス(特性きおくにもぐる)
 POKE_PAD = 1152  # ポケパッド(ルール無しポケモンをサーチ)
 JUDGE = 1213     # ジャッジマン(おたがい手札を山札に戻し4枚引く=手札妨害)
+ULTRA_BALL = 1121  # ハイパーボール(手札2枚捨て→ポケモン1枚サーチ)
 RAGING_HAMMER = 224  # レイジングハンマー(ジュラルドンのワザ): 80＋自分に乗ったダメージ量
 
 
@@ -106,7 +107,31 @@ class ArchaludonBot(DeckBot):
         spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
         return sum(1 for s in spots if s and s.get("id") == cid)
 
+    def _missing_piece_value(self) -> int:
+        """サーチで今得られると価値が高い『欠けているピース』の評価値(depth-1近似)。
+        ＝『使った後に何が可能になるか』で札を評価する(GPTレビュー: 結果志向)。"""
+        me = self._me() or {}
+        hand = me.get("hand") or []
+        has_ex = self._count_in_play(ARCH_EX) >= 1 or any(c.get("id") == ARCH_EX for c in hand)
+        dura = self._count_in_play(DURALUDON) + sum(1 for c in hand if c.get("id") == DURALUDON)
+        has_reli = self._count_in_play(RELICANTH) >= 1 or any(c.get("id") == RELICANTH for c in hand)
+        n = sum(1 for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s)
+        if dura == 0 and not has_ex:
+            return 120                 # 進化線が皆無=最優先(たね確保→攻撃役へ)
+        if not has_ex and dura >= 1:
+            return 115                 # exをサーチ→進化→Metal Defenderへ(最重要)
+        if not has_reli:
+            return 95                  # ジーランス(レイジング/Hammer Inのエンジン)
+        if n < 3:
+            return 75                  # ベンチ薄い→バックアップ確保
+        return 40                      # 揃っている→低い
+
     def _play_score(self, cid, hand):
+        # ハイパボ(ポケモンサーチ): 静的でなく『何を持ってこられるか』で評価(結果志向=depth-1)。
+        # 欠けている重要ピース(攻撃役/たね/ジーランス)を取れる時ほど高く、揃っていれば低い。
+        # ※加点中心(基準82を下回らない)で、揃っている時の過度な温存=テンポ損を避ける。
+        if cid == ULTRA_BALL:
+            return max(82, self._missing_piece_value())
         # ジャッジマン(手札妨害): 自分の手札が多い時に使うと自分の手札も捨てる損。
         # 自分の手札が少なく(プレイ後に山札に戻る枚数<=4で実質減らない=4枚引き直し)、
         # かつ相手の手札が多い(妨害価値あり)時だけ使う＝「目的のために使う」。
@@ -121,11 +146,11 @@ class ArchaludonBot(DeckBot):
         # 既に場に居るなら出さない(2匹目以降はベンチ枠とテンポの無駄＝GPTレビュー指摘)。
         if cid == RELICANTH:
             return None if self._count_in_play(RELICANTH) >= 1 else 87
-        # ポケパッド(ルール無しポケサーチ): たね/ジーランスが足りない時のみ価値あり。
-        # 盤面が揃っている(場のポケモン4体以上＋ジーランス済)なら温存(無駄なサーチ＝山札を薄くしない)。
+        # ポケパッド(ルール無しポケサーチ): 盤面が揃っている(場4体以上＋ジーランス済)なら
+        # 温存(無駄なサーチで山札を薄くしない)。結果志向の細分化はA/Bで悪化のため二値ゲートを採用。
         if cid == POKE_PAD:
-            me = self._me()
-            n = sum(1 for s in [((me or {}).get("active") or [None])[0]] + list((me or {}).get("bench") or []) if s)
+            me = self._me() or {}
+            n = sum(1 for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s)
             setup_done = n >= 4 and self._count_in_play(RELICANTH) >= 1
             return None if setup_done else super()._play_score(cid, hand)
         return super()._play_score(cid, hand)
@@ -179,7 +204,7 @@ class ArchaludonBot(DeckBot):
         """ごうきんビルド(進化時にトラッシュから鋼エネ2枚加速)の燃料を仕込むべきか。
         ブリジュラスexが手札にあり(=今/次の番に進化してごうきんビルドが撃てる)、進化先のジュラルドンが
         場におり、鋼エネが3枚以上余る(貼る分2枚を残す)、かつトラッシュの鋼がまだ2枚未満の時だけ捨てる。
-        早すぎる仕込みは手貼り用の鋼エネを枯渇させるため、条件を厳しくする。"""
+        ※条件を緩めて捨てすぎると手貼り用の鋼が枯れ、鋼3(Metal Defender)到達率が下がる(A/B確認済)。"""
         me = self._me()
         if not me:
             return False
