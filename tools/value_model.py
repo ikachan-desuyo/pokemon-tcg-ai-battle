@@ -113,8 +113,16 @@ def train_logreg(X, y, iters=4000, lr=0.3):
     return w, b, mu, sd
 
 
+def save_model(path, w, b, mu, sd):
+    import json
+    json.dump({"features": FEATURES, "w": list(map(float, w)), "b": float(b),
+               "mu": list(map(float, mu)), "sd": list(map(float, sd))},
+              open(path, "w", encoding="utf-8"))
+
+
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--games", type=int, default=120); a = ap.parse_args()
+    ap = argparse.ArgumentParser(); ap.add_argument("--games", type=int, default=120)
+    ap.add_argument("--save", default="out/value_model.json"); a = ap.parse_args()
     print(f"自己対戦で状態を収集中... ({a.games}試合)")
     X, y = collect(a.games)
     n = len(y); split = int(n * 0.8)
@@ -136,6 +144,12 @@ def main():
     print("\n特徴量の重み(勝率への寄与, 標準化済):")
     for f, wi in sorted(zip(FEATURES, w), key=lambda t: -abs(t[1])):
         print(f"  {f:18s} {wi:+.3f}")
+    # 全データで再学習して保存(実戦投入用)
+    import os
+    os.makedirs(os.path.dirname(a.save), exist_ok=True)
+    w, b, mu, sd = train_logreg(X, y)
+    save_model(a.save, w, b, mu, sd)
+    print(f"\n→ モデルを {a.save} に保存(全{n}状態で学習)")
 
 
 if __name__ == "__main__":
