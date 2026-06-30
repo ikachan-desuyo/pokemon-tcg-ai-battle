@@ -84,9 +84,11 @@ def _stadium_name(s):
 
 
 def _player(p):
+    hand = p.get("hand") or []
     return {
         "prize": len(p.get("prize") or []),
-        "hand": p.get("handCount", len(p.get("hand") or [])),
+        "hand": p.get("handCount", len(hand)),
+        "handCards": [cname(c.get("id") if isinstance(c, dict) else c) for c in hand],
         "deck": p.get("deckCount"),
         "discard": len(p.get("discard") or []),
         "active": _spot((p.get("active") or [None])[0]),
@@ -230,6 +232,9 @@ header b{{font-size:15px}} .dim{{color:var(--dim)}}
 .meta{{font-size:11px;color:var(--dim)}} .ene{{color:#7fd0ff}} .tool{{color:#d79bff}}
 .lab{{font-size:11px;color:var(--dim);margin:4px 0 6px;text-transform:uppercase;letter-spacing:.05em}}
 .empty{{color:#54627d;font-style:italic;padding:6px}}
+.hand{{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}}
+.chip{{background:#10203a;border:1px solid #2c3a55;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap}}
+.chip.back{{background:#241622;border-color:#4a2a38;color:#a07585}}
 #turnbar{{margin:6px 0 12px;padding:8px 12px;border-radius:8px;background:#0c1322;border:1px solid var(--line)}}
 #turnbar .who{{font-weight:700}}
 .logitem{{padding:2px 6px;border-left:3px solid var(--line);margin:2px 0;border-radius:0 4px 4px 0;white-space:pre-wrap}}
@@ -282,8 +287,14 @@ function half(p, who, mine, activeTurn){{
   const act = p.active ? `<div class="lab">バトル場</div><div class="row">${{slot(p.active,true)}}</div>` : '<div class="empty">バトル場 なし</div>';
   const bench = p.bench.length ? `<div class="lab">ベンチ (${{p.bench.length}})</div><div class="row">${{p.bench.map(b=>slot(b,false)).join('')}}</div>` : '<div class="empty">ベンチ なし</div>';
   const st = p.status.length ? `<span class="badge" style="color:#ff9c9c">${{p.status.join(',')}}</span>`:'';
+  let hand;
+  if(p.handCards && p.handCards.length)
+    hand = `<div class="lab">手札 (${{p.hand}})</div><div class="hand">${{p.handCards.map(c=>`<span class="chip">${{c}}</span>`).join('')}}</div>`;
+  else if(p.hand>0)
+    hand = `<div class="lab">手札 (${{p.hand}})</div><div class="hand">${{Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}}</div>`;
+  else hand = '';
   return `<div class="phead"><div class="nm">${{mine?'▼ ':''}}${{who}} ${{activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}}${{st}}</div>
-    <div><span class="prizes">サイド ${{p.prize}}</span><span class="badge">手札 ${{p.hand}}</span><span class="badge">山 ${{p.deck}}</span><span class="badge">トラ ${{p.discard}}</span></div></div>${{act}}${{bench}}`;
+    <div><span class="prizes">サイド ${{p.prize}}</span><span class="badge">手札 ${{p.hand}}</span><span class="badge">山 ${{p.deck}}</span><span class="badge">トラ ${{p.discard}}</span></div></div>${{act}}${{bench}}${{hand}}`;
 }}
 function render(){{
   const step = DATA.steps[idx];
