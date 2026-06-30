@@ -116,6 +116,70 @@ def featurize(ctx, opt, atk_dmg=None):
 FEATURE_DIM = len(OTYPES) + len(DECK_IDS) + 1 + 5 + 5 + 1 + len(DECK_IDS) * 4
 
 
+# ===== デッキ非依存 Action Scorer 用 =====
+# カードidに依存せず『役割・効果・状態述語』で表現＝他デッキへ転移可能にする。
+from .cards import load_cards as _load_cards
+try:
+    _CARDS = _load_cards()
+except Exception:
+    _CARDS = {}
+
+
+def card_role(cid):
+    """(is_pokemon, is_trainer, is_energy)。デッキ非依存の役割。"""
+    c = _CARDS.get(cid)
+    if not c:
+        return (0.0, 0.0, 0.0)
+    stage = (c.stage or "")
+    is_energy = 1.0 if stage.endswith("Energy") else 0.0
+    is_poke = 1.0 if (c.hp is not None) else 0.0
+    is_trainer = 1.0 if (not is_poke and not is_energy) else 0.0
+    return (is_poke, is_trainer, is_energy)
+
+
+def featurize_generic(ctx, opt, atk_dmg=None):
+    """選好学習(Action Scorer)用のデッキ非依存特徴。カードidを使わず、役割・能力・行動の効果・
+    状態述語で表現する＝Archaludon以外のデッキにも転移できる『価値観』を学ぶ。"""
+    f = []
+    for t in (7, 8, 9, 10, 12, 13, 14, 3):           # option種別(主要)
+        f.append(1.0 if opt["otype"] == t else 0.0)
+    cid = opt["card_id"]
+    f += list(card_role(cid))                          # 役割
+    cp = caps(cid) if cid else None                    # 能力(デッキ非依存)
+    f += [(cp["max_dmg"] / 100.0) if cp else 0.0, (cp["min_cost"] / 3.0) if cp else 0.0,
+          (cp["evo"] / 2.0) if cp else 0.0, (cp["has_ability"] if cp else 0.0),
+          (cp["pv"] / 3.0) if cp else 0.0, (cp["hp"] / 300.0) if cp else 0.0]
+    # 行動の効果
+    dmg = opt.get("damage", 0)
+    if not dmg and atk_dmg and opt.get("attack_id"):
+        dmg = atk_dmg.get(opt["attack_id"], 0)
+    is_atk = 1.0 if opt["otype"] == 13 else 0.0
+    is_evo = 1.0 if opt["otype"] == 9 else 0.0
+    ohp = ctx.get("opp_active_hp", 0)
+    kos = 1.0 if (is_atk and dmg > 0 and ohp > 0 and dmg >= ohp) else 0.0
+    tgt = opt.get("target_id")
+    tcp = caps(tgt) if tgt else None
+    tgt_attacker = 1.0 if (tcp and tcp["max_dmg"] >= 120) else 0.0
+    f += [is_atk, dmg / 200.0, kos, kos * (ctx.get("opp_active_pv", 0) / 3.0),
+          min(dmg / ohp, 2.0) / 2.0 if (is_atk and ohp > 0) else 0.0,
+          tgt_attacker]
+    # 状態述語(文脈)
+    turn = min(ctx.get("turn", 0), 12) / 12.0
+    mypz = ctx.get("my_prizes", 6) / 6.0
+    bench = ctx.get("my_bench", 0) / 5.0
+    have_atk = float(ctx.get("attacker_in_play", 0))
+    behind = 1.0 if ctx.get("my_prizes", 6) > ctx.get("opp_prizes", 6) else 0.0
+    low_hand = 1.0 if ctx.get("my_hand", 7) <= 3 else 0.0
+    f += [turn, mypz, bench, have_atk, behind, low_hand]
+    # 効果×状態 の相互作用(汎用な『いつ何をするか』)
+    f += [is_atk * behind, is_atk * (1 - behind), kos,
+          is_evo * (1 - have_atk), card_role(cid)[1] * low_hand, is_atk * (1 - have_atk)]
+    return f
+
+
+GENERIC_DIM = 8 + 3 + 6 + 6 + 6 + 6
+
+
 def policy_scores(X, params):
     """選択肢の特徴行列 X(n×d) を方策で採点(各選択肢のスコア n個)。線形/MLP両対応。
     学習(train_policy)と推論(ImitationBot)で同じ計算を使うための共有関数。"""
