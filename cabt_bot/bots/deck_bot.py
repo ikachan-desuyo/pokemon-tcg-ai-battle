@@ -105,6 +105,10 @@ class DeckBot(Bot):
         self._sel = None
         self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
+        # 専門家ログから学んだ Action Scorer(デッキ非依存) を『どれを選ぶか』に加点(opt-in)。
+        # FinalScore = Heuristic + ml_alpha * MLScore。既定オフ(挙動不変)。
+        self.action_scorer = None
+        self.ml_alpha = 0.0
 
     # ===== entry =====
     def select(self, obs: Observation) -> list[int]:
@@ -214,8 +218,22 @@ class DeckBot(Bot):
             s = self._play_score(cid, hand)
             if s is None:
                 continue
-            scored.append((s, i))
+            scored.append((s + self._ml_bonus(options[i]), i))
         return max(scored, key=lambda x: x[0])[1] if scored else None
+
+    def _ml_bonus(self, op: Option) -> float:
+        """専門家ログ由来 Action Scorer の加点(デッキ非依存)。action_scorer未設定なら0。"""
+        if not self.action_scorer or not self.ml_alpha or not self._cur:
+            return 0.0
+        try:
+            from ..imitation import resolve, board_ctx, featurize_generic, policy_scores
+            me = self._cur.get("yourIndex", 0)
+            ctx = board_ctx(self._cur, me)
+            r = resolve(op.raw, self._cur, me)
+            f = featurize_generic(ctx, r)
+            return self.ml_alpha * float(policy_scores([f], self.action_scorer)[0])
+        except Exception:
+            return 0.0
 
     def _play_score(self, cid, hand):
         if cid == LILLIE:
