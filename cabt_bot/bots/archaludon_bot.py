@@ -39,6 +39,8 @@ PLAN = DeckPlan(
 METAL = 8        # 基本【鋼】エネルギー
 DURALUDON = 169  # ジュラルドン
 ARCH_EX = 190    # ブリジュラスex
+RELICANTH = 57   # ジーランス(特性きおくにもぐる)
+RAGING_HAMMER = 224  # レイジングハンマー(ジュラルドンのワザ): 80＋自分に乗ったダメージ量
 
 
 class ArchaludonBot(DeckBot):
@@ -93,6 +95,26 @@ class ArchaludonBot(DeckBot):
             if best_key is None or key > best_key:
                 best_key, best = key, i
         return best
+
+    def _my_active_spot(self):
+        cur = self._cur
+        if not cur:
+            return None
+        act = cur["players"][cur["yourIndex"]].get("active") or []
+        return act[0] if act and act[0] else None
+
+    def _dmg(self, op):
+        # ジーランス(きおくにもぐる)でブリジュラスexが使える「レイジングハンマー」は、
+        # 基底80＋自分に乗ったダメージ量。HP300のexが削れるほど高火力(削れていればメタル
+        # ディフェンダー220を上回り、HP50まで削れれば330=メガスターミーをワンパン)。
+        # 基底値(80)のままだと常にメタルディフェンダーが選ばれてしまうため正しく計算する。
+        if op.attack_id == RAGING_HAMMER:
+            sp = self._my_active_spot()
+            if sp:
+                taken = (sp.get("maxHp") or 0) - (sp.get("hp") or 0)
+                return 80 + max(0, taken)
+            return 80
+        return super()._dmg(op)
 
     def _bench_thin(self) -> bool:
         """場のポケモン総数が1以下＝バックアップが無く donk 負けの危険がある状態。"""
