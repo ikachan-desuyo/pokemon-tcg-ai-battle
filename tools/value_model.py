@@ -13,48 +13,11 @@ from cg.game import battle_start, battle_select, battle_finish
 from cg.api import to_observation_class
 from cabt_bot import Observation
 from cabt_bot.bots import deck_registry as R
-
-FEATURES = [
-    "my_prizes_left", "opp_prizes_left", "prize_diff",
-    "my_active_hp_ratio", "opp_active_hp_ratio",
-    "my_active_energy", "opp_active_energy",
-    "my_bench", "opp_bench", "my_board_energy", "opp_board_energy",
-    "my_hand", "opp_hand", "turn", "my_has_active", "opp_has_active",
-]
+from cabt_bot.state_encoder import encode_state, FEATURES  # カード能力ベースの共通エンコーダ
 
 
 def load(p):
     return [int(x) for x in open(f"decks/{p}.csv").read().split() if x.strip()]
-
-
-def _side(p):
-    act = (p.get("active") or [None])[0]
-    bench = [s for s in (p.get("bench") or []) if s]
-    def en(s):
-        e = s.get("energyCards") or s.get("energies") or []
-        return len(e)
-    pr = p.get("prize") or p.get("prizes") or []
-    prizes_left = sum(1 for x in pr if x) if pr else 6
-    return {
-        "prizes": prizes_left,
-        "active_hp_ratio": (act.get("hp", 0) / act["maxHp"]) if (act and act.get("maxHp")) else 0.0,
-        "active_energy": en(act) if act else 0,
-        "bench": len(bench),
-        "board_energy": (en(act) if act else 0) + sum(en(s) for s in bench),
-        "hand": len(p.get("hand") or []),
-        "has_active": 1 if act else 0,
-    }
-
-
-def encode_state(cur, who):
-    me = _side(cur["players"][who]); opp = _side(cur["players"][1 - who])
-    return [
-        me["prizes"], opp["prizes"], opp["prizes"] - me["prizes"],
-        me["active_hp_ratio"], opp["active_hp_ratio"],
-        me["active_energy"], opp["active_energy"],
-        me["bench"], opp["bench"], me["board_energy"], opp["board_energy"],
-        me["hand"], opp["hand"], cur.get("turn", 0), me["has_active"], opp["has_active"],
-    ]
 
 
 def collect(games, general=False):
