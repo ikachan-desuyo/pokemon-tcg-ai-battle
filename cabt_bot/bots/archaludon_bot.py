@@ -40,6 +40,7 @@ METAL = 8        # 基本【鋼】エネルギー
 DURALUDON = 169  # ジュラルドン
 ARCH_EX = 190    # ブリジュラスex
 RELICANTH = 57   # ジーランス(特性きおくにもぐる)
+POKE_PAD = 1152  # ポケパッド(ルール無しポケモンをサーチ)
 RAGING_HAMMER = 224  # レイジングハンマー(ジュラルドンのワザ): 80＋自分に乗ったダメージ量
 
 
@@ -95,6 +96,27 @@ class ArchaludonBot(DeckBot):
             if best_key is None or key > best_key:
                 best_key, best = key, i
         return best
+
+    def _count_in_play(self, cid: int) -> int:
+        me = self._me()
+        if not me:
+            return 0
+        spots = [(me.get("active") or [None])[0]] + list(me.get("bench") or [])
+        return sum(1 for s in spots if s and s.get("id") == cid)
+
+    def _play_score(self, cid, hand):
+        # ジーランスは特性(きおくにもぐる)が重複しないため、場に1匹で十分。
+        # 既に場に居るなら出さない(2匹目以降はベンチ枠とテンポの無駄＝GPTレビュー指摘)。
+        if cid == RELICANTH:
+            return None if self._count_in_play(RELICANTH) >= 1 else 87
+        # ポケパッド(ルール無しポケサーチ): たね/ジーランスが足りない時のみ価値あり。
+        # 盤面が揃っている(場のポケモン4体以上＋ジーランス済)なら温存(無駄なサーチ＝山札を薄くしない)。
+        if cid == POKE_PAD:
+            me = self._me()
+            n = sum(1 for s in [((me or {}).get("active") or [None])[0]] + list((me or {}).get("bench") or []) if s)
+            setup_done = n >= 4 and self._count_in_play(RELICANTH) >= 1
+            return None if setup_done else super()._play_score(cid, hand)
+        return super()._play_score(cid, hand)
 
     def _my_active_spot(self):
         cur = self._cur
