@@ -3,10 +3,14 @@
 回し方の方針: ジュラルドン→ブリジュラスex(1進化, HP300)を立てる。
 ブリジュラスex の特性「ごうきんビルド」(進化時にトラッシュから基本【鋼】エネを2枚加速)
 が火力エンジン。＝先に鋼エネをトラッシュへ置いてから進化すると、メタルディフェンダー
-(鋼3=220)を最速で起動できる。非exブリジュラス(170)の特性で鋼ポケは逃げエネ0=自由入替。
+(鋼3=220)を最速で起動できる。
 
-TODO(作り込み): ハイパボ等で鋼エネを意図的にトラッシュへ送ってから進化し、
-ごうきんビルドの加速を最大化するカスタムロジック（現状は設定のみ）。
+構築: たね ジュラルドン×4 / ブリジュラスex×4(非ex170は自由入替が誤差のためカット、
+4枚目のexの方が苦手対面で勝率上=A/B)。鋼エネ18。サーチはex探しが潤沢な一方たねは
+ハイパボ依存(たねサーチのサポ追加はサポ枠を食い悪化したため不採用=A/B)。
+
+カスタムロジック: 鋼エネをトラッシュへ送りごうきんビルドを仕込む / active=攻撃役exを
+最優先進化 / ベンチ薄時はジュラルドン優先 / activeが攻撃可なら余剰エネは控えにプリチャージ。
 """
 from .deck_bot import DeckBot, DeckPlan
 from ..enums import AreaType
@@ -14,7 +18,7 @@ from ..enums import AreaType
 PLAN = DeckPlan(
     name="Archaludon",
     go_first=True,
-    attackers=(190, 170, 169),            # ブリジュラスex / ブリジュラス / ジュラルドン
+    attackers=(190, 169),                 # ブリジュラスex / ジュラルドン
     key_cards=(190, 169),
     preferred_attacks=(),
     energy_rules=((8, 190), (8, 170), (None, 190)),  # 鋼→ブリジュラス
@@ -59,7 +63,7 @@ class ArchaludonBot(DeckBot):
                 if self._hand_id(hand, op.index) != METAL:
                     continue
                 tid = self._target_id(me, op.in_play_area, op.in_play_index)
-                if tid in (ARCH_EX, DURALUDON, 170):
+                if tid in (ARCH_EX, DURALUDON):
                     spot = self._target_spot(me, op.in_play_area, op.in_play_index)
                     cand.append((self._metal_on(spot), i))  # 鋼が少ない控えを優先育成
             if cand:
