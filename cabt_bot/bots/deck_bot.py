@@ -23,6 +23,7 @@ from .base import Bot
 from ..cards import load_cards
 from ..enums import AreaType, OptionType, SelectContext, SelectType
 from ..models import Observation, Option
+from ..state_encoder import line_threat as _line_threat
 
 # 汎用 PLAY 優先度（多くのデッキ共通の一貫性札）
 POFFIN, HYPER_BALL, POKE_PAD, MEGA_SIGNAL = 1086, 1121, 1152, 1145
@@ -102,6 +103,8 @@ class DeckBot(Bot):
         self._atk_no_weak = None
         self._cur = None
         self._sel = None
+        self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
+        self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
 
     # ===== entry =====
     def select(self, obs: Observation) -> list[int]:
@@ -109,6 +112,7 @@ class DeckBot(Bot):
         if sel is None or not sel.options:
             return []
         self._cur, self._sel = obs.current, sel
+        self._track_opponent()
         try:
             t = sel.type
             if t == SelectType.MAIN:
@@ -728,10 +732,13 @@ class DeckBot(Bot):
                 sp = spots[op.index]
                 hp = sp.get("hp", 9999)
                 koable = 1 if self._eff_dmg(dmg, ign, sp.get("id")) >= hp else 0
-                cand.append((koable, self._prize_value(sp.get("id")), -hp, i))
+                # 進化ライン脅威度: 進化前を叩くと摘める脅威の大きさ(例:リオル=メガルカリオ線)。
+                # KO可否・サイド価値が同点なら、最大脅威の線(進化前)を優先＝発展を妨害する。
+                threat = _line_threat(sp.get("id"))
+                cand.append((koable, self._prize_value(sp.get("id")), threat, -hp, i))
         if not cand:
             return None
-        return max(cand)[3]
+        return max(cand)[-1]
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)
@@ -751,6 +758,43 @@ class DeckBot(Bot):
                 if self._opt_card_id(op) == cid:
                     return i
         return None
+
+    # ===== 相手デッキ検出（マッチアップ別処理の起点） =====
+    def _track_opponent(self):
+        """相手の場(active/bench)で見えたカードidを累積し、最大脅威ライン(line_threat最大)を更新。
+        ＝相手デッキを試合中に判定し、マッチアップ別の処理に切り替えるための観測。"""
+        cur = self._cur
+        if not cur:
+            return
+        opp = cur["players"][1 - cur.get("yourIndex", 0)]
+        for area in ("active", "bench"):
+            for sp in (opp.get(area) or []):
+                if sp and sp.get("id") is not None:
+                    self._opp_seen.add(sp["id"])
+        if self._opp_seen:
+            self._opp_main_line = max(_line_threat(c) for c in self._opp_seen)
+
+    def _opp_key_preevo_spots(self):
+        """相手ベンチの『主力アタッカーの進化前』(=倒すと発展を阻害できる)spot。
+        最大脅威ラインに属し、まだ最終形でない(line_threat>自身の最大ダメージ=さらに強く進化できる)もの。"""
+        cur = self._cur
+        ml = self._opp_main_line or 0
+        if not cur or ml < 180:
+            return []
+        opp = cur["players"][1 - cur.get("yourIndex", 0)]
+        spots = []
+        for sp in (opp.get("bench") or []):
+            if not sp:
+                continue
+            cid = sp.get("id")
+            lt = _line_threat(cid)
+            if lt >= ml and lt > self._cardinfo_dmg(cid):
+                spots.append(sp)
+        return spots
+
+    def _cardinfo_dmg(self, cid):
+        from ..state_encoder import caps as _caps
+        return _caps(cid)["max_dmg"]
 
     # ===== ヘルパ =====
     def _me(self):

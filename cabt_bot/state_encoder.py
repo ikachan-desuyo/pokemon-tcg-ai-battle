@@ -13,6 +13,10 @@ _COLORED = set("水超悪鋼闘草炎雷竜妖")
 _CAPS = None
 
 
+_FWD = None   # 進化前名 -> その進化先のカードid群(forward evolution map)
+_NAME = {}    # cid -> name
+
+
 def _load_caps():
     rows = defaultdict(list)
     try:
@@ -21,10 +25,16 @@ def _load_caps():
     except Exception:
         return {}
     caps = {}
+    global _FWD
+    _FWD = defaultdict(list)
     for cid, rs in rows.items():
         r0 = rs[0]
         stage_s = r0.get("ポケモンの進化の段階/エネルギー・トレーナーズの種類") or ""
         name = r0.get("カード名") or ""
+        prev = (r0.get("進化前") or "").strip()
+        _NAME[int(cid)] = name
+        if prev and prev != "n/a":
+            _FWD[prev].append(int(cid))
         hp = int(r0["HP"]) if (r0.get("HP") or "").isdigit() else 0
         typ = (r0.get("タイプ") or "").strip()
         weak = (r0.get("弱点") or "").strip()
@@ -59,6 +69,25 @@ def caps(cid):
     if _CAPS is None:
         _CAPS = _load_caps()
     return _CAPS.get(cid, _EMPTY)
+
+
+def line_threat(cid):
+    """このポケモンの進化ライン(自分＋進化先を辿った全カード)の最大ワザダメージ。
+    ＝『進化前を倒すとどれだけの脅威の芽を摘めるか』。例: リオル→メガルカリオex(270)なら270。"""
+    caps(cid)  # 初期化
+    best = _CAPS.get(cid, _EMPTY)["max_dmg"]
+    seen = set()
+    frontier = [cid]
+    while frontier:
+        c = frontier.pop()
+        if c in seen:
+            continue
+        seen.add(c)
+        nm = _NAME.get(c)
+        for nxt in (_FWD.get(nm, []) if _FWD else []):
+            best = max(best, _CAPS.get(nxt, _EMPTY)["max_dmg"])
+            frontier.append(nxt)
+    return best
 
 
 def _en(s):
