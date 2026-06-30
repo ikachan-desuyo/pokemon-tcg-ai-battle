@@ -170,6 +170,7 @@ def build(replay_path):
     last_act = 0
     prev_logs = None
     hand_cards = [[], []]   # 各プレイヤーの最後に判明した手札(本人ACTIVE時に更新)。常時表示用。
+    seen_events = set()     # 表示済みの実イベント(serialで一意特定)。視点違いの再掲を除去。
     for st in steps:
         # status=="ACTIVE" のエージェントが行動者。その視点(本人手札可視・逐次更新)を盤面/ログ/手番に採用。
         # ＝P0もP1も自分の手番中は1手ずつ進行し、相手の手番中は潰さず本人視点で詳細表示できる。
@@ -179,6 +180,7 @@ def build(replay_path):
             act_idx = 0
         else:
             act_idx = last_act
+        act_changed = (act_idx != last_act)
         last_act = act_idx
         obs = st[act_idx]["observation"]
         cur = obs.get("current") or last_cur
@@ -189,6 +191,28 @@ def build(replay_path):
             hand_cards[act_idx] = [cname(c.get("id") if isinstance(c, dict) else c)
                                    for c in (me.get("hand") or [])]
         raw_logs = obs.get("logs") or []
+        # 行動権が移った最初の観測には『前プレイヤーのターン』がバックログとして乗る(既に表示済み)。
+        # 自分の最後の「ターン開始」以降だけ残す。無ければ(=自分のターンが未開始)バックログ全捨て。
+        if act_changed:
+            starts = [j for j, lg in enumerate(raw_logs)
+                      if lg.get("type") == int(LogType.TURN_START) and lg.get("playerIndex") == act_idx]
+            raw_logs = raw_logs[starts[-1]:] if starts else []
+        # さらに、serialで一意に特定できる実イベントはグローバルに重複排除(同一イベントは1度だけ)。
+        # ＝視点違いの再掲(バックログ)を確実に除去。serialの無いマーカー/非公開はそのまま。
+        kept = []
+        for lg in raw_logs:
+            sig = None
+            if lg.get("serial") is not None:
+                sig = (lg.get("type"), lg.get("playerIndex"), lg.get("serial"),
+                       lg.get("serialTarget"), lg.get("fromArea"), lg.get("toArea"))
+            elif lg.get("serialActive") is not None:
+                sig = (lg.get("type"), lg.get("serialActive"), lg.get("serialBench"))
+            if sig is not None:
+                if sig in seen_events:
+                    continue
+                seen_events.add(sig)
+            kept.append(lg)
+        raw_logs = kept
         logs = [] if raw_logs == prev_logs else [_fmt_log(lg) for lg in raw_logs]
         prev_logs = raw_logs
         view = None
