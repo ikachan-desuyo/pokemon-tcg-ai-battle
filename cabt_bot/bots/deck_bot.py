@@ -644,6 +644,18 @@ class DeckBot(Bot):
                    opp_evolved=oevo, my_energy=me_e, opp_energy=oe)
         return out
 
+    def evaluate_position(self) -> float:
+        """状態評価器(State→スカラー): 今の盤面の良さ。Analyzer(Development/Threat/Prize)を統合。
+        Resolver/Search/Explain が共有する共通の"局面価値"。デッキ名・カード名は見ない＝Universal。
+        育成進捗＋攻撃準備＋実効耐久(被KO)＋サイド差 で構成。将来 Tempo 等を加える。"""
+        dv = self._analyze_development(); th = self.analyze_threat(); pr = self.analyze_prize()
+        score = pr["prize_diff"] * 40.0                                   # サイド先行=+
+        score += 100.0 if dv["ready"] else 0.0                            # 攻撃準備完了=+
+        score -= dv["energy_short"] * 12 + dv["evolution_short"] * 25 + dv["attacker_short"] * 40  # 育成不足=-
+        score -= 50.0 if th["can_ko_me"] else 0.0                         # 次番KOされる=-
+        score += min(th["hits_to_lose"], 5) * 10                          # 何発耐えるか=+
+        return round(score, 1)
+
     def _estimate_phase(self, ph, dv) -> str:
         """フェーズ推定(Opinion・Turn Evaluator内)。事実(サイド/ターン/成熟度)から opening/mid/end を判断。"""
         if min(ph["my_prizes"], ph["opp_prizes"]) <= 2:
