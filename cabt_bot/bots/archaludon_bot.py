@@ -279,16 +279,40 @@ class ArchaludonBot(DeckBot):
         disc_metal = sum(1 for c in (me.get("discard") or []) if c.get("id") == METAL)
         return hand_metal >= 3 and disc_metal < 2
 
+    def _discard_keep(self, cid) -> int:
+        """捨て札(give)の『残す価値』。高いほど残す(＝捨てる時は後回し)。相手デッキ・状況で変える。
+        1位は「余る鋼を捨て、今/この相手に有用な限られた札を残す」＝文脈依存で選んでいるため。"""
+        from ..state_encoder import caps
+        me = self._me() or {}
+        hand_metal = sum(1 for c in (me.get("hand") or []) if c.get("id") == METAL)
+        cur = self._cur or {}
+        opp = cur["players"][1 - cur.get("yourIndex", 0)] if cur.get("players") else {}
+        opp_act = (opp.get("active") or [None])[0] if opp else None
+        opp_hand = len(opp.get("hand") or []) if opp else 0
+        high_dmg_opp = (self._opp_main_line or (caps(opp_act.get("id"))["max_dmg"] if opp_act else 0)) >= 180
+        if cid == METAL:
+            # 鋼14枚は潤沢。手札に4枚以上なら余剰=先に捨てる(ごうきんビルドの燃料にもなる)。3枚以下は攻撃用に残す。
+            return 8 if hand_metal >= 4 else 88
+        if cid in (ARCH_EX, DURALUDON):
+            return 100                                   # 攻撃役の線は残す
+        if cid == RELICANTH:
+            return 60 if self._count_in_play(RELICANTH) >= 1 else 92
+        if cid == JUDGE:
+            return 82 if opp_hand >= 5 else 45           # 相手手札が多い時だけ妨害価値=残す
+        if cid in (HERO_CAPE, 1244):                     # ヒーローマント/フルメタルラボ=耐久
+            return 85 if high_dmg_opp else 45            # 高火力相手なら残す
+        if cid == 1182:                                  # ボスの指令(限られる妨害札。多用はしない)
+            return 58
+        return 55                                        # 掘り札等は状況で使う=中程度
+
     def _take(self, sel, prefer_high: bool, take_max: bool):
-        # 捨てる(give)場面では、ごうきんビルドの燃料として鋼エネを優先的にトラッシュへ送る。
-        if not prefer_high and self._want_metal_in_discard():
+        # 捨てる/山戻し(give)場面: 文脈依存の『残す価値』が低い順に手放す。
+        # ＝余る鋼を先に捨て、攻撃役の線や今の相手に有用なトレーナー(Judge/耐久札)を残す。
+        if not prefer_high:
             n = len(sel.options)
             k = sel.max_count if take_max else sel.min_count
             k = max(0, min(k, n))
             if k > 0:
-                metal = [i for i in range(n) if self._opt_card_id(sel.options[i]) == METAL]
-                if metal:
-                    rest = sorted((i for i in range(n) if i not in metal),
-                                  key=lambda i: self._opt_value(sel.options[i]))
-                    return sorted((metal + rest)[:k])
+                ranked = sorted(range(n), key=lambda i: self._discard_keep(self._opt_card_id(sel.options[i])))
+                return sorted(ranked[:k])
         return super()._take(sel, prefer_high, take_max)
