@@ -777,6 +777,100 @@ class DeckBot(Bot):
                 pass
         return {"position": pos, "decision": first_idx, "comp": comp} if pos is not None else None
 
+    def evaluate_plan(self, obs_dict, first_idx, root_player, horizon=3, seeds=(7, 17, 29)):
+        """Plan AI (Episode 1): 初手(first_idx)を実行し、root_player の複数ターン先(horizon)まで
+        自己trajectoryを延長して"各自ターン終端の position 軌跡"を返す。
+        設計(明示): 相手ターンは最小行動(END/強制先頭)で通す=相手の攻めは入れず、まず
+          「自分の複数ターン育成計画」の良さを測る(相手の本格rolloutは Episode 2)。相手の脅威は
+          静的な analyze_threat 経由で position に反映される。
+        未来ドローのノイズは複数determinization(seeds)平均で低減。各自ターン終端で check_invariants を
+        回し「でたらめな未来でない」ことをOSが自己検知(Plan健全性)。
+        返り値: {terminal, trajectory:[t1..tH](seed平均), n_seeds, invariant_violations}。"""
+        import dataclasses as _dc, random
+        from collections import Counter as _C
+        from cg.api import search_begin, search_step, search_end, to_observation_class
+        from cabt_bot.enums import OptionType as _OT
+        _END = int(_OT.END)
+        raw = obs_dict.get("current")
+        if not raw or self.deck_counts is None:
+            return None
+        o = to_observation_class(obs_dict); oi = raw["yourIndex"]
+        if oi != root_player:
+            return None
+        me = raw["players"][oi]; op = raw["players"][1 - oi]
+        base_rem = _C(self.deck_counts) - _C([c["id"] for c in (me.get("hand") or []) + (me.get("discard") or [])])
+        for sp in (me.get("active") or []) + (me.get("bench") or []):
+            if sp:
+                base_rem[sp["id"]] -= 1
+                for k in ("preEvolution", "energyCards", "tools"):
+                    for cc in sp.get(k) or []:
+                        base_rem[cc["id"]] -= 1
+        fil = lambda n: [(8 if i % 3 == 0 else 3) for i in range(n)]
+        dc = me["deckCount"]; pc = len(me["prize"])
+
+        def opp_min(ob):                                   # 相手は最小行動: 可能ならEND、強制選択は先頭
+            for i, o_ in enumerate(ob.select.option):
+                if getattr(o_, "type", None) == _END:
+                    return [i]
+            return [0]
+
+        saved_cur = self._cur
+        trajectories = []; viol_total = 0
+        try:
+            for seed in seeds:
+                pool = []
+                for cid, n in _C(base_rem).items():
+                    pool += [cid] * max(0, n)
+                random.Random(seed).shuffle(pool)
+                if len(pool) < dc + pc:
+                    pool += [3] * (dc + pc - len(pool))
+                oa = [] if (op["active"] and op["active"][0]) else [8]
+                try:
+                    state = search_begin(o, pool[:dc], pool[dc:dc + pc], fil(op["deckCount"]),
+                                         fil(len(op["prize"])), fil(op["handCount"]), oa, False)
+                except Exception:
+                    continue
+                traj = []; turns_done = 0; pending = [first_idx]
+                for _ in range(400):
+                    ob = state.observation; c = ob.current
+                    if c is None or c.result != -1:
+                        break
+                    if ob.select is None or not ob.select.option:
+                        break
+                    if c.yourIndex == root_player:
+                        sel = pending if pending else (self.select(Observation.from_dict(_dc.asdict(ob))) or [0])
+                        pending = None
+                        state = search_step(state.searchId, sel)
+                        nc = state.observation.current
+                        if nc is None:
+                            break
+                        ended = (nc.result != -1) or (nc.yourIndex != root_player)
+                        if ended:                          # 自ターン終端(またはゲーム終了)=軌跡を1点記録
+                            self._cur = _dc.asdict(nc); self._eval_player = root_player
+                            traj.append(self.evaluate_position())
+                            viol_total += len(self.check_invariants())
+                            turns_done += 1
+                            if nc.result != -1 or turns_done >= horizon:
+                                break
+                    else:
+                        state = search_step(state.searchId, opp_min(ob))
+                if traj:
+                    trajectories.append(traj)
+        finally:
+            self._eval_player = None
+            self._cur = saved_cur
+            try:
+                search_end()
+            except Exception:
+                pass
+        if not trajectories:
+            return None
+        H = max(len(t) for t in trajectories)
+        avg = [round(sum(t[i] for t in trajectories if len(t) > i) /
+                     max(1, sum(1 for t in trajectories if len(t) > i)), 1) for i in range(H)]
+        return {"terminal": avg[-1], "trajectory": avg, "n_seeds": len(trajectories),
+                "invariant_violations": viol_total}
+
     @staticmethod
     def decision_diff(search_tr, heur_tr) -> dict:
         """DecisionDiff: Search と Heuristic の TurnResult の Component 差分(なぜ差がついたかの内訳)。
