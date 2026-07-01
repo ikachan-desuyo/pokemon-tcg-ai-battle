@@ -777,7 +777,7 @@ class DeckBot(Bot):
                 pass
         return {"position": pos, "decision": first_idx, "comp": comp} if pos is not None else None
 
-    def evaluate_plan(self, obs_dict, first_idx, root_player, horizon=3, seeds=(7, 17, 29)):
+    def evaluate_plan(self, obs_dict, first_idx, root_player, horizon=3, seeds=(7, 17, 29), record_chain=False):
         """Plan AI (Episode 1): 初手(first_idx)を実行し、root_player の複数ターン先(horizon)まで
         自己trajectoryを延長して"各自ターン終端の position 軌跡"を返す。
         設計(明示): 相手ターンは最小行動(END/強制先頭)で通す=相手の攻めは入れず、まず
@@ -791,6 +791,8 @@ class DeckBot(Bot):
         from cg.api import search_begin, search_step, search_end, to_observation_class
         from cabt_bot.enums import OptionType as _OT
         _END = int(_OT.END)
+        _ACT = {int(_OT.PLAY): "PLAY", int(_OT.EVOLVE): "EVOLVE", int(_OT.ATTACH): "ATTACH",
+                int(_OT.ATTACK): "ATTACK", int(_OT.ABILITY): "ABILITY"}   # Decision Chain記録対象
         raw = obs_dict.get("current")
         if not raw or self.deck_counts is None:
             return None
@@ -815,7 +817,7 @@ class DeckBot(Bot):
             return [0]
 
         saved_cur = self._cur
-        trajectories = []; viol_total = 0
+        trajectories = []; viol_total = 0; seed_terminal_comps = []; chain = []
         try:
             for seed in seeds:
                 pool = []
@@ -830,7 +832,8 @@ class DeckBot(Bot):
                                          fil(len(op["prize"])), fil(op["handCount"]), oa, False)
                 except Exception:
                     continue
-                traj = []; turns_done = 0; pending = [first_idx]
+                traj = []; turns_done = 0; pending = [first_idx]; last_comp = None; prev_ms = None
+                rec = record_chain and seed == seeds[0]
                 for _ in range(400):
                     ob = state.observation; c = ob.current
                     if c is None or c.result != -1:
@@ -840,6 +843,16 @@ class DeckBot(Bot):
                     if c.yourIndex == root_player:
                         sel = pending if pending else (self.select(Observation.from_dict(_dc.asdict(ob))) or [0])
                         pending = None
+                        if rec:                            # Decision Chain: root行動をカード名付きで記録
+                            _si = sel[0] if sel else 0
+                            if 0 <= _si < len(ob.select.option):
+                                _opt = ob.select.option[_si]; _t = getattr(_opt, "type", None)
+                                if _t in _ACT:
+                                    _idx = getattr(_opt, "index", None)
+                                    _hd = _dc.asdict(ob)["current"]["players"][root_player].get("hand") or []
+                                    _cid = _hd[_idx]["id"] if (_idx is not None and 0 <= _idx < len(_hd)) else None
+                                    _nm = self._cardinfo.get(_cid).name if _cid in self._cardinfo else ""
+                                    chain.append(f"{_ACT[_t]}{(' '+_nm) if _nm else ''}")
                         state = search_step(state.searchId, sel)
                         nc = state.observation.current
                         if nc is None:
@@ -849,6 +862,24 @@ class DeckBot(Bot):
                             self._cur = _dc.asdict(nc); self._eval_player = root_player
                             traj.append(self.evaluate_position())
                             viol_total += len(self.check_invariants())
+                            pr = self.analyze_prize(); th = self.analyze_threat()
+                            dv = self._analyze_development(); ph = self.analyze_phase()
+                            last_comp = {"prize_diff": pr["prize_diff"], "hits_to_lose": min(th["hits_to_lose"], 6),
+                                         "energy_short": dv["energy_short"], "evolution_short": dv["evolution_short"],
+                                         "ready": int(dv["ready"]), "attackers": ph["my_attackers"],
+                                         "evolved": ph["my_evolved"], "energy": ph["my_energy"], "result": nc.result}
+                            if rec:                        # マイルストーン: 決定が生んだ未来の状態変化
+                                if prev_ms is not None:
+                                    if prev_ms["evolution_short"] and not last_comp["evolution_short"]:
+                                        chain.append("★線完成")
+                                    if last_comp["prize_diff"] > prev_ms["prize_diff"]:
+                                        chain.append(f"★サイド+{last_comp['prize_diff']-prev_ms['prize_diff']}")
+                                    if last_comp["ready"] and not prev_ms["ready"]:
+                                        chain.append("★攻撃準備")
+                                if last_comp["result"] != -1:
+                                    chain.append("★決着")
+                                prev_ms = last_comp
+                                chain.append(f"‖T+{turns_done+1}")
                             turns_done += 1
                             if nc.result != -1 or turns_done >= horizon:
                                 break
@@ -856,6 +887,8 @@ class DeckBot(Bot):
                         state = search_step(state.searchId, opp_min(ob))
                 if traj:
                     trajectories.append(traj)
+                    if last_comp is not None:
+                        seed_terminal_comps.append(last_comp)
         finally:
             self._eval_player = None
             self._cur = saved_cur
@@ -868,8 +901,12 @@ class DeckBot(Bot):
         H = max(len(t) for t in trajectories)
         avg = [round(sum(t[i] for t in trajectories if len(t) > i) /
                      max(1, sum(1 for t in trajectories if len(t) > i)), 1) for i in range(H)]
+        tcomp = None
+        if seed_terminal_comps:                            # 終端事実(seed平均)=Plan Explain用
+            keys = seed_terminal_comps[0].keys()
+            tcomp = {k: round(sum(sc[k] for sc in seed_terminal_comps) / len(seed_terminal_comps), 1) for k in keys}
         return {"terminal": avg[-1], "trajectory": avg, "n_seeds": len(trajectories),
-                "invariant_violations": viol_total}
+                "invariant_violations": viol_total, "terminal_comp": tcomp, "chain": chain}
 
     @staticmethod
     def decision_diff(search_tr, heur_tr) -> dict:
