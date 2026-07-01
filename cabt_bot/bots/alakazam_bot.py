@@ -17,6 +17,7 @@ ALAKAZAM_PLAN = DeckPlan(
     play_priority={741: 84, 743: 90, 66: 78, 305: 55, 65: 55},
     card_values={743: 100, 741: 88, 19: 85, 5: 80, 66: 78},
     lethal=True,
+    setup_energy=1,                            # ハンドパワーは超1で撃てる(育成評価器の必要エネ)
     est_var_damage=True,                       # ハンドパワー(手札×20)等の可変ダメージを効果文から推定
     boss_cards=(1182,),                        # ボスはKO時のみ
     recover_cards=(1097,),                     # 夜タンカは回収価値がある時のみ

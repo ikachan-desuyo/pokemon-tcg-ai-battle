@@ -83,6 +83,7 @@ class DeckPlan:
     sacrifice_abilities: tuple[int, ...] = () # 自滅特性(例:カースドボム)。ベンチ backup有り＆相手をKOできる時のみ使う
     sacrifice_damage: dict = field(default_factory=dict)  # {特性カードid: 与ダメージ} 自滅特性のKO判定用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
+    setup_energy: int = 0                     # 主アタッカーが攻撃に必要なエネ数(育成評価器 _eval_setup 用。0=既定3扱い)
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
 
@@ -337,8 +338,8 @@ class DeckBot(Bot):
             for i in idxs:
                 if aid and options[i].attack_id == aid:
                     return i
-        # 非リーサル時の攻撃選択: 現在盤面の可変ダメージ ＋ 状態異常のテンポ価値 で比較。
-        return max(idxs, key=lambda i: self._dmg(options[i]) + self._status_value(options[i].attack_id))
+        # 非リーサル時の攻撃選択: 多次元評価器(_attack_score = 可変ダメージ＋状態異常＋リソース破壊)で比較。
+        return max(idxs, key=lambda i: self._attack_score(options[i]))
 
     def _setup_attack_choice(self, idxs, options):
         """火力技の最大ダメージが setup_attack_min_damage 未満なら、弱く殴らず準備技(サーチ/加速)を使う。
@@ -452,6 +453,70 @@ class DeckBot(Bot):
         if "confused" in low:
             return 25
         return 0
+
+    def _disrupt_value(self, aid) -> int:
+        """相手リソース破壊の価値（手札/エネ/山札の discard）。Control軸に効く共通次元。"""
+        low = self._atk_texts().get(aid, "").lower()
+        if "discard" not in low or "opponent" not in low:
+            return 0
+        v = 0
+        if "hand" in low:
+            v += 25                              # 手札破壊
+        if "energy" in low:
+            v += 40                              # エネ破壊(相手の攻撃を止める＝価値大)
+        if "deck" in low:
+            v += 8                               # 山札削り(緩い)
+        return v
+
+    def _eval_attack(self, op) -> dict:
+        """攻撃の多次元評価（共通資産・拡張可能）。heuristic選択と将来の探索評価の両方で使う。
+        現状: damage(現在盤面) / status(状態異常テンポ) / disrupt(相手リソース破壊)。
+        将来: ko_probability / energy_efficiency / prize_trade をこの dict に追加していく。"""
+        aid = op.attack_id
+        return {
+            "damage": self._dmg(op),
+            "status": self._status_value(aid),
+            "disrupt": self._disrupt_value(aid),
+        }
+
+    def _attack_score(self, op) -> int:
+        """heuristicの攻撃選択に使うスカラー化（多次元評価の重み付き和）。KOは _lethal_choice が別途最優先。"""
+        e = self._eval_attack(op)
+        return e["damage"] + e["status"] + e["disrupt"]
+
+    def _analyze_development(self) -> dict:
+        """育成の『課題診断』（共通資産）。状態でなく"何が足りないか(ボトルネック)"を複数返す。
+        ArchaludonBot._missing_piece を全デッキへ一般化。Ultra Ball/ポフィン/ポケギア等のサーチ先選択・
+        Turn Evaluator(攻撃 vs 育成)・探索評価が同じ診断を共有する。Attack Evaluator(技は強いか)とは責務が別。
+        返り値: attacker_short(線が場/手札に無い) / evolution_short(進化が必要) / energy_short(主役のエネ不足数)
+                / ready(強い攻撃が可能) / priority(不足の優先リスト: attacker>evolve>energy)。
+        ※ 複数のボトルネックを返す＝サーチ先の選択肢を潰さない。"""
+        out = {"attacker_short": 0, "evolution_short": 0, "energy_short": 0, "ready": False, "priority": []}
+        cur = self._cur
+        if not cur or not cur.get("players") or not self.plan.attackers:
+            return out
+        me = cur["players"][cur.get("yourIndex", 0)]
+        in_play = [s for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s]
+        hand_ids = [c.get("id") for c in (me.get("hand") or [])]
+        atk = set(self.plan.attackers)
+        evolved_ids = {a for a in atk if not getattr(self._cardinfo.get(a), "is_basic", True)}
+        evolved_in_play = [s for s in in_play if s.get("id") in evolved_ids]
+        basic_in_play = [s for s in in_play if s.get("id") in atk and s.get("id") not in evolved_ids]
+        need = self.plan.setup_energy or 3
+        # ① 攻撃役の線が場にも手札にも無い
+        if not (any(s.get("id") in atk for s in in_play) or any(h in atk for h in hand_ids)):
+            out["attacker_short"] = 1; out["priority"].append("attacker")
+        # ② 進化形が要るデッキで、まだ最終形が場に居ない
+        if evolved_ids and not evolved_in_play:
+            out["evolution_short"] = 1; out["priority"].append("evolve")
+        # ③ 主役(進化形優先→前段)のエネ不足
+        body = (evolved_in_play or basic_in_play or [None])[0]
+        if body:
+            short = max(0, need - len(body.get("energyCards") or []))
+            out["energy_short"] = short
+            if short > 0: out["priority"].append("energy")
+        out["ready"] = (not out["attacker_short"]) and (not evolved_ids or bool(evolved_in_play)) and out["energy_short"] == 0
+        return out
 
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
