@@ -533,12 +533,16 @@ class DeckBot(Bot):
         # ② 進化形が要るデッキで、まだ最終形が場に居ない
         if evolved_ids and not evolved_in_play:
             out["evolution_short"] = 1; out["priority"].append("evolve")
-        # ③ 主役(進化形優先→前段)のエネ不足
+        # ③ 主役(進化形優先→前段)のエネ不足。※攻撃役が場に無い時は0(不足なし)でなく need(満額不足)。
+        #   0にすると「エネを乗せる攻撃役が居ない」状態が「エネ充足」と誤読され、ENDが好調に見えるバグになる。
         body = (evolved_in_play or basic_in_play or [None])[0]
         if body:
             short = max(0, need - len(body.get("energyCards") or []))
-            out["energy_short"] = short
-            if short > 0: out["priority"].append("energy")
+        else:
+            short = need
+        out["energy_short"] = short
+        if short > 0:
+            out["priority"].append("energy")
         out["ready"] = (not out["attacker_short"]) and (not evolved_ids or bool(evolved_in_play)) and out["energy_short"] == 0
         return out
 
@@ -716,9 +720,14 @@ class DeckBot(Bot):
                 sel = self.select(Observation.from_dict(_dc.asdict(ob))) or [0]
                 state = search_step(state.searchId, sel)
             fc = state.observation.current
+            comp = None
             if fc is not None:
                 self._cur = _dc.asdict(fc); self._eval_player = root_player   # root視点で最終局面を評価
                 pos = self.evaluate_position()
+                pr = self.analyze_prize(); th = self.analyze_threat(); dv = self._analyze_development()
+                comp = {"prize": pr["prize_diff"], "hits_to_lose": min(th["hits_to_lose"], 6),
+                        "energy_short": dv["energy_short"], "evolution_short": dv["evolution_short"],
+                        "ready": int(dv["ready"])}
         finally:
             self._eval_player = None
             self._cur = saved_cur
@@ -726,7 +735,21 @@ class DeckBot(Bot):
                 search_end()
             except Exception:
                 pass
-        return {"position": pos, "decision": first_idx} if pos is not None else None
+        return {"position": pos, "decision": first_idx, "comp": comp} if pos is not None else None
+
+    @staticmethod
+    def decision_diff(search_tr, heur_tr) -> dict:
+        """DecisionDiff: Search と Heuristic の TurnResult の Component 差分(なぜ差がついたかの内訳)。
+        position_delta と、prize/threat(hits_to_lose)/development(energy/evolution/ready) の各deltaを返す。"""
+        if not search_tr or not heur_tr or not search_tr.get("comp") or not heur_tr.get("comp"):
+            return {}
+        s, h = search_tr["comp"], heur_tr["comp"]
+        return {
+            "position_delta": round(search_tr["position"] - heur_tr["position"], 1),
+            "prize_delta": s["prize"] - h["prize"],
+            "threat_delta": s["hits_to_lose"] - h["hits_to_lose"],
+            "development_delta": (h["energy_short"] - s["energy_short"]) + (h["evolution_short"] - s["evolution_short"]) * 2 + (s["ready"] - h["ready"]) * 3,
+        }
 
     def _estimate_phase(self, ph, dv) -> str:
         """フェーズ推定(Opinion・Turn Evaluator内)。事実(サイド/ターン/成熟度)から opening/mid/end を判断。"""
