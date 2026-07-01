@@ -599,6 +599,39 @@ class DeckBot(Bot):
             "bench_thin": len([b for b in (me.get("bench") or []) if b]) < 3,
         }
 
+    def analyze_phase(self) -> dict:
+        """局面フェーズの事実診断（Fact・Opinion無し）。Turn Evaluator が重み付けに使う。
+        opening/midgame/endgame（残りサイド×ターンで判定）＋ prize_race（接戦の終盤=事実）。"""
+        out = {"turn": 0, "opening": False, "midgame": True, "endgame": False, "prize_race": False}
+        cur = self._cur
+        if not cur or not cur.get("players"):
+            return out
+        oi = cur.get("yourIndex", 0)
+        myp = len(cur["players"][oi].get("prize") or []) or 6
+        opz = len(cur["players"][1 - oi].get("prize") or []) or 6
+        ph = self._game_phase()
+        out.update(turn=cur.get("turn", 0), opening=(ph == "early"), endgame=(ph == "late"),
+                   midgame=(ph == "mid"), prize_race=(min(myp, opz) <= 3 and abs(myp - opz) <= 1))
+        return out
+
+    def evaluate_turn(self) -> dict:
+        """Turn Evaluator: Analyzer群(Fact)を統合し、各行動の"機会(Opportunity)"スコアを返す。★Actionは返さない。
+        唯一の Opinion 層（Phase補正・Threatの重み等）。Resolver も Search も同じこの評価器を共有する。
+        デッキ名・カード名は見ない（Fact経由のみ）＝Universal。feature flag(use_turn_evaluator)で段階導入する。"""
+        ph = self.analyze_phase(); th = self.analyze_threat(); dv = self._analyze_development()
+        if ph["opening"]:
+            w = {"attack": 0.6, "develop": 1.4, "recover": 1.0, "disrupt": 0.8}
+        elif ph["endgame"]:
+            w = {"attack": 1.3, "develop": 0.6, "recover": 1.1, "disrupt": 0.9}
+        else:
+            w = {"attack": 1.0, "develop": 1.0, "recover": 1.0, "disrupt": 1.0}
+        attack = 100 if dv["ready"] else 25
+        develop = 30 + dv["energy_short"] * 15 + dv["evolution_short"] * 30 + dv["attacker_short"] * 45
+        recover = 65 if (dv["attacker_short"] or (th["can_ko_me"] and not dv["ready"])) else 10
+        disrupt = 25
+        return {"attack": round(attack * w["attack"], 1), "develop": round(develop * w["develop"], 1),
+                "recover": round(recover * w["recover"], 1), "disrupt": round(disrupt * w["disrupt"], 1)}
+
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
             self._load_attacks()
