@@ -90,6 +90,27 @@ def line_threat(cid):
     return best
 
 
+def line_attacker_hp(cid):
+    """この進化ラインで『最大火力を出す形(=将来前に出てくる火力枠)』のHP。
+    ＝ベンチの進化前を今削ると、進化して前に出た時のHPからその分減っている(ダメージは進化で引き継ぐ)。
+    火力枠が未判明(自身が最火力)なら自身のHP。"""
+    caps(cid)
+    self_cp = _CAPS.get(cid, _EMPTY)
+    best_dmg, best_hp = self_cp["max_dmg"], (self_cp["hp"] or 0)
+    seen = set(); frontier = [cid]
+    while frontier:
+        c = frontier.pop()
+        if c in seen:
+            continue
+        seen.add(c)
+        for nxt in (_FWD.get(_NAME.get(c), []) if _FWD else []):
+            cp = _CAPS.get(nxt, _EMPTY)
+            if cp["max_dmg"] > best_dmg:
+                best_dmg, best_hp = cp["max_dmg"], (cp["hp"] or 0)
+            frontier.append(nxt)
+    return best_hp
+
+
 def _en(s):
     e = (s.get("energyCards") if isinstance(s, dict) else None) or s.get("energies") or []
     return len(e)

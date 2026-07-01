@@ -52,6 +52,20 @@ class ArchaludonBot(DeckBot):
 
     ATTACK_COST = 3  # メタルディフェンダー(鋼鋼鋼)
 
+    def __init__(self, plan=None, decklist=None):
+        super().__init__(plan, decklist)
+        # ===== 相手デッキ判別の signature（実#1の64戦の対面分布から）=====
+        # 検出順=具体的→一般。判別不能ならベース処理テーブル(PLAN)を使う。
+        self.matchup_signatures = {
+            "megastarmie": (1031, 1030),   # メガスターミーex/ヒトデマン(36戦・最重要)
+            "mirror": (190, 169),          # ブリジュラスex/ジュラルドン(11戦)
+            "dragapult": (121,),           # ドラパルトex(4戦)
+            "megalucario": (678, 677),     # メガルカリオex/リオル(2戦)
+        }
+        # matchup_plans: ベースと違う『検証済みの差分knob』のみ。全体改善はベース(PLAN)へ。
+        # 現状の主要な対面差『KOできる最小コストの技で倒す』は汎用原則のためベース側で扱う。
+        self.matchup_plans = {}
+
     @staticmethod
     def _metal_on(spot) -> int:
         if not spot:

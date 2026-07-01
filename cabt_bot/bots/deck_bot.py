@@ -16,14 +16,14 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from math import comb
 
 from .base import Bot
 from ..cards import load_cards
 from ..enums import AreaType, OptionType, SelectContext, SelectType
 from ..models import Observation, Option
-from ..state_encoder import line_threat as _line_threat
+from ..state_encoder import line_threat as _line_threat, line_attacker_hp as _line_attacker_hp
 
 # 汎用 PLAY 優先度（多くのデッキ共通の一貫性札）
 POFFIN, HYPER_BALL, POKE_PAD, MEGA_SIGNAL = 1086, 1121, 1152, 1145
@@ -56,6 +56,10 @@ class DeckPlan:
     attackers: tuple[int, ...] = ()
     key_cards: tuple[int, ...] = ()
     preferred_attacks: tuple[str, ...] = ()
+    spread_attacks: tuple[str, ...] = ()      # ベンチにもダメージを与える技名。KO可能な技が複数ある時、
+                                              # 相手バトル場を倒せるならベンチも削れるこの技を優先(次のKOを準備)
+    spread_damage: int = 0                    # ベンチ撒きの damage(例:Jetting Blow=50)。ベンチ対象選択で
+                                              # 『将来の火力枠を今削り、前に出た時のKO攻撃回数を減らす』予測に使う
     energy_rules: tuple[tuple, ...] = ()      # (energy_id|None, target_id)
     play_priority: dict[int, int] = field(default_factory=dict)
     card_values: dict[int, int] = field(default_factory=dict)
@@ -109,6 +113,14 @@ class DeckBot(Bot):
         # FinalScore = Heuristic + ml_alpha * MLScore。既定オフ(挙動不変)。
         self.action_scorer = None
         self.ml_alpha = 0.0
+        # ===== マッチアップ別処理テーブル（DRY: ベース＋相手別差分） =====
+        # matchup_signatures: {アーキ名: [そのデッキを示すカードid]} 子クラスで設定。
+        # matchup_plans: {アーキ名: {DeckPlanの差分knob}}。ベースと違う部分のみ。残りはベース参照。
+        # 全体に効く改善はベース(self._base_plan)のみに入れる。空なら挙動不変(既存bot/提出に無影響)。
+        self.matchup_signatures = {}
+        self.matchup_plans = {}
+        self._base_plan = self.plan
+        self._matchup = "__init__"
 
     # ===== entry =====
     def select(self, obs: Observation) -> list[int]:
@@ -117,6 +129,7 @@ class DeckBot(Bot):
             return []
         self._cur, self._sel = obs.current, sel
         self._track_opponent()
+        self._apply_matchup()
         try:
             t = sel.type
             if t == SelectType.MAIN:
@@ -339,20 +352,25 @@ class DeckBot(Bot):
         return setup_is[0]  # 弱い火力しか無い→準備技で盤面を育てる
 
     def _lethal_choice(self, idxs, options):
-        """相手バトル場を倒せる技があれば、その中で最大ダメージを選ぶ。"""
+        """相手バトル場を倒せる技があれば選ぶ。倒せる技が複数なら、ベンチも削れる技(spread)を優先し、
+        その中で最大ダメージ＝相手バトル場を確実に倒しつつ次のKOも準備する。"""
         hp, weak = self._opp_active_hp_weak()
         if hp is None:
             return None
         my_type = self._my_active_type()
-        best, best_eff = None, -1
+        spread_ids = {self._attack_name_ids().get(n) for n in self.plan.spread_attacks}
+        best, best_key = None, None
         for i in idxs:
             base = self._dmg(options[i])
             # 弱点無視の技(例: Nebula Beam)は2倍にしない
             apply_weak = (weak and my_type and weak == my_type
                           and options[i].attack_id not in self._attack_no_weak())
             eff = base * 2 if apply_weak else base
-            if eff >= hp and eff > best_eff:
-                best_eff, best = eff, i
+            if eff >= hp:
+                # (ベンチも削れるか, 実効ダメージ) で選ぶ＝倒せる技の中でJetting Blow等を優先
+                key = (1 if options[i].attack_id in spread_ids else 0, eff)
+                if best_key is None or key > best_key:
+                    best_key, best = key, i
         return best
 
     def _opp_active_hp_weak(self):
@@ -755,6 +773,7 @@ class DeckBot(Bot):
         opp_idx = 1 - cur["yourIndex"]
         opp = cur["players"][opp_idx]
         dmg, ign = self._active_attack_potential()
+        spread = self.plan.spread_damage
         cand = []
         for i, op in enumerate(sel.options):
             if op.player_index != opp_idx:
@@ -762,15 +781,58 @@ class DeckBot(Bot):
             spots = (opp.get("active") if op.area == AreaType.ACTIVE else opp.get("bench")) or []
             if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
                 sp = spots[op.index]
+                cid = sp.get("id")
                 hp = sp.get("hp", 9999)
-                koable = 1 if self._eff_dmg(dmg, ign, sp.get("id")) >= hp else 0
-                # 進化ライン脅威度: 進化前を叩くと摘める脅威の大きさ(例:リオル=メガルカリオ線)。
-                # KO可否・サイド価値が同点なら、最大脅威の線(進化前)を優先＝発展を妨害する。
-                threat = _line_threat(sp.get("id"))
-                cand.append((koable, self._prize_value(sp.get("id")), threat, -hp, i))
+                threat = _line_threat(cid)   # 進化ライン脅威度(例:リオル=メガルカリオ線)
+                if spread:
+                    cand.append(self._spread_key(sp, cid, hp, threat, spread, dmg) + (i,))
+                else:
+                    koable = 1 if self._eff_dmg(dmg, ign, cid) >= hp else 0
+                    cand.append((koable, self._prize_value(cid), threat, -hp, i))
         if not cand:
             return None
         return max(cand)[-1]
+
+    def _game_phase(self) -> str:
+        """序盤/中盤/後半。残りサイドとターンで判定（撒き優先度の切替に使う）。"""
+        cur = self._cur
+        if not cur:
+            return "mid"
+        turn = cur.get("turn", 0)
+        me = cur["players"][cur["yourIndex"]]; opp = cur["players"][1 - cur["yourIndex"]]
+        my_pz = sum(1 for x in (me.get("prize") or []) if x) or 6
+        opp_pz = sum(1 for x in (opp.get("prize") or []) if x) or 6
+        if turn <= 3 or (my_pz >= 5 and opp_pz >= 5):
+            return "early"
+        if my_pz <= 2 or opp_pz <= 2:
+            return "late"
+        return "mid"
+
+    def _spread_key(self, sp, cid, hp, threat, spread, our_dmg):
+        """ベンチ撒き(Jetting Blow等)の対象優先度テーブル＝ベース×相手デッキ(self._matchup)×局面。
+        ダメージは進化で引き継ぐので『将来この火力枠が前に出た時、今の撒きでKO攻撃回数を減らせるか』を予測する。
+          - 序盤: 発展中の主力ライン(進化前=最大脅威の線)を優先的に削り、将来の脅威の芽を先に摘む。
+          - 中盤: 将来のKO攻撃回数削減(reduce)を最優先＝前に出てくる火力枠を効率よく軟化。
+          - 後半: 撒き＋自火力でKO圏に入る主力を優先＝詰め。
+        ＝(局面別のキー, i) を返す。i は呼び出し側で付与。"""
+        koable = 1 if spread >= hp else 0            # 撒きだけで今KOできるか(低HPベンチ)
+        fhp = _line_attacker_hp(cid)                 # 進化後に前に出てくる火力枠のHP
+        maxhp = sp.get("maxHp") or fhp or hp
+        cur_dmg = max(0, maxhp - hp) if sp.get("maxHp") else 0
+        remaining = max(0, fhp - cur_dmg)            # 火力枠HP - 引き継ぎダメージ
+        our = our_dmg if our_dmg > 0 else 210
+        rem_after = max(0, remaining - spread)
+        reduce = 0                                   # 今の撒きで減る将来のKO攻撃回数(3回→2回等)
+        if our > 0 and remaining > 0:
+            reduce = (-(-remaining // our)) - (-(-rem_after // our))
+        # 相手の火力枠は1回では倒せない→『2回(=2*自火力)で倒せるか』を詰めの判断基準にする(1回狙いは非現実的)。
+        two_ko = 1 if (remaining > 0 and rem_after <= 2 * our) else 0
+        # 実測で reduce(将来KO削減)＋threat(最大脅威の線に蓄積) が全局面で支配的＝主軸に固定。局面で二次基準を切替。
+        phase = self._game_phase()
+        pv = self._prize_value(cid)
+        if phase == "late":             # 後半=詰め: reduce同点なら『撒き後2回で倒せる』主力を優先
+            return (koable, reduce, threat, two_ko, pv, -hp)
+        return (koable, reduce, threat, pv, -hp)     # 序盤・中盤: 軟化(将来KO削減＋脅威線に蓄積)
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)
@@ -805,6 +867,28 @@ class DeckBot(Bot):
                     self._opp_seen.add(sp["id"])
         if self._opp_seen:
             self._opp_main_line = max(_line_threat(c) for c in self._opp_seen)
+
+    def _classify_opponent(self):
+        """相手の場で見えたカードからアーキタイプを判別。判別不能ならNone(=ベース処理テーブル)。
+        matchup_signatures は『そのデッキを示す代表カードid』。先に定義したものを優先(具体的→一般)。"""
+        for arch, sig in self.matchup_signatures.items():
+            if any(c in self._opp_seen for c in sig):
+                return arch
+        return None
+
+    def _apply_matchup(self):
+        """検出した相手アーキを self._matchup に保持し、差分テーブルをベースに適用。
+        DRY: matchup_plans には差分knobのみ。未定義の処理は self._base_plan(ベース)を参照。
+        マッチアップ固有の『ロジック』は各メソッドが self._matchup を見て分岐できる。
+        signatures が無い bot は何もしない（既存bot/提出は挙動不変）。"""
+        if not self.matchup_signatures:
+            return
+        arch = self._classify_opponent()
+        if arch == self._matchup:
+            return
+        self._matchup = arch
+        ov = self.matchup_plans.get(arch) if self.matchup_plans else None
+        self.plan = replace(self._base_plan, **ov) if ov else self._base_plan
 
     def _opp_key_preevo_spots(self):
         """相手ベンチの『主力アタッカーの進化前』(=倒すと発展を阻害できる)spot。
