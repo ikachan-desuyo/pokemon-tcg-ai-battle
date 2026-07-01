@@ -518,6 +518,40 @@ class DeckBot(Bot):
         out["ready"] = (not out["attacker_short"]) and (not evolved_ids or bool(evolved_in_play)) and out["energy_short"] == 0
         return out
 
+    def analyze_threat(self) -> dict:
+        """相手の脅威診断（情報のみ・スコア無し）。相手が自分の活性をどれだけ削れるか/KOされるか。
+        Analyzer層の一部。Turn Evaluator が Attack/Development/Threat/Prize を統合して判断する。"""
+        out = {"opp_line_damage": 0, "can_ko_me": False, "my_active_hp": 0, "hits_to_lose": 99}
+        cur = self._cur
+        if not cur or not cur.get("players"):
+            return out
+        oi = cur.get("yourIndex", 0)
+        me = cur["players"][oi]; opp = cur["players"][1 - oi]
+        opp_a = (opp.get("active") or [None])[0]; my_a = (me.get("active") or [None])[0]
+        if not opp_a or not my_a:
+            return out
+        dmg = _line_threat(opp_a.get("id"))              # 相手の進化含む最大火力
+        mc = self._cardinfo.get(my_a.get("id")); oc = self._cardinfo.get(opp_a.get("id"))
+        if mc and oc and mc.weakness and oc.type == mc.weakness:
+            dmg *= 2                                      # 自分の弱点で2倍
+        hp = my_a.get("hp", 0)
+        out.update(my_active_hp=hp, opp_line_damage=dmg,
+                   can_ko_me=(dmg >= hp and hp > 0),
+                   hits_to_lose=(((hp + dmg - 1) // dmg) if dmg > 0 else 99))
+        return out
+
+    def analyze_prize(self) -> dict:
+        """サイドレース診断（情報のみ）。残りサイド差（prize_diff>0 なら自分が先行）。"""
+        out = {"my_prizes": 6, "opp_prizes": 6, "prize_diff": 0}
+        cur = self._cur
+        if not cur or not cur.get("players"):
+            return out
+        oi = cur.get("yourIndex", 0)
+        myp = len(cur["players"][oi].get("prize") or []) or 6
+        opz = len(cur["players"][1 - oi].get("prize") or []) or 6
+        out.update(my_prizes=myp, opp_prizes=opz, prize_diff=opz - myp)
+        return out
+
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
             self._load_attacks()
