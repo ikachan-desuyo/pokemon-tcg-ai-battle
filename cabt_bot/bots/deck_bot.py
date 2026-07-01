@@ -600,37 +600,74 @@ class DeckBot(Bot):
         }
 
     def analyze_phase(self) -> dict:
-        """局面フェーズの事実診断（Fact・Opinion無し）。Turn Evaluator が重み付けに使う。
-        opening/midgame/endgame（残りサイド×ターンで判定）＋ prize_race（接戦の終盤=事実）。"""
-        out = {"turn": 0, "opening": False, "midgame": True, "endgame": False, "prize_race": False}
+        """局面の"事実(features)"のみ返す（Fact）。opening/mid/end の判定はしない＝それはOpinion(Turn Evaluatorの責務)。
+        turn / 残りサイド / 攻撃役数 / 進化済み攻撃役数 / 盤面エネ数。"""
+        out = {"turn": 0, "my_prizes": 6, "opp_prizes": 6, "my_attackers": 0, "my_evolved": 0,
+               "opp_evolved": 0, "my_energy": 0, "opp_energy": 0}
         cur = self._cur
         if not cur or not cur.get("players"):
             return out
-        oi = cur.get("yourIndex", 0)
-        myp = len(cur["players"][oi].get("prize") or []) or 6
-        opz = len(cur["players"][1 - oi].get("prize") or []) or 6
-        ph = self._game_phase()
-        out.update(turn=cur.get("turn", 0), opening=(ph == "early"), endgame=(ph == "late"),
-                   midgame=(ph == "mid"), prize_race=(min(myp, opz) <= 3 and abs(myp - opz) <= 1))
+        oi = cur.get("yourIndex", 0); me = cur["players"][oi]; opp = cur["players"][1 - oi]
+        atk = set(self.plan.attackers)
+        ma = mevo = me_e = 0
+        for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if not s:
+                continue
+            me_e += len(s.get("energyCards") or [])
+            if s.get("id") in atk:
+                ma += 1
+                if not getattr(self._cardinfo.get(s.get("id")), "is_basic", True):
+                    mevo += 1
+        oevo = oe = 0
+        for s in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if not s:
+                continue
+            oe += len(s.get("energyCards") or [])
+            if not getattr(self._cardinfo.get(s.get("id")), "is_basic", True):
+                oevo += 1
+        out.update(turn=cur.get("turn", 0), my_prizes=len(me.get("prize") or []) or 6,
+                   opp_prizes=len(opp.get("prize") or []) or 6, my_attackers=ma, my_evolved=mevo,
+                   opp_evolved=oevo, my_energy=me_e, opp_energy=oe)
         return out
 
-    def evaluate_turn(self) -> dict:
-        """Turn Evaluator: Analyzer群(Fact)を統合し、各行動の"機会(Opportunity)"スコアを返す。★Actionは返さない。
-        唯一の Opinion 層（Phase補正・Threatの重み等）。Resolver も Search も同じこの評価器を共有する。
-        デッキ名・カード名は見ない（Fact経由のみ）＝Universal。feature flag(use_turn_evaluator)で段階導入する。"""
+    def _estimate_phase(self, ph, dv) -> str:
+        """フェーズ推定(Opinion・Turn Evaluator内)。事実(サイド/ターン/成熟度)から opening/mid/end を判断。"""
+        if min(ph["my_prizes"], ph["opp_prizes"]) <= 2:
+            return "end"
+        # 盤面が未成熟(進化攻撃役が立っていない/攻撃役が薄い) かつ 序盤ターン → opening
+        if ph["my_evolved"] == 0 and ph["turn"] <= 5 and not dv["ready"]:
+            return "opening"
+        return "mid"
+
+    def evaluate_turn(self, attack_candidates=None) -> dict:
+        """Turn Evaluator（唯一のOpinion層）: Analyzer群(Fact)を統合し、各行動の"機会(Opportunity)"スコアと
+        ★その内訳(Explain)を返す。Actionは返さない。phase推定・Phase補正・各軸の重みはここだけ。
+        Attack Opportunity は Attack Analyzer 候補集合(attack_candidates=[{damage,status,disrupt},...])の最良で評価。
+        デッキ名・カード名は見ない＝Universal。Resolver も Search もこの評価器を共有する。"""
         ph = self.analyze_phase(); th = self.analyze_threat(); dv = self._analyze_development()
-        if ph["opening"]:
-            w = {"attack": 0.6, "develop": 1.4, "recover": 1.0, "disrupt": 0.8}
-        elif ph["endgame"]:
-            w = {"attack": 1.3, "develop": 0.6, "recover": 1.1, "disrupt": 0.9}
+        phase = self._estimate_phase(ph, dv)
+        W = {"opening": {"attack": 0.6, "develop": 1.4, "recover": 1.0, "disrupt": 0.8},
+             "mid":     {"attack": 1.0, "develop": 1.0, "recover": 1.0, "disrupt": 1.0},
+             "end":     {"attack": 1.3, "develop": 0.6, "recover": 1.1, "disrupt": 1.0}}[phase]
+        if attack_candidates:
+            atk_base = max((c.get("damage", 0) + c.get("status", 0) + c.get("disrupt", 0)) for c in attack_candidates)
         else:
-            w = {"attack": 1.0, "develop": 1.0, "recover": 1.0, "disrupt": 1.0}
-        attack = 100 if dv["ready"] else 25
-        develop = 30 + dv["energy_short"] * 15 + dv["evolution_short"] * 30 + dv["attacker_short"] * 45
-        recover = 65 if (dv["attacker_short"] or (th["can_ko_me"] and not dv["ready"])) else 10
-        disrupt = 25
-        return {"attack": round(attack * w["attack"], 1), "develop": round(develop * w["develop"], 1),
-                "recover": round(recover * w["recover"], 1), "disrupt": round(disrupt * w["disrupt"], 1)}
+            atk_base = 100 if dv["ready"] else 25
+        dev_parts = {"attacker": dv["attacker_short"] * 45, "evolve": dv["evolution_short"] * 30,
+                     "energy": dv["energy_short"] * 15}
+        dev_base = 30 + sum(dev_parts.values())
+        rec_base = 65 if (dv["attacker_short"] or (th["can_ko_me"] and not dv["ready"])) else 10
+        dis_base = 25
+        def opp(base, key, parts=None):
+            e = {"score": round(base * W[key], 1), "base": round(base, 1), "phase_w": W[key]}
+            if parts:
+                e["parts"] = parts
+            return e
+        return {"phase": phase,
+                "attack": opp(atk_base, "attack"),
+                "develop": opp(dev_base, "develop", dev_parts),
+                "recover": opp(rec_base, "recover"),
+                "disrupt": opp(dis_base, "disrupt")}
 
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
