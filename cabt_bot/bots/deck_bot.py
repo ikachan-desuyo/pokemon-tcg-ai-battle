@@ -114,6 +114,7 @@ class DeckBot(Bot):
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
         self._resolver_log = []     # Resolver v1 の Explain Log(候補・改善量・採用理由)
         self._turn_eval_log = []    # Turn Evaluator接続の Explain Log(攻撃 vs 育成の Opportunity・採用)
+        self._eval_player = None    # Analyzer/評価器の視点を固定(Search中はroot視点)。Noneなら現手番(cur.yourIndex)
         # 専門家ログから学んだ Action Scorer(デッキ非依存) を『どれを選ぶか』に加点(opt-in)。
         # FinalScore = Heuristic + ml_alpha * MLScore。既定オフ(挙動不変)。
         self.action_scorer = None
@@ -500,6 +501,13 @@ class DeckBot(Bot):
         e = self._eval_attack(op)
         return e["damage"] + e["status"] + e["disrupt"]
 
+    def _me_index(self) -> int:
+        """Analyzer/評価器の"自分"の視点。Search中は root視点(self._eval_player)に固定、通常は現手番。
+        ＝ENDで手番が相手に移った状態でも root視点で評価できる(視点フリップバグの修正)。"""
+        if self._eval_player is not None:
+            return self._eval_player
+        return (self._cur or {}).get("yourIndex", 0)
+
     def _analyze_development(self) -> dict:
         """育成の『課題診断』（共通資産）。状態でなく"何が足りないか(ボトルネック)"を複数返す。
         ArchaludonBot._missing_piece を全デッキへ一般化。Ultra Ball/ポフィン/ポケギア等のサーチ先選択・
@@ -511,7 +519,7 @@ class DeckBot(Bot):
         cur = self._cur
         if not cur or not cur.get("players") or not self.plan.attackers:
             return out
-        me = cur["players"][cur.get("yourIndex", 0)]
+        me = cur["players"][self._me_index()]
         in_play = [s for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s]
         hand_ids = [c.get("id") for c in (me.get("hand") or [])]
         atk = set(self.plan.attackers)
@@ -541,7 +549,7 @@ class DeckBot(Bot):
         cur = self._cur
         if not cur or not cur.get("players"):
             return out
-        oi = cur.get("yourIndex", 0)
+        oi = self._me_index()
         me = cur["players"][oi]; opp = cur["players"][1 - oi]
         opp_a = (opp.get("active") or [None])[0]; my_a = (me.get("active") or [None])[0]
         if not opp_a or not my_a:
@@ -562,7 +570,7 @@ class DeckBot(Bot):
         cur = self._cur
         if not cur or not cur.get("players"):
             return out
-        oi = cur.get("yourIndex", 0)
+        oi = self._me_index()
         myp = len(cur["players"][oi].get("prize") or []) or 6
         opz = len(cur["players"][1 - oi].get("prize") or []) or 6
         out.update(my_prizes=myp, opp_prizes=opz, prize_diff=opz - myp)
@@ -605,7 +613,7 @@ class DeckBot(Bot):
         is_evo_atk = is_atk and not getattr(info, "is_basic", True)
         need = self._analyze_development()
         cur = self._cur
-        me = cur["players"][cur.get("yourIndex", 0)] if (cur and cur.get("players")) else {}
+        me = cur["players"][self._me_index()] if (cur and cur.get("players")) else {}
         return {
             "is_attacker": is_atk,
             "is_evolved_attacker": is_evo_atk,
@@ -621,7 +629,7 @@ class DeckBot(Bot):
         cur = self._cur
         if not cur or not cur.get("players"):
             return out
-        oi = cur.get("yourIndex", 0); me = cur["players"][oi]; opp = cur["players"][1 - oi]
+        oi = self._me_index(); me = cur["players"][oi]; opp = cur["players"][1 - oi]
         atk = set(self.plan.attackers)
         ma = mevo = me_e = 0
         for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
@@ -658,6 +666,67 @@ class DeckBot(Bot):
         # 脅威は連続な hits_to_lose 主体に(can_ko_meの-50二値は撤廃)。耐えるほど+。
         score += min(th["hits_to_lose"], 6) * 14
         return round(score, 1)
+
+    def evaluate_decision(self, obs_dict, first_idx, root_player, seed=0):
+        """OSカーネル: 初手(first_idx=Decisionの最初の選択)を実行し、以降ヒューリスティックで root_player の
+        ターンを終端まで"完成"させ、root視点で局面評価して TurnResult{position, decision} を返す。
+        全候補(END含む)が同じ経路を通る＝ENDを特別扱いしない。視点はroot固定(フリップバグ回避)。
+        Search/Resolver/Plan がこのAPIを共有する共通カーネル。"""
+        import dataclasses as _dc, random
+        from collections import Counter as _C
+        from cg.api import search_begin, search_step, search_end, to_observation_class
+        raw = obs_dict.get("current")
+        if not raw or self.deck_counts is None:
+            return None
+        o = to_observation_class(obs_dict); oi = raw["yourIndex"]
+        me = raw["players"][oi]; op = raw["players"][1 - oi]
+        rem = _C(self.deck_counts) - _C([c["id"] for c in (me.get("hand") or []) + (me.get("discard") or [])])
+        for sp in (me.get("active") or []) + (me.get("bench") or []):
+            if sp:
+                rem[sp["id"]] -= 1
+                for k in ("preEvolution", "energyCards", "tools"):
+                    for cc in sp.get(k) or []:
+                        rem[cc["id"]] -= 1
+        pool = []
+        for cid, n in rem.items():
+            pool += [cid] * max(0, n)
+        random.Random(seed).shuffle(pool)
+        dc = me["deckCount"]; pc = len(me["prize"])
+        if len(pool) < dc + pc:
+            pool += [3] * (dc + pc - len(pool))
+        fil = lambda n: [(8 if i % 3 == 0 else 3) for i in range(n)]
+        oa = [] if (op["active"] and op["active"][0]) else [8]
+        saved_cur = self._cur
+        try:
+            state = search_begin(o, pool[:dc], pool[dc:dc + pc], fil(op["deckCount"]),
+                                 fil(len(op["prize"])), fil(op["handCount"]), oa, False)
+        except Exception:
+            return None
+        pos = None
+        try:
+            state = search_step(state.searchId, [first_idx])       # Decisionの最初の選択
+            for _ in range(40):                                    # 以降ヒューリスティックで自ターン完成
+                ob = state.observation; c = ob.current
+                if c is None or c.result != -1:
+                    break
+                if c.yourIndex != root_player:                     # 自ターン終了＝Decision Complete
+                    break
+                if ob.select is None or not ob.select.option:
+                    break
+                sel = self.select(Observation.from_dict(_dc.asdict(ob))) or [0]
+                state = search_step(state.searchId, sel)
+            fc = state.observation.current
+            if fc is not None:
+                self._cur = _dc.asdict(fc); self._eval_player = root_player   # root視点で最終局面を評価
+                pos = self.evaluate_position()
+        finally:
+            self._eval_player = None
+            self._cur = saved_cur
+            try:
+                search_end()
+            except Exception:
+                pass
+        return {"position": pos, "decision": first_idx} if pos is not None else None
 
     def _estimate_phase(self, ph, dv) -> str:
         """フェーズ推定(Opinion・Turn Evaluator内)。事実(サイド/ターン/成熟度)から opening/mid/end を判断。"""
