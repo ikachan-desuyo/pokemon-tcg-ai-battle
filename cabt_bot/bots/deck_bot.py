@@ -552,6 +552,32 @@ class DeckBot(Bot):
         out.update(my_prizes=myp, opp_prizes=opz, prize_diff=opz - myp)
         return out
 
+    def _need_improvement(self, card_id) -> dict:
+        """Action Impact（改善量Analyzer）: このカードを獲得/展開すると Need(analyze_development)を
+        どれだけ改善するか"だけ"返す。カード選択はしない（あなたの設計: Need→候補→改善量→決定 を分離）。
+        全サーチ札(Ultra Ball/ネスト/ポフィン/夜タンカ)・ドロー・展開・エネ加速が共通で使える。
+        返り値: {attacker, evolve, energy} の改善量（Needが大きく、そのカードが該当するほど大きい）。"""
+        imp = {"attacker": 0.0, "evolve": 0.0, "energy": 0.0}
+        if card_id is None:
+            return imp
+        need = self._analyze_development()
+        atk = set(self.plan.attackers)
+        if card_id in atk:
+            if getattr(self._cardinfo.get(card_id), "is_basic", True):
+                imp["attacker"] = need["attacker_short"] * 60.0    # 攻撃役の線(たね)を確保
+                if need["evolution_short"]:
+                    imp["evolve"] = 25.0                           # 進化の前提(前段)を確保
+            else:
+                imp["evolve"] = need["evolution_short"] * 55.0     # 進化形を確保
+        if self._is_energy(card_id):
+            imp["energy"] = need["energy_short"] * 35.0
+        return imp
+
+    def _need_improvement_score(self, card_id) -> float:
+        """改善量のスカラー化（決定層/探索が使う。Analyzerは改善量dictを返し、スコア化はここで分離）。"""
+        imp = self._need_improvement(card_id)
+        return imp["attacker"] + imp["evolve"] + imp["energy"]
+
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
             self._load_attacks()
