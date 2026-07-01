@@ -85,6 +85,7 @@ class DeckPlan:
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     setup_energy: int = 0                     # 主アタッカーが攻撃に必要なエネ数(育成評価器 _eval_setup 用。0=既定3扱い)
     use_resolver: bool = False                # サーチ先(take)を Resolver(Need改善量) で選ぶ(v1限定導入・A/B用)
+    use_turn_evaluator: bool = False          # 「攻撃 vs 育成」の1判断のみ Turn Evaluator に委譲(限定接続・A/B用)
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
 
@@ -112,6 +113,7 @@ class DeckBot(Bot):
         self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
         self._resolver_log = []     # Resolver v1 の Explain Log(候補・改善量・採用理由)
+        self._turn_eval_log = []    # Turn Evaluator接続の Explain Log(攻撃 vs 育成の Opportunity・採用)
         # 専門家ログから学んだ Action Scorer(デッキ非依存) を『どれを選ぶか』に加点(opt-in)。
         # FinalScore = Heuristic + ml_alpha * MLScore。既定オフ(挙動不変)。
         self.action_scorer = None
@@ -190,7 +192,19 @@ class DeckBot(Bot):
                 and self._should_reposition(me)):
             return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACK in g:
-            return [self._best_attack(g[OptionType.ATTACK], options)]
+            idxs = g[OptionType.ATTACK]
+            # Turn Evaluator 限定接続: 「攻撃 vs 育成」の1判断のみ委譲(flag)。リーサルは必ず攻撃。
+            if self.plan.use_turn_evaluator and OptionType.END in g:
+                lethal = self._lethal_choice(idxs, options) if self.plan.lethal else None
+                if lethal is None:
+                    ev = self.evaluate_turn(attack_candidates=[self._eval_attack(options[i]) for i in idxs])
+                    a_op, d_op = ev["attack"]["score"], ev["develop"]["score"]
+                    chosen = "develop(skip)" if d_op > a_op * 1.3 else "attack"
+                    self._turn_eval_log.append({"turn": (self._cur or {}).get("turn"), "phase": ev["phase"],
+                                                "attack": a_op, "develop": d_op, "chosen": chosen})
+                    if chosen == "develop(skip)":
+                        return [g[OptionType.END][0]]  # この番は殴らず育成優先(盤面は既に展開済)
+            return [self._best_attack(idxs, options)]
         if OptionType.END in g:
             return [g[OptionType.END][0]]
         return [0]
