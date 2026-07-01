@@ -43,6 +43,27 @@ def chain_diff(ca1, caH):
     return only_aH, only_a1
 
 
+DECOMP_SEEDS = (7, 17, 29, 41, 53, 67, 79, 97)   # A判定だけを個別seedで検証
+
+
+def seed_decompose(b, obs, a1, aH, dev_caps, horizon):
+    """A判定の妥当性テスト: a1/aHを個別seedで走らせ、aHが「全seedで勝つ＋育成能力を安定して築く」か。
+    全seed勝ち=decision由来(本物Plan) / seed毎に勝者が変わる=引き運。"""
+    wins = 0; dev_ok = 0; n = 0; margins = []
+    for s in DECOMP_SEEDS:
+        p1 = b.evaluate_plan(obs, a1, root_player=0, horizon=horizon, seeds=(s,), record_chain=True)
+        pH = b.evaluate_plan(obs, aH, root_player=0, horizon=horizon, seeds=(s,), record_chain=True)
+        if not (p1 and pH):
+            continue
+        n += 1
+        m = round(pH["terminal"] - p1["terminal"], 1); margins.append(m)
+        if m > 0:
+            wins += 1
+        if all(c in set(pH["cap_chain"]) for c in dev_caps):   # aHが同じ育成能力を築いたか
+            dev_ok += 1
+    return {"wins": wins, "dev_ok": dev_ok, "n": n, "margins": margins}
+
+
 def categorize(ca1, caH):
     """A=Plan / B=Passive Opponent Bias / C=Equivalent / D=Bug。cap_chainの差で判定。"""
     only_aH, only_a1 = chain_diff(ca1, caH)
@@ -90,12 +111,16 @@ def main(max_decisions=24, max_cand=5, horizon=3, seeds=(7, 17, 29)):
                     if a1 != aH:
                         only_aH, only_a1 = chain_diff(capchains[a1], capchains[aH])
                         cat = categorize(capchains[a1], capchains[aH])
+                        sd = None
+                        if cat.startswith("A"):            # A判定だけ seed分解で妥当性を確認
+                            dev_caps = [x for x in only_aH if x in DEV_CAPS]
+                            sd = seed_decompose(b, obs, a1, aH, dev_caps, horizon)
                         divs.append({"turn": st.turn,
                                      "a1": label(sel["option"][a1], hand), "aH": label(sel["option"][aH], hand),
                                      "t1_gap": round(t1[a1] - t1[aH], 1), "tH_gap": round(tH[aH] - tH[a1], 1),
                                      "traj_a1": trajs[a1], "traj_aH": trajs[aH],
                                      "cap_a1": capchains[a1], "cap_aH": capchains[aH],
-                                     "only_aH": only_aH, "only_a1": only_a1, "cat": cat})
+                                     "only_aH": only_aH, "only_a1": only_a1, "cat": cat, "sd": sd})
                 ret = b.select(Observation.from_dict(obs))
             else:
                 ret = b.select(Observation.from_dict(obs)) if who == 0 else o.select(Observation.from_dict(obs))
@@ -112,7 +137,13 @@ def main(max_decisions=24, max_cand=5, horizon=3, seeds=(7, 17, 29)):
         print(f"     Cap a1: {' → '.join(d['cap_a1']) or '(なし)'}")
         print(f"     Cap aH: {' → '.join(d['cap_aH']) or '(なし)'}")
         print(f"     Chain Diff: aHのみ={d['only_aH']}  a1のみ={d['only_a1']}")
-        print(f"     判定: {d['cat']}\n")
+        print(f"     判定: {d['cat']}")
+        if d["sd"]:
+            s = d["sd"]
+            verdict = "本物Plan(全seed勝ち＋育成安定)" if (s["wins"] == s["n"] and s["dev_ok"] == s["n"]) \
+                else ("引き運疑い(seed毎に勝敗変動)" if s["wins"] <= s["n"] * 0.6 else "有力(過半seed勝ち)")
+            print(f"     ★seed分解: aH勝ち {s['wins']}/{s['n']}  育成能力安定 {s['dev_ok']}/{s['n']}  margins={s['margins']} → {verdict}")
+        print()
 
 
 if __name__ == "__main__":
