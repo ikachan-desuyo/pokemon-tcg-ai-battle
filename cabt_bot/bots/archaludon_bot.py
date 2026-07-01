@@ -201,7 +201,9 @@ class ArchaludonBot(DeckBot):
             opp = (cur.get("players") or [None, None])[1 - cur.get("yourIndex", 0)] if cur else {}
             my_after = len(me.get("hand") or []) - 1   # ジャッジ自身を除いた戻り枚数
             opp_hand = len((opp or {}).get("hand") or [])
-            return 60 if (my_after <= 4 and opp_hand >= 5) else None
+            # 相手の手札が多い(妨害価値)＆自分は戻す枚数が少ない(4枚引き直しで損しない)時に使う。
+            # 従来 my_after<=4 は厳しすぎて未発火 → <=5(手札6枚)まで緩和。相手大量(>=7)なら1枚損でも妨害優先。
+            return 60 if ((my_after <= 5 and opp_hand >= 5) or (my_after <= 6 and opp_hand >= 7)) else None
         # ジーランスは特性(きおくにもぐる)が重複しないため、場に1匹で十分。
         # 既に場に居るなら出さない(2匹目以降はベンチ枠とテンポの無駄＝GPTレビュー指摘)。
         if cid == RELICANTH:
