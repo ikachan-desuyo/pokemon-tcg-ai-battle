@@ -656,6 +656,46 @@ class DeckBot(Bot):
                    opp_evolved=oevo, my_energy=me_e, opp_energy=oe)
         return out
 
+    def check_invariants(self) -> list:
+        """Analyzer同士の整合性(Invariant)を自己検知する。事実層が"ルール違反"を自分で見つける。
+        レビューで人間が気づく前に、Analyzerが矛盾した事実を返したら即検出する
+        （例: 攻撃役が場に無いのに energy_short=0 ＝今回のバグ）。返り値=違反メッセージのリスト(空=健全)。
+        提出botを壊さないため assert で落とさず違反を返す（テスト/デバッグ側が判定）。"""
+        v = []
+        dv = self._analyze_development(); th = self.analyze_threat()
+        pr = self.analyze_prize(); ph = self.analyze_phase()
+        need = self.plan.setup_energy or 3
+        # --- Development ---
+        if not (0 <= dv["energy_short"] <= need):
+            v.append(f"energy_short={dv['energy_short']} が範囲[0,{need}]外")
+        if dv["ready"] and dv["attacker_short"]:
+            v.append("ready=True なのに attacker_short>0（攻撃役なしでready）")
+        if dv["ready"] and dv["energy_short"]:
+            v.append(f"ready=True なのに energy_short={dv['energy_short']}")
+        if dv["ready"] and dv["evolution_short"]:
+            v.append("ready=True なのに evolution_short>0")
+        # 今回のバグ: 攻撃役が場に無いのに energy_short=0（"エネ充足"と誤読）
+        cur = self._cur
+        if cur and cur.get("players") and self.plan.attackers:
+            me = cur["players"][self._me_index()]
+            in_play = [s for s in [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if s]
+            if not any(s.get("id") in set(self.plan.attackers) for s in in_play) and dv["energy_short"] == 0:
+                v.append("攻撃役が場に無いのに energy_short=0（=今回修正したバグの再発）")
+        # --- Threat ---
+        if th["can_ko_me"] and th["hits_to_lose"] != 1:
+            v.append(f"can_ko_me=True なのに hits_to_lose={th['hits_to_lose']}(≠1)")
+        if (not th["can_ko_me"]) and th["opp_line_damage"] > 0 and th["my_active_hp"] > 0 and th["hits_to_lose"] < 2:
+            v.append(f"can_ko_me=False なのに hits_to_lose={th['hits_to_lose']}(<2)")
+        if th["hits_to_lose"] < 1:
+            v.append(f"hits_to_lose={th['hits_to_lose']} <1")
+        # --- Prize ---
+        if pr["prize_diff"] != pr["opp_prizes"] - pr["my_prizes"]:
+            v.append("prize_diff が opp_prizes-my_prizes と不一致")
+        # --- Phase ---
+        if ph["my_evolved"] > ph["my_attackers"]:
+            v.append(f"my_evolved={ph['my_evolved']} > my_attackers={ph['my_attackers']}")
+        return v
+
     def evaluate_position(self) -> float:
         """状態評価器(State→スカラー): 今の盤面の良さ。Analyzer(Development/Threat/Prize)を統合。
         Resolver/Search/Explain が共有する共通の"局面価値"。デッキ名・カード名は見ない＝Universal。
