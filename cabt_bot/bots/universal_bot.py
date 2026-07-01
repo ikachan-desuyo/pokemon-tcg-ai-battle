@@ -59,15 +59,18 @@ def interpret_move(mv) -> dict:
     return {"is_attack": (mv.cost is not None) and est > 0, "est_damage": est, "cost_syms": syms}
 
 
-def _energy_type(ci) -> str | None:
-    """基本エネカードの型記号。"Basic {W} Energy" → 'W'。エネでなければ None。"""
+def _energy_provides(ci) -> list[str]:
+    """エネカードが供給する型記号リスト。Basic {W}→['W']、Ignition {C}{C}{C}→['C','C','C']。
+    特殊エネ(無色供給/多色)も type から解釈＝基本エネだけでなく Game Plan のエネ源を正しく捉える。"""
     if not ci or ci.is_pokemon:
-        return None
-    nm = ci.name or ""
-    if "Energy" not in nm:
-        return None
-    m = re.search(r"\{([A-Z])\}", nm)
-    return m.group(1) if m else None
+        return []
+    if "Energy" not in (ci.name or ""):
+        return []
+    syms = _cost_syms(ci.type or "")           # "{C}{C}{C}"→['C','C','C'], "{W}"→['W']
+    if syms:
+        return syms
+    m = re.search(r"\{([A-Z])\}", ci.name or "")   # fallback: "Basic {W} Energy"
+    return [m.group(1)] if m else []
 
 
 def infer_plan(decklist) -> DeckPlan:
@@ -104,32 +107,44 @@ def infer_plan(decklist) -> DeckPlan:
     for i in damaging:
         attackers.update(line(i))
 
-    # 基本エネカード: id → 型
-    energy_type = {i: _energy_type(C[i]) for i in ids}
-    energy_type = {i: t for i, t in energy_type.items() if t}
+    # ===== Game Plan 推論層: main attack → 必要エネ → energy_rules / setup_energy =====
+    energy_cards = {i: _energy_provides(C.get(i)) for i in ids}   # id → 供給型(特殊エネ含む)
+    energy_cards = {i: p for i, p in energy_cards.items() if p}
 
-    # 主アタッカー(最大火力順) の"最初に使う技=主役の最良技"から energy_rules / setup_energy を導出
-    main = sorted(damaging, key=maxdmg, reverse=True)
-    # setup_energy は最強デッキ全体でなく「主役(main[0])の主技」のコスト＝最初に使う技(ユーザ指摘)
-    setup = 0
+    def basic_of(t):
+        return (next((e for e, p in energy_cards.items() if p == [t]), None)
+                or next((e for e, p in energy_cards.items() if t in p), None))
+
+    main = sorted(damaging, key=maxdmg, reverse=True)   # main attack = 最大火力(ゲームプランの中心)
+    setup = 0; rules = []
+
+    def assign(atk, primary):
+        """主技コストから energy_rules を派生。特殊エネ(無色供給)も使う。"""
+        ba = best_attack(atk)
+        if not ba:
+            return
+        syms = ba["cost_syms"]; used = set()
+        for t in [x for x in syms if x != "C"]:          # 特定型 → 基本エネ
+            e = basic_of(t)
+            if e is not None and e not in used:
+                rules.append((e, atk)); used.add(e)
+        if "C" in syms and primary:                      # 無色枠 → 基本エネ優先
+            # 特殊エネ(Ignition等 volatile)は番末トラッシュ等の特別扱いが要り、ノブOFFのUniversalには不利。
+            # 基本エネで払えるなら基本を使う(信頼性優先)。基本が無い時のみ特殊エネにフォールバック。
+            fb = next((e for e, p in energy_cards.items() if len(p) == 1 and e not in used), None)
+            if fb is None:
+                fb = next((e for e, p in energy_cards.items() if e not in used), None)
+            if fb is not None:
+                rules.append((fb, atk)); used.add(fb)
+
     if main:
         b0 = best_attack(main[0])
         if b0:
-            setup = len(b0["cost_syms"])
-    rules = []
-    for atk in main[:3]:
-        best = best_attack(atk)
-        if not best:
-            continue
-        syms = best["cost_syms"]
-        needed = [t for t in syms if t != "C"] or (["C"] if syms else [])
-        for t in needed:
-            # 必要型に一致する基本エネ、無ければ任意の基本エネ(無色枠用)
-            eid = next((e for e, et in energy_type.items() if et == t), None)
-            if eid is None and t == "C" and energy_type:
-                eid = next(iter(energy_type))
-            if eid is not None:
-                rules.append((eid, atk))
+            setup = len(b0["cost_syms"])                 # setup = 主役の主技コスト(最初に使う技)
+        assign(main[0], primary=True)
+        for atk in main[1:3]:
+            assign(atk, primary=False)
+    rules = list(dict.fromkeys(rules))
 
     # card_values / play_priority を火力から自動導出（デッキ固有チューニングでなくカードデータ由来）
     #   主役ほど高価値=守る/出す。専用botの手書き値を、火力という普遍指標で代替する。
@@ -139,7 +154,7 @@ def infer_plan(decklist) -> DeckPlan:
         d = maxdmg(i)
         card_values[i] = min(100, 50 + d // 3)        # 火力比例(主役ほど高い)
         play_priority[i] = max(45, 88 - rank * 6)      # 火力順に早く出す
-    for e in energy_type:
+    for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
     return DeckPlan(

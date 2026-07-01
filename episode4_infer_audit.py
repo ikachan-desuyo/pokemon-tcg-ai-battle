@@ -41,10 +41,18 @@ def infer_score(inf, truth):
     i_atk = set(inf.attackers or ())
     # attackers 40: 真の攻撃役の recall
     s_atk = 40 * (len(t_atk & i_atk) / len(t_atk)) if t_atk else 40
-    # energy 25: 真の energy_rules で使うエネidを推論もカバーするか
-    t_e = {e for e, _ in (truth.energy_rules or ())}
+    # energy 25: 真の energy_rules で使うエネidを推論もカバーするか。
+    #   真が None(任意エネ)の枠は「推論が何かエネを割当てていれば可」とする(不当減点回避)。
+    t_pairs = truth.energy_rules or ()
     i_e = {e for e, _ in (inf.energy_rules or ())}
-    s_e = 25 * (len(t_e & i_e) / len(t_e)) if t_e else 25
+    t_specific = {e for e, _ in t_pairs if e is not None}
+    t_flex = any(e is None for e, _ in t_pairs)
+    if not t_pairs:
+        s_e = 25
+    else:
+        hit = len(t_specific & i_e) + (1 if (t_flex and i_e) else 0)
+        need = len(t_specific) + (1 if t_flex else 0)
+        s_e = 25 * (hit / need) if need else 25
     # setup 20: 一致=20, ±1=10, それ以外=0
     d = abs((inf.setup_energy or 0) - (truth.setup_energy or 3))
     s_s = 20 if d == 0 else (10 if d == 1 else 0)
@@ -55,8 +63,8 @@ def infer_score(inf, truth):
 
 
 def main():
-    print(f"{'デッキ':<12} {'InferScore':>10}  {'内訳(atk/ene/setup/pp)':<24} recall/setup(推/真)")
-    tot = 0; n = 0
+    print(f"{'デッキ':<12} {'Score':>6}  {'atk':>4} {'ene':>4} {'setup':>5} {'pp':>4}   setup(推/真)")
+    tot = 0; n = 0; dim = [0.0, 0.0, 0.0, 0.0]; cap = [40, 25, 20, 15]
     for name, stem, key in DECKS:
         if not os.path.exists(f"decks/{stem}.csv") or key not in R.DECK_BOTS:
             continue
@@ -70,12 +78,15 @@ def main():
             print(f"{name:<12} (専用planにattackers無し=比較不可)"); continue
         score, (a, e, s, p) = infer_score(inf, truth)
         tot += score; n += 1
-        t_atk = set(truth.attackers); recall = len(t_atk & set(inf.attackers)) / len(t_atk)
-        miss = [nm(i) for i in t_atk - set(inf.attackers)]
-        flag = f" 取零し={miss}" if miss else ""
-        print(f"{name:<12} {score:>8}/100  {a}/{e}/{s}/{p:<16} r{recall:.0%} setup {inf.setup_energy}/{truth.setup_energy or 3}{flag}")
+        for k, v in enumerate((a, e, s, p)):
+            dim[k] += v
+        print(f"{name:<12} {score:>4}/100  {a:>4} {e:>4} {s:>5} {p:>4}   {inf.setup_energy}/{truth.setup_energy or 3}")
     if n:
         print(f"\n=== 平均 Infer Score: {tot/n:.1f}/100 ({n}デッキ) ===")
+        print("=== 次元別(達成率) ===")
+        labels = ["Attackers", "Energy", "Setup", "Play"]
+        for k in range(4):
+            print(f"  {labels[k]:<10} {dim[k]/n:>5.1f}/{cap[k]}  = {100*dim[k]/(n*cap[k]):>3.0f}%")
 
 
 if __name__ == "__main__":
