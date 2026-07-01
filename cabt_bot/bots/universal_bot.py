@@ -148,24 +148,23 @@ def infer_plan(decklist) -> DeckPlan:
 
     # card_values / play_priority を火力から自動導出（デッキ固有チューニングでなくカードデータ由来）
     #   主役ほど高価値=守る/出す。専用botの手書き値を、火力という普遍指標で代替する。
-    card_values = {}
-    play_priority = {}
-    for rank, i in enumerate(main):
-        d = maxdmg(i)
-        card_values[i] = min(100, 50 + d // 3)        # 火力比例(主役ほど高い)
-        play_priority[i] = max(45, 88 - rank * 6)      # 火力順に早く出す
-    # 主役(main[0])の前段(たね)は火力ゼロでもゲームプランの土台＝T1に置きたい(高priority)。
-    #   火力だけの play_priority だと前段が最後に置かれ進化が遅れる(EVOLVE Timing監査で判明)。
+    # 主役(main[0])の前段(土台)集合。火力ゼロでもゲームプランの土台＝早く置きたい。
+    main_line = set()
     if main:
         cur = C.get(main[0])
         while cur and cur.previous_stage and cur.previous_stage in name2id:
             pid = name2id[cur.previous_stage]
-            play_priority[pid] = max(play_priority.get(pid, 0), 85)
-            card_values.setdefault(pid, 60)
-            cur = C.get(pid)
-    for i in attackers:                                # その他の攻撃役ラインも最低限は展開
-        play_priority.setdefault(i, 60)
-        card_values.setdefault(i, 55)
+            if pid in main_line:
+                break
+            main_line.add(pid); cur = C.get(pid)
+    # play_priority = 火力ベース + 加点(前段=土台 +20)。固定値でなく加点＝大量タイを避ける(将来デッキにも自然)。
+    card_values = {}
+    play_priority = {}
+    for i in attackers:
+        d = maxdmg(i)
+        card_values[i] = min(100, 50 + d // 3)
+        base = 50 + min(40, d // 5)                    # 火力ベース(0火力=50, 高火力ほど高い)
+        play_priority[i] = base + (20 if i in main_line else 0)   # 前段(土台)に加点
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
