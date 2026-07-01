@@ -15,6 +15,7 @@ from .lucario_bot import MegaLucarioBot
 from .yukinooh_bot import MegaYukinoohBot
 from .alakazam_bot import AlakazamBot
 from .froslass_bot import FroslassBot
+from .scrafty_bot import ScraftyBot
 
 # Mega Starmie（Nebula 主軸）
 STARMIE_PLAN = DeckPlan(
@@ -103,4 +104,5 @@ DECK_BOTS: dict[str, type] = {
     "archaludon_il": ImitationBot,
     "alakazam": AlakazamBot,        # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
     "froslass": FroslassBot,        # 1位ログ由来: 水(メガユキメノコex)
+    "scrafty": ScraftyBot,          # Control原理: 手札干渉(メガズルズキンex)
 }

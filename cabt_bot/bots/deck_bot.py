@@ -337,7 +337,8 @@ class DeckBot(Bot):
             for i in idxs:
                 if aid and options[i].attack_id == aid:
                     return i
-        return max(idxs, key=lambda i: self._dmg(options[i]))
+        # 非リーサル時の攻撃選択: 現在盤面の可変ダメージ ＋ 状態異常のテンポ価値 で比較。
+        return max(idxs, key=lambda i: self._dmg(options[i]) + self._status_value(options[i].attack_id))
 
     def _setup_attack_choice(self, idxs, options):
         """火力技の最大ダメージが setup_attack_min_damage 未満なら、弱く殴らず準備技(サーチ/加速)を使う。
@@ -398,9 +399,59 @@ class DeckBot(Bot):
         if op.attack_id is None:
             return 0
         base = self._attack_table().get(op.attack_id, 0)
+        # 可変ダメージは『現在の盤面』から計算する（期待値でなく実値）。固定技は None → base。
+        var = self._var_dmg(op.attack_id, base)
+        if var is not None:
+            return var
         if base == 0 and self.plan.est_var_damage:
             return self._attack_est().get(op.attack_id, 0)
         return base
+
+    def _atk_texts(self) -> dict:
+        if getattr(self, "_atk_text", None) is None:
+            self._load_attacks()
+        return self._atk_text or {}
+
+    def _var_dmg(self, aid, base):
+        """効果文＋現在盤面から可変ダメージを計算（汎用）。『N (more) damage for each X』を、Xの現在数
+        （相手手札/自分の手札/自分に乗ったダメカン/相手が取ったサイド/自分のベンチ）で評価する。
+        固定技や未対応パターンは None（呼び出し側が base を使う）。全カードに効く共通評価器。"""
+        import re
+        text = self._atk_texts().get(aid, "")
+        cur = self._cur
+        if not text or not cur or not cur.get("players"):
+            return None
+        m = re.search(r"(\d+)\s*(more\s+)?damage\s+for each", text)
+        if not m:
+            return None
+        per = int(m.group(1)); low = text.lower()
+        me = cur["players"][cur.get("yourIndex", 0)]
+        opp = cur["players"][1 - cur.get("yourIndex", 0)]
+        cnt = None
+        if "opponent" in low and "hand" in low:
+            cnt = len(opp.get("hand") or []) or opp.get("handCount", 0)
+        elif "your hand" in low or "in your hand" in low:
+            cnt = len(me.get("hand") or [])
+        elif "damage counter on this" in low:
+            a = (me.get("active") or [None])[0]
+            mhp = (a.get("maxHp") or 0) if a else 0; hp = (a.get("hp") or 0) if a else 0
+            cnt = max(0, (mhp - hp) // 10) if mhp else 0
+        elif "prize" in low and "taken" in low:
+            cnt = 6 - (len(opp.get("prize") or []) or 6) if "opponent" in low else 6 - (len(me.get("prize") or []) or 6)
+        elif "benched" in low and "your" in low:
+            cnt = len([b for b in (me.get("bench") or []) if b])
+        if cnt is None:
+            return None
+        return base + per * cnt   # base=0 なら per×cnt(うらみぶし等)、base有なら加算(レイジング等)
+
+    def _status_value(self, aid) -> int:
+        """状態異常の"テンポ価値"。眠り/マヒ=次ターン攻撃不能に近い→加点。攻撃選択の比較にのみ使う。"""
+        low = self._atk_texts().get(aid, "").lower()
+        if "asleep" in low or "paralyzed" in low:
+            return 60
+        if "confused" in low:
+            return 25
+        return 0
 
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
@@ -1016,6 +1067,7 @@ class DeckBot(Bot):
     def _load_attacks(self):
         import re
         self._atk_dmg, self._atk_name, self._atk_est = {}, {}, {}
+        self._atk_text = {}
         self._atk_no_weak = set()
         try:
             import sys
@@ -1037,6 +1089,7 @@ class DeckBot(Bot):
                         if "for each" in a.text.lower():
                             est = min(est * 3, 240)
                 self._atk_est[a.attackId] = est
+                self._atk_text[a.attackId] = a.text or ""
                 # 弱点/抵抗を無視する技を記録（例: Nebula Beam）
                 if a.text and "affected by Weakness" in a.text:
                     self._atk_no_weak.add(a.attackId)
