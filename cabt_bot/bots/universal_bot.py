@@ -154,6 +154,18 @@ def infer_plan(decklist) -> DeckPlan:
         d = maxdmg(i)
         card_values[i] = min(100, 50 + d // 3)        # 火力比例(主役ほど高い)
         play_priority[i] = max(45, 88 - rank * 6)      # 火力順に早く出す
+    # 主役(main[0])の前段(たね)は火力ゼロでもゲームプランの土台＝T1に置きたい(高priority)。
+    #   火力だけの play_priority だと前段が最後に置かれ進化が遅れる(EVOLVE Timing監査で判明)。
+    if main:
+        cur = C.get(main[0])
+        while cur and cur.previous_stage and cur.previous_stage in name2id:
+            pid = name2id[cur.previous_stage]
+            play_priority[pid] = max(play_priority.get(pid, 0), 85)
+            card_values.setdefault(pid, 60)
+            cur = C.get(pid)
+    for i in attackers:                                # その他の攻撃役ラインも最低限は展開
+        play_priority.setdefault(i, 60)
+        card_values.setdefault(i, 55)
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
