@@ -84,6 +84,7 @@ class DeckPlan:
     sacrifice_damage: dict = field(default_factory=dict)  # {特性カードid: 与ダメージ} 自滅特性のKO判定用
     est_var_damage: bool = False              # 可変ダメージ技(base=0)を効果文から推定して評価
     setup_energy: int = 0                     # 主アタッカーが攻撃に必要なエネ数(育成評価器 _eval_setup 用。0=既定3扱い)
+    use_resolver: bool = False                # サーチ先(take)を Resolver(Need改善量) で選ぶ(v1限定導入・A/B用)
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
 
@@ -110,6 +111,7 @@ class DeckBot(Bot):
         self._sel = None
         self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
+        self._resolver_log = []     # Resolver v1 の Explain Log(候補・改善量・採用理由)
         # 専門家ログから学んだ Action Scorer(デッキ非依存) を『どれを選ぶか』に加点(opt-in)。
         # FinalScore = Heuristic + ml_alpha * MLScore。既定オフ(挙動不変)。
         self.action_scorer = None
@@ -578,6 +580,25 @@ class DeckBot(Bot):
         imp = self._need_improvement(card_id)
         return imp["attacker"] + imp["evolve"] + imp["energy"]
 
+    def analyze_recovery(self, card_id) -> dict:
+        """復旧/展開の"事実"診断（Analyzer=事実のみ・Opinionを持たない）。カードの価値判断はしない。
+        Turn Evaluator が局面ごとに重み付けする。将来 engine状態/エネ源 等の Fact Analyzer をここへ拡張。
+        is_attacker / is_evolved_attacker / recovery_possible(進化前が居て最終形が欠けている) /
+        bench_thin(ベンチ<3=展開が薄い事実)。"""
+        atk = set(self.plan.attackers)
+        info = self._cardinfo.get(card_id)
+        is_atk = card_id in atk
+        is_evo_atk = is_atk and not getattr(info, "is_basic", True)
+        need = self._analyze_development()
+        cur = self._cur
+        me = cur["players"][cur.get("yourIndex", 0)] if (cur and cur.get("players")) else {}
+        return {
+            "is_attacker": is_atk,
+            "is_evolved_attacker": is_evo_atk,
+            "recovery_possible": bool(is_evo_atk and need["evolution_short"] and need["attacker_short"] == 0),
+            "bench_thin": len([b for b in (me.get("bench") or []) if b]) < 3,
+        }
+
     def _attack_est(self) -> dict:
         if getattr(self, "_atk_est", None) is None:
             self._load_attacks()
@@ -1016,11 +1037,36 @@ class DeckBot(Bot):
         k = max(0, min(k, n))
         if k == 0:
             return []
+        # Resolver v1: 取得(take)は Need改善量 で選ぶ(限定導入・Explain Log付き)。give(discard)は従来通り。
+        if prefer_high and self.plan.use_resolver:
+            return self._resolve_target(sel, k)
         keyfn = (self._take_rank if (prefer_high and self.plan.smart_take)
                  else self._opt_value)
         ranked = sorted(range(n), key=lambda i: keyfn(sel.options[i]),
                         reverse=prefer_high)
         return sorted(ranked[:k])
+
+    def _resolve_target(self, sel, k) -> list[int]:
+        """Resolver v1: 候補(sel.options) × Need改善量(_need_improvement) → 最良k件。カード選択は最後の argmax のみ。
+        Explain Log に『候補・改善量・Need・採用』を残す(デバッグ/説明用)。サーチ札共通(候補生成はengineが提供)。"""
+        # Resolver = argmax のみ（評価は本来 Turn Evaluator の責務）。Turn Evaluator 実装までの暫定として
+        # Need改善量でランクし、同点は静的カード価値(_opt_value=既存の価値判断)でタイブレーク。
+        # ※Opinion(価値判断)は Analyzer に持たせない。ここは"決定層"なので暫定的に価値を参照してよい。
+        scored = []
+        for i in range(len(sel.options)):
+            cid = self._opt_card_id(sel.options[i])
+            score = (self._need_improvement_score(cid), self._opt_value(sel.options[i]))
+            scored.append((score, i, cid))
+        scored.sort(key=lambda t: t[0], reverse=True)
+        need = self._analyze_development()
+        cn = lambda c: (self._cardinfo.get(c).name if self._cardinfo.get(c) else f"#{c}")
+        self._resolver_log.append({
+            "turn": (self._cur or {}).get("turn"),
+            "need": {kk: need[kk] for kk in ("attacker_short", "evolution_short", "energy_short")},
+            "candidates": [(cn(c), round(s)) for s, _, c in scored[:5]],
+            "chosen": cn(scored[0][2]) if scored else None,
+        })
+        return sorted(i for _, i, _ in scored[:k])
 
     def _first_of(self, sel, want_ids) -> int | None:
         for cid in want_ids:
