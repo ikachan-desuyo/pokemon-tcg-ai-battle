@@ -817,7 +817,14 @@ class DeckBot(Bot):
             return [0]
 
         saved_cur = self._cur
-        trajectories = []; viol_total = 0; seed_terminal_comps = []; chain = []
+        trajectories = []; viol_total = 0; seed_terminal_comps = []; chain = []; cap_chain = []
+        init_caps = None
+        if record_chain:                                   # 決定"前"の能力集合(既存能力は新規獲得に数えない)
+            self._cur = raw; self._eval_player = root_player
+            dv0 = self._analyze_development(); ph0 = self.analyze_phase()
+            init_caps = {"attacker": ph0["my_attackers"] >= 1, "evolved": ph0["my_evolved"] >= 1,
+                         "energy": dv0["energy_short"] == 0 and ph0["my_attackers"] >= 1, "ready": bool(dv0["ready"])}
+            self._eval_player = None; self._cur = saved_cur
         try:
             for seed in seeds:
                 pool = []
@@ -834,6 +841,7 @@ class DeckBot(Bot):
                     continue
                 traj = []; turns_done = 0; pending = [first_idx]; last_comp = None; prev_ms = None
                 rec = record_chain and seed == seeds[0]
+                cap_prev = dict(init_caps) if (rec and init_caps) else None; attacked = False
                 for _ in range(400):
                     ob = state.observation; c = ob.current
                     if c is None or c.result != -1:
@@ -853,6 +861,8 @@ class DeckBot(Bot):
                                     _cid = _hd[_idx]["id"] if (_idx is not None and 0 <= _idx < len(_hd)) else None
                                     _nm = self._cardinfo.get(_cid).name if _cid in self._cardinfo else ""
                                     chain.append(f"{_ACT[_t]}{(' '+_nm) if _nm else ''}")
+                                    if _t == int(_OT.ATTACK):
+                                        attacked = True
                         state = search_step(state.searchId, sel)
                         nc = state.observation.current
                         if nc is None:
@@ -878,6 +888,29 @@ class DeckBot(Bot):
                                         chain.append("★攻撃準備")
                                 if last_comp["result"] != -1:
                                     chain.append("★決着")
+                                # Capability Chain(抽象・デッキ非依存): 決定が新規獲得した能力を依存順で
+                                if cap_prev is not None:
+                                    curr = {"attacker": last_comp["attackers"] >= 1,
+                                            "evolved": last_comp["evolved"] >= 1,
+                                            "energy": last_comp["energy_short"] == 0 and last_comp["attackers"] >= 1,
+                                            "ready": last_comp["ready"] == 1}
+                                    if curr["attacker"] and not cap_prev["attacker"]:
+                                        cap_chain.append("攻撃役Exists")
+                                    if curr["energy"] and not cap_prev["energy"]:
+                                        cap_chain.append("エネReady")
+                                    if curr["evolved"] and not cap_prev["evolved"]:
+                                        cap_chain.append("進化Attacker")
+                                    if curr["ready"] and not cap_prev["ready"]:
+                                        cap_chain.append("攻撃Possible")
+                                    if attacked:
+                                        cap_chain.append("Attack")
+                                    _pd = prev_ms["prize_diff"] if prev_ms else 0
+                                    if last_comp["prize_diff"] > _pd:
+                                        cap_chain.append(f"Prize+{last_comp['prize_diff']-_pd}")
+                                    if last_comp["result"] != -1:
+                                        cap_chain.append("Win" if last_comp["result"] == root_player else "Loss")
+                                    cap_prev = curr
+                                attacked = False
                                 prev_ms = last_comp
                                 chain.append(f"‖T+{turns_done+1}")
                             turns_done += 1
@@ -906,7 +939,8 @@ class DeckBot(Bot):
             keys = seed_terminal_comps[0].keys()
             tcomp = {k: round(sum(sc[k] for sc in seed_terminal_comps) / len(seed_terminal_comps), 1) for k in keys}
         return {"terminal": avg[-1], "trajectory": avg, "n_seeds": len(trajectories),
-                "invariant_violations": viol_total, "terminal_comp": tcomp, "chain": chain}
+                "invariant_violations": viol_total, "terminal_comp": tcomp,
+                "chain": chain, "cap_chain": cap_chain}
 
     @staticmethod
     def decision_diff(search_tr, heur_tr) -> dict:

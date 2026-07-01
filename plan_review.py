@@ -31,29 +31,32 @@ def label(opt, hand):
     return t
 
 
-def explain(a1c, aHc):
-    """終端事実(aH vs a1)の差をPlanのExplainとして返す＋自動ヒント。"""
-    if not a1c or not aHc:
-        return "(終端事実なし)", "C"
-    parts = []
-    for k, lab in [("evolved", "進化済攻撃役"), ("attackers", "攻撃役"), ("energy", "盤面エネ"),
-                   ("ready", "攻撃準備"), ("prize_diff", "サイド差"), ("hits_to_lose", "被KO余裕")]:
-        d = round(aHc[k] - a1c[k], 1)
-        if abs(d) >= 0.3:
-            parts.append(f"{lab}{'+' if d>0 else ''}{d}")
-    # 自動ヒント: 育成事実がaHで明確に良い=Plan / ほぼ同一なのにposition差=運疑い
-    dev_gain = (aHc["evolved"] - a1c["evolved"]) * 2 + (aHc["ready"] - a1c["ready"]) * 2 + \
-               (aHc["energy"] - a1c["energy"]) + (aHc["prize_diff"] - a1c["prize_diff"]) - \
-               (aHc["evolution_short"] - a1c["evolution_short"])
-    if dev_gain >= 2:
-        hint = "A/B(育成/サイドがaHで明確に良い=Plan)"
-    elif dev_gain <= -1:
-        hint = "D?(aHの終端事実が悪いのにposition高=要精査)"
-    elif not parts:
-        hint = "C(終端事実ほぼ同一=引き運疑い)"
-    else:
-        hint = "B/C(小差)"
-    return ("; ".join(parts) if parts else "終端事実ほぼ同一"), hint
+DEV_CAPS = {"攻撃役Exists", "エネReady", "進化Attacker", "攻撃Possible"}   # 育成の「途中」=Plan価値
+
+
+def chain_diff(ca1, caH):
+    """Chain Difference: aHのcap_chainにあってa1に無い能力/イベント(と逆)。順序でなく多重集合差。"""
+    from collections import Counter
+    c1 = Counter(ca1 or []); cH = Counter(caH or [])
+    only_aH = list((cH - c1).elements())     # aHだけが到達した能力/成果
+    only_a1 = list((c1 - cH).elements())
+    return only_aH, only_a1
+
+
+def categorize(ca1, caH):
+    """A=Plan / B=Passive Opponent Bias / C=Equivalent / D=Bug。cap_chainの差で判定。"""
+    only_aH, only_a1 = chain_diff(ca1, caH)
+    dev_gain_aH = [x for x in only_aH if x in DEV_CAPS]        # aHが余分に築いた"途中(育成)"
+    attack_only_aH = [x for x in only_aH if x in ("Attack",) or x.startswith("Prize")]
+    if not only_aH and not only_a1:
+        return "C(Equivalent: cap_chain同一)"
+    # aHが育成の途中(Recovery/Evo/Ready)を余分に築いた＝本物のPlan
+    if dev_gain_aH:
+        return f"A(Plan: aHが育成連鎖を築いた {dev_gain_aH})"
+    # aHの差が攻撃/サイドのみで、育成の途中を築いていない＝前のめり(相手が殴らせてくれた疑い)
+    if attack_only_aH and not dev_gain_aH:
+        return f"B(Passive Opponent Bias: 育成でなく先制Attack/Prize {attack_only_aH})"
+    return "C/D(要精査: cap差はあるが育成でも攻撃でもない)"
 
 
 def main(max_decisions=24, max_cand=5, horizon=3, seeds=(7, 17, 29)):
@@ -74,39 +77,42 @@ def main(max_decisions=24, max_cand=5, horizon=3, seeds=(7, 17, 29)):
             if who == 0 and sel.get("type") == MAIN and obs.get("search_begin_input") and len(sel["option"]) >= 2:
                 hand = obs["current"]["players"][0].get("hand") if obs.get("current") else None
                 cands = list(range(min(len(sel["option"]), max_cand)))
-                t1 = {}; tH = {}; trajs = {}; comps = {}; chains = {}
+                t1 = {}; tH = {}; trajs = {}; capchains = {}
                 for i in cands:
                     p = b.evaluate_plan(obs, i, root_player=0, horizon=horizon, seeds=seeds, record_chain=True)
                     if p and len(p["trajectory"]) >= 2:
                         t1[i] = p["trajectory"][0]; tH[i] = p["trajectory"][-1]
-                        trajs[i] = p["trajectory"]; comps[i] = p["terminal_comp"]; chains[i] = p["chain"]
+                        trajs[i] = p["trajectory"]; capchains[i] = p["cap_chain"]
                         viol += p["invariant_violations"]
                 if len(t1) >= 2:
                     n_dec += 1
                     a1 = max(t1, key=lambda i: t1[i]); aH = max(tH, key=lambda i: tH[i])
                     if a1 != aH:
-                        exp, hint = explain(comps[a1], comps[aH])
+                        only_aH, only_a1 = chain_diff(capchains[a1], capchains[aH])
+                        cat = categorize(capchains[a1], capchains[aH])
                         divs.append({"turn": st.turn,
                                      "a1": label(sel["option"][a1], hand), "aH": label(sel["option"][aH], hand),
                                      "t1_gap": round(t1[a1] - t1[aH], 1), "tH_gap": round(tH[aH] - tH[a1], 1),
                                      "traj_a1": trajs[a1], "traj_aH": trajs[aH],
-                                     "comp_a1": comps[a1], "comp_aH": comps[aH], "explain": exp, "hint": hint,
-                                     "chain_a1": chains[a1], "chain_aH": chains[aH]})
+                                     "cap_a1": capchains[a1], "cap_aH": capchains[aH],
+                                     "only_aH": only_aH, "only_a1": only_a1, "cat": cat})
                 ret = b.select(Observation.from_dict(obs))
             else:
                 ret = b.select(Observation.from_dict(obs)) if who == 0 else o.select(Observation.from_dict(obs))
             obs = battle_select(ret or [0]); steps += 1
         battle_finish()
 
-    print(f"=== Plan Divergence REVIEW ({n_dec}決定中 {len(divs)}件食い違い, Invariant違反{viol}) ===\n")
+    from collections import Counter
+    tally = Counter(d["cat"][0] for d in divs)   # 先頭文字 A/B/C/D で集計
+    print(f"=== Plan Divergence REVIEW ({n_dec}決定中 {len(divs)}件食い違い, Invariant違反{viol}) ===")
+    print(f"    カテゴリ集計: {dict(tally)}  (A=Plan / B=PassiveOppBias / C=Equivalent / D=Bug)\n")
     for k, d in enumerate(divs, 1):
         print(f"[{k}] T{d['turn']}  1turn最善: {d['a1']}   →   3turn最善: {d['aH']}")
-        print(f"     1turn: a1が+{d['t1_gap']}上 / 3turn: aHが+{d['tH_gap']}逆転")
-        print(f"     traj a1={d['traj_a1']}  aH={d['traj_aH']}")
-        print(f"     終端事実(aH-a1): {d['explain']}")
-        print(f"     Chain a1: {' → '.join(d['chain_a1'])}")
-        print(f"     Chain aH: {' → '.join(d['chain_aH'])}")
-        print(f"     自動ヒント: {d['hint']}\n")
+        print(f"     traj a1={d['traj_a1']}  aH={d['traj_aH']}  (3turnでaHが+{d['tH_gap']})")
+        print(f"     Cap a1: {' → '.join(d['cap_a1']) or '(なし)'}")
+        print(f"     Cap aH: {' → '.join(d['cap_aH']) or '(なし)'}")
+        print(f"     Chain Diff: aHのみ={d['only_aH']}  a1のみ={d['only_a1']}")
+        print(f"     判定: {d['cat']}\n")
 
 
 if __name__ == "__main__":
