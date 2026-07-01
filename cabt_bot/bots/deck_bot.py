@@ -777,7 +777,8 @@ class DeckBot(Bot):
                 pass
         return {"position": pos, "decision": first_idx, "comp": comp} if pos is not None else None
 
-    def evaluate_plan(self, obs_dict, first_idx, root_player, horizon=3, seeds=(7, 17, 29), record_chain=False):
+    def evaluate_plan(self, obs_dict, first_idx, root_player, horizon=3, seeds=(7, 17, 29),
+                      record_chain=False, opponent=None, opp_decklist=None):
         """Plan AI (Episode 1): 初手(first_idx)を実行し、root_player の複数ターン先(horizon)まで
         自己trajectoryを延長して"各自ターン終端の position 軌跡"を返す。
         設計(明示): 相手ターンは最小行動(END/強制先頭)で通す=相手の攻めは入れず、まず
@@ -834,9 +835,27 @@ class DeckBot(Bot):
                 if len(pool) < dc + pc:
                     pool += [3] * (dc + pc - len(pool))
                 oa = [] if (op["active"] and op["active"][0]) else [8]
+                # 相手の隠し札(山/サイド/手札): opp_decklist があれば既知デッキで determinize、無ければ filler
+                if opp_decklist:
+                    orem = _C(opp_decklist) - _C([c["id"] for c in (op.get("discard") or [])])
+                    for sp in (op.get("active") or []) + (op.get("bench") or []):
+                        if sp:
+                            orem[sp["id"]] -= 1
+                            for k in ("preEvolution", "energyCards", "tools"):
+                                for cc in sp.get(k) or []:
+                                    orem[cc["id"]] -= 1
+                    opool = []
+                    for cid, n in orem.items():
+                        opool += [cid] * max(0, n)
+                    random.Random(seed + 1).shuffle(opool)
+                    odc = op["deckCount"]; opc = len(op["prize"]); ohc = op["handCount"]
+                    if len(opool) < odc + opc + ohc:
+                        opool += [3] * (odc + opc + ohc - len(opool))
+                    o_deck = opool[:odc]; o_prize = opool[odc:odc + opc]; o_hand = opool[odc + opc:odc + opc + ohc]
+                else:
+                    o_deck = fil(op["deckCount"]); o_prize = fil(len(op["prize"])); o_hand = fil(op["handCount"])
                 try:
-                    state = search_begin(o, pool[:dc], pool[dc:dc + pc], fil(op["deckCount"]),
-                                         fil(len(op["prize"])), fil(op["handCount"]), oa, False)
+                    state = search_begin(o, pool[:dc], pool[dc:dc + pc], o_deck, o_prize, o_hand, oa, False)
                 except Exception:
                     continue
                 traj = []; turns_done = 0; pending = [first_idx]; last_comp = None; prev_ms = None
@@ -916,8 +935,9 @@ class DeckBot(Bot):
                             turns_done += 1
                             if nc.result != -1 or turns_done >= horizon:
                                 break
-                    else:
-                        state = search_step(state.searchId, opp_min(ob))
+                    else:                                  # 相手手番: opponent(薄い方策)が居ればそれ、無ければ最小行動
+                        osel = (opponent.act(ob) if opponent is not None else opp_min(ob)) or [0]
+                        state = search_step(state.searchId, osel)
                 if traj:
                     trajectories.append(traj)
                     if last_comp is not None:
