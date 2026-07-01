@@ -13,6 +13,8 @@ from .iwapa_bot import IwapaBot
 from .lopunny_bot import MegaLopunnyBot
 from .lucario_bot import MegaLucarioBot
 from .yukinooh_bot import MegaYukinoohBot
+from .alakazam_bot import AlakazamBot
+from .froslass_bot import FroslassBot
 
 # Mega Starmie（Nebula 主軸）
 STARMIE_PLAN = DeckPlan(
@@ -66,8 +68,29 @@ class MegaStarmieSpreadPlanBot(DeckBot):
     plan = SPREAD_PLAN
 
 
+# Lightning（弱点デッキ: 水のMegaStarmie exを雷2倍でOHKOする天敵候補。全アタッカーBasic＝速い）
+LIGHTNING_PLAN = DeckPlan(
+    name="Lightning",
+    attackers=(957, 328, 953),             # ミライドンex / ピカチュウex / サンダー(全てたね)
+    key_cards=(957, 328),
+    energy_rules=((4, 957), (4, 328), (4, 953)),  # 基本雷→各アタッカー
+    play_priority={957: 90, 328: 84, 953: 78},
+    card_values={957: 100, 328: 90, 953: 80, 4: 85},
+    lethal=True,                           # 雷技はMega ex(水)を弱点2倍でOHKO＝KO最優先
+    boss_cards=(1182,),                    # ボスはKO時のみ
+    recover_cards=(1097,),                 # 夜タンカは回収価値がある時のみ
+    switch_cards=(1123,),                  # いれかえは攻撃役を前に出す時のみ
+    smart_take=True,
+)
+
+
+class LightningPlanBot(DeckBot):
+    plan = LIGHTNING_PLAN
+
+
 # csv stem -> bot class（引数なしで生成できる）
 DECK_BOTS: dict[str, type] = {
+    "lightning": LightningPlanBot,
     "deck": MegaStarmiePlanBot,
     "mega_spread": MegaStarmieSpreadPlanBot,
     "dragapult": DragapultBot,
@@ -78,4 +101,6 @@ DECK_BOTS: dict[str, type] = {
     "gardevoir": MegaGardevoirBot,
     "archaludon": ArchaludonBot,
     "archaludon_il": ImitationBot,
+    "alakazam": AlakazamBot,        # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
+    "froslass": FroslassBot,        # 1位ログ由来: 水(メガユキメノコex)
 }

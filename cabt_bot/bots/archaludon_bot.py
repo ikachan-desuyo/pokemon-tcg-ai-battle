@@ -16,7 +16,7 @@
 最優先進化 / ベンチ薄時はジュラルドン優先 / activeが攻撃可なら余剰エネは控えにプリチャージ。
 """
 from .deck_bot import DeckBot, DeckPlan
-from ..enums import AreaType
+from ..enums import AreaType, OptionType
 
 PLAN = DeckPlan(
     name="Archaludon",
@@ -53,8 +53,11 @@ class ArchaludonBot(DeckBot):
 
     ATTACK_COST = 3  # メタルディフェンダー(鋼鋼鋼)
 
-    def __init__(self, plan=None, decklist=None):
+    def __init__(self, plan=None, decklist=None, mode="base"):
         super().__init__(plan, decklist)
+        # 戦略モード(Plan Generator用): base=通常挙動。rush/tank/recovery で支配的な決定を分岐させ、
+        # 同一盤面から異なるゲームプランを生成する(探索の候補多様性を作る)。base は既存挙動を変えない。
+        self.mode = mode
         # ===== 相手デッキ判別の signature（実#1の64戦の対面分布から）=====
         # 検出順=具体的→一般。判別不能ならベース処理テーブル(PLAN)を使う。
         self.matchup_signatures = {
@@ -182,7 +185,47 @@ class ArchaludonBot(DeckBot):
             return "ルール無しポケサーチ(盤面が揃えば温存)"
         return ""
 
+    def _main(self, options):
+        res = super()._main(options)
+        # 戦略モード別の攻撃積極性(Plan Generator用)。
+        if res and self.mode in ("tank", "recovery", "tempo"):
+            op = options[res[0]]
+            if op.type == int(OptionType.ATTACK) and not self._active_lethal_now():
+                # Tank/Recovery: 大技(>=100)でない弱い削りなら殴らず番を終える(セットアップ/耐久優先)。
+                if self._dmg(op) < 100:
+                    for i, o2 in enumerate(options):
+                        if o2.type == int(OptionType.END):
+                            return [i]
+        return res
+
+    def _mode_play_score(self, cid, hand):
+        """戦略モード別のプレイ優先(Plan Generator用)。base/該当外は None を返して通常ロジックへ委譲。
+        目的は『同一盤面から異なる手順のプランを作る』こと(探索候補の多様性)。品質は後段のEvaluatorが選別。"""
+        if self.mode == "base":
+            return None
+        FULL_METAL_LAB, NIGHT_STRETCHER, LILLIE_DET, ZEIYU, BOSS_ORD = 1244, 1097, 1227, 1192, 1182
+        if self.mode == "tank":       # 耐久: スタジアム/安全ドロー/cape線を厚く、手札全捨てと積極妨害は避ける
+            if cid == FULL_METAL_LAB: return 96
+            if cid == LILLIE_DET:     return 88   # 山に戻す安全ドロー(capeを捨てない)
+            if cid == ZEIYU:          return None # 手札全捨ては打たない
+            if cid == BOSS_ORD:       return None
+        elif self.mode == "rush":     # 積極: 釣り/攻撃準備を厚く、耐久札は後回し
+            if cid == BOSS_ORD:       return 95
+            if cid == FULL_METAL_LAB: return 28
+            if cid == LILLIE_DET:     return 40
+        elif self.mode == "tempo":    # 育成: 攻撃せず次番の大技を最速で用意。攻撃ピースのサーチ厚め、耐久/妨害は後回し
+            if cid == ULTRA_BALL:      return 94   # 攻撃役/進化ピースを最優先で掘る
+            if cid == FULL_METAL_LAB:  return 32
+            if cid == BOSS_ORD:        return None
+        elif self.mode == "recovery": # 再構築: 回収を厚く
+            if cid == NIGHT_STRETCHER: return 92
+            if cid == FULL_METAL_LAB:  return 35
+        return None
+
     def _play_score(self, cid, hand):
+        mb = self._mode_play_score(cid, hand)
+        if mb is not None:
+            return mb
         # ハイパボ(ポケモンサーチ): 静的でなく『何を持ってこられるか』で評価(結果志向=depth-1)。
         # 欠けている重要ピース(攻撃役/たね/ジーランス)を取れる時ほど高く、揃っていれば低い。
         # ※加点中心(基準82を下回らない)で、揃っている時の過度な温存=テンポ損を避ける。
