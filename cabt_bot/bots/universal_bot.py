@@ -25,11 +25,38 @@ def _cost_syms(cost: str | None) -> list[str]:
     return out
 
 
-def _dmg(move) -> int:
-    if not move.damage:
-        return 0
-    m = re.match(r"(\d+)", str(move.damage))
-    return int(m.group(1)) if m else 0
+_ABILITY = "[Ability]"
+_EST_COUNT = 5      # 可変ダメージの代表個数(手札/ベンチ枚数などの想定値)
+
+
+def interpret_move(mv) -> dict:
+    """Move を総合解釈する（Episode4 の心臓）。damage欄と effect文を統合して
+    「攻撃か / 実効ダメージ / コスト記号」を返す。個別if でなく Move全体の解釈能力。
+      - "[Ability]" は攻撃でない。
+      - damage欄が空でも effect文の「does N damage」「N damage counters ... for each」等からダメージを推定
+        ＝可変ダメージ主役(フーディン ハンドパワー / Cruel Arrow 等)を取りこぼさない。
+    返り値: {is_attack, est_damage, cost_syms}。"""
+    name = mv.name or ""
+    if name.startswith(_ABILITY):
+        return {"is_attack": False, "est_damage": 0, "cost_syms": []}
+    syms = _cost_syms(mv.cost)
+    est = 0
+    if mv.damage:
+        m = re.match(r"(\d+)", str(mv.damage))
+        if m:
+            est = int(m.group(1))
+    if est == 0 and mv.effect:                 # damage欄が空 → 効果文から推定
+        eff = mv.effect
+        m = re.search(r"does (\d+) damage", eff)
+        if m:
+            est = int(m.group(1))              # 効果文の固定ダメージ(Cruel Arrow=100)
+        else:
+            m = re.search(r"(\d+) damage counters?.*?for each", eff)
+            if m:
+                est = int(m.group(1)) * 10 * _EST_COUNT    # counters×10dmg×代表個数(可変)
+            elif re.search(r"for each|times the number|damage .*×|×.*damage", eff):
+                est = 60                        # 倍率不明の可変=中程度と見なし攻撃役認識
+    return {"is_attack": (mv.cost is not None) and est > 0, "est_damage": est, "cost_syms": syms}
 
 
 def _energy_type(ci) -> str | None:
@@ -49,10 +76,17 @@ def infer_plan(decklist) -> DeckPlan:
     ids = list(dict.fromkeys(int(x) for x in decklist))
     pokes = [i for i in ids if C.get(i) and C[i].is_pokemon]
 
-    def maxdmg(i):
-        return max((_dmg(mv) for mv in C[i].moves), default=0)
+    def moves_of(i):
+        return [interpret_move(mv) for mv in C[i].moves]
 
-    damaging = [i for i in pokes if maxdmg(i) > 0]
+    def maxdmg(i):
+        return max((im["est_damage"] for im in moves_of(i) if im["is_attack"]), default=0)
+
+    def best_attack(i):
+        atks = [im for im in moves_of(i) if im["is_attack"]]
+        return max(atks, key=lambda im: im["est_damage"]) if atks else None
+
+    damaging = [i for i in pokes if any(im["is_attack"] for im in moves_of(i))]
     # 進化線(previous_stage 名で辿る)を含めて attacker 役を集める＝前段のたねも役に含める
     name2id = {C[i].name: i for i in pokes}
 
@@ -74,15 +108,20 @@ def infer_plan(decklist) -> DeckPlan:
     energy_type = {i: _energy_type(C[i]) for i in ids}
     energy_type = {i: t for i, t in energy_type.items() if t}
 
-    # 主アタッカー(最大火力順) の主技コストから energy_rules / setup_energy を導出
+    # 主アタッカー(最大火力順) の"最初に使う技=主役の最良技"から energy_rules / setup_energy を導出
     main = sorted(damaging, key=maxdmg, reverse=True)
-    rules = []; setup = 0
+    # setup_energy は最強デッキ全体でなく「主役(main[0])の主技」のコスト＝最初に使う技(ユーザ指摘)
+    setup = 0
+    if main:
+        b0 = best_attack(main[0])
+        if b0:
+            setup = len(b0["cost_syms"])
+    rules = []
     for atk in main[:3]:
-        best = max(C[atk].moves, key=_dmg, default=None)
+        best = best_attack(atk)
         if not best:
             continue
-        syms = _cost_syms(best.cost)
-        setup = max(setup, len(syms))
+        syms = best["cost_syms"]
         needed = [t for t in syms if t != "C"] or (["C"] if syms else [])
         for t in needed:
             # 必要型に一致する基本エネ、無ければ任意の基本エネ(無色枠用)
