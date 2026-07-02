@@ -19,7 +19,7 @@ BLOCKING_PREFIXES = [
     "ValuelessSupportPlay",                                  # 無価値サポでサポ権消費
     "MissedLethal",                                          # 勝ち筋逃し
     "WallRetreat",                                           # 逃げ0壁の無意味な交代
-    "LastStand|単騎×被KO×非致死|リーリエ手札あり",              # 確定敗北圏でドローサポ未活用
+    "LastStand|単騎×被KO×非致死|リーリエ打てたのに未使用",       # 確定敗北圏でドローサポ未活用(選択肢実在時のみ)
 ]
 
 

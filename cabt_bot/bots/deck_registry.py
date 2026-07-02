@@ -41,6 +41,7 @@ STARMIE_PLAN = DeckPlan(
     smart_take=True,               # ポケギア等のサポ取得を効果×盤面で選ぶ（展開/KO/手札立て直し）
     setup_wall=(666,),             # 先攻T1は攻撃不可→HP160エースバーンを壁に開幕。reposition修正と併せA/B +0.020
     energy_supporters=(1225,),     # トウコ(進化+エネ)。メガが居てエネ切れ＝攻撃不可なら優先＝攻撃を早める
+    evolve_supporters=(1189,),     # セイジ(山札から進化)。場に進化対象が居る時のみ=前提条件Gate(無価値使用の防止)
     avoid_overstack=True,          # v7: エネ将来価値原則(飽和or死亡濃厚(can_ko_me)かつ技解放なしの対象へ注がない。
                                    #     Ignition→Nebula解放は例外)。実ラダー32敗中28局面の"死にゆくactiveへの注ぎ"対策。
                                    #     ローカル5環境で悪化なし・死亡濃厚Attach率88→59-63%。最終判定=実ラダー(v7検証提出)

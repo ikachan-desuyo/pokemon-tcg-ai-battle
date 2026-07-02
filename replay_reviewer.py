@@ -230,19 +230,20 @@ def det_valueless_support(g, sig):
 
 def det_last_stand(g, sig):
     """LastStand: 確定敗北圏(ベンチ空×被KO圏×今ターン非致死)での資源運用をFactとして記録。
-    人間が1試合で気付く「詰み回避を探すべき局面」——リーリエ(引き直し=ベンチ札を探す唯一の生存線)の
-    扱いと、サポ権を何に使ったかを観測する。"""
+    **ターン最終MAIN時点**で評価する(ターン途中スナップショットだと「その後リーリエ/ベンチ置きで
+    解決したケース」を誤検出する)。手札に生存手段(たね/ポフィン)がある場合も対象外(置けば済む)。"""
     from cabt_bot.state_encoder import line_threat
-    LIL = 1227
-    seen_turn = set()
+    LIL, POFFIN_ = 1227, 1086
+    last_of_turn = {}
     for t, ob, act in g["decisions"]:
-        cur, me, opp = my_view(ob, g["my"])
+        cur = ob.get("current")
         sel, ch = chosen(ob, act)
-        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+        if not ch or not cur or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
-        turn = cur.get("turn")
-        if turn in seen_turn:
-            continue
+        if OT.get(ch.get("type")) in ("ATTACK", "END"):     # ターンを閉じる選択=最終MAIN
+            last_of_turn[cur.get("turn")] = ob
+    for turn, ob in last_of_turn.items():
+        cur, me, opp = my_view(ob, g["my"])
         a = (me.get("active") or [None])[0]
         oa = (opp.get("active") or [None])[0]
         bench = [b for b in (me.get("bench") or []) if b]
@@ -253,13 +254,19 @@ def det_last_stand(g, sig):
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             dmg_in *= 2
         if (a.get("hp") or 999) > dmg_in:
-            continue                                        # 被KO圏でない
-        my_dmg = attack_dmg(a)
-        if my_dmg >= (oa.get("hp") or 999):
-            continue                                        # 今ターン倒せるなら詰みでない
-        seen_turn.add(turn)
+            continue
+        if attack_dmg(a) >= (oa.get("hp") or 999):
+            continue
         h = hand_ids(me)
-        lil = "リーリエ手札あり" if LIL in h else "リーリエなし"
+        if any(C.get(x) and C[x].is_pokemon and C[x].is_basic for x in h) or POFFIN_ in h:
+            continue                                        # 置けば済む=リーリエ不要
+        # リーリエのPLAY選択肢が実在したか(先攻T1はエンジンがサポ禁止=選択肢が無い→bot誤りでない)
+        sel = ob.get("select") or {}
+        lil_playable = any(o.get("type") == PLAY and o.get("index") is not None
+                           and o["index"] < len(h) and h[o["index"]] == LIL
+                           for o in (sel.get("option") or []))
+        lil = ("リーリエ打てたのに未使用" if lil_playable else
+               ("リーリエ手札あり(打てない)" if LIL in h else "リーリエなし"))
         sup = "サポ権未使用" if not cur.get("supporterPlayed") else "サポ権使用済"
         sig(f"LastStand|単騎×被KO×非致死|{lil}|{sup}", g["ep"], turn)
 

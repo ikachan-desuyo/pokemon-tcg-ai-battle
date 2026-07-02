@@ -72,6 +72,8 @@ class DeckPlan:
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
     switch_cards: tuple[int, ...] = ()        # 入替系(例:ポケモンいれかえ)。攻撃役を前に出す必要がある時のみ使用
+    evolve_supporters: tuple[int, ...] = ()   # 進化加速サポ(例:セイジ)。場に山札から進化できるポケモンが居る時のみ
+                                              # =前提条件Gateファミリ(boss/recover/switchと同じ責務)。QA: 無価値セイジ11件の修正
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
@@ -288,6 +290,10 @@ class DeckBot(Bot):
         # 入替系(ポケモンいれかえ等): 攻撃役を前に出す必要がある時のみ
         if cid in self.plan.switch_cards:
             return 64 if self._should_switch() else None
+        # 進化加速サポ(セイジ等): 場に山札から進化できるポケモンが居る時のみ(前提条件Gate)。
+        # 対象ゼロでの使用はサポ権の浪費(QAゲート: 無価値セイジ11件/30試合)。
+        if cid in self.plan.evolve_supporters:
+            return 58 if self._has_evolution_target() else None
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if cid in self.plan.attackers:   # 進化前/アタッカーをベンチに置くのは重要
@@ -1217,6 +1223,10 @@ class DeckBot(Bot):
     def _should_reposition(self, me) -> bool:
         if not me or not self.plan.attackers:
             return False
+        # 先攻T1は攻撃不可＝前進は主役を無駄に晒すだけ(eager版と同じガード。QA: WallRetreat 2件の修正)
+        cur = self._cur or {}
+        if cur.get("turn") == 1 and cur.get("yourIndex") == cur.get("firstPlayer"):
+            return False
         act = me.get("active") or []
         if not act or not act[0]:
             return False
@@ -1390,11 +1400,37 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _has_evolution_target(self) -> bool:
+        """場に『山札から進化できるポケモン』が居るか(セイジ等 進化加速サポの前提条件)。
+        ＝場のポケモン名を進化前(previous_stage)に持つカードがデッキに存在する。"""
+        me = self._me()
+        if not me or not self.deck_counts:
+            return False
+        in_play_names = {(self._cardinfo.get(s.get("id")).name if s.get("id") in self._cardinfo else None)
+                         for s in ([(me.get("active") or [None])[0]] + list(me.get("bench") or [])) if s}
+        in_play_names.discard(None)
+        for cid, n in self.deck_counts.items():
+            info = self._cardinfo.get(cid)
+            if info and info.previous_stage in in_play_names:
+                return True
+        return False
+
     def _should_use_lillie(self) -> bool:
         """リーリエの決心: 手札を山に戻して6枚(早期=サイド6なら8枚)引く。
         キー札は温存し、引き直しで純増 or 必要資源(エネ/アタッカー)を高確率で引ける時に使う。"""
         me = self._me()
         hand = (me.get("hand") or []) if me else []
+        # ===== 緊急時Gate(条件は意図的に限定=乱発防止。QA: リーリエ未活用C 4件+既知15件の修正) =====
+        # 単騎 × 被KO圏 × 現手札に生存手段なし(たねポケ/ポフィン無し) → 引き直しが唯一の生存線。
+        if me and not any(b for b in (me.get("bench") or []) if b):
+            th = self.analyze_threat()
+            if th.get("can_ko_me"):
+                has_basic = any(
+                    (c.get("id") in self._cardinfo and self._cardinfo[c.get("id")].is_pokemon
+                     and self._cardinfo[c.get("id")].is_basic) for c in hand)
+                has_poffin = any(c.get("id") == POFFIN for c in hand)
+                if not has_basic and not has_poffin:
+                    return True
         if not self.deck_counts:  # 構成不明 → 従来の保守的条件
             return not (self._has_key(hand) or len(hand) >= 4)
         blocked = (self._has_key(hand) if self.plan.strict_lillie_guard
