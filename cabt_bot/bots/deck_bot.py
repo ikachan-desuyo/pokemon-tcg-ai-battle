@@ -328,12 +328,51 @@ class DeckBot(Bot):
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
             if self.plan.avoid_overstack:
-                # 過積み回避: 最大技コスト充足済みの対象は最下位へ=エネを後継(未充足のベンチ攻撃役)に回す。
-                # 全員飽和なら従来通り付ける(逃げエネ等の余地)。監査で判明した"act3-6エネ/コスト3に貼り続ける"穴の修正。
-                key = (0 if self._is_saturated(target, me, op) else 1,) + key
+                # 将来価値の低い投資先を後回し(汎用原則: エネは死ぬ前に価値を生む場所へ)。
+                #   ①飽和(最大技コスト充足済) ②死亡濃厚なactive(既存Analyzer can_ko_me)かつ
+                #     このattachが今ターンより強い技を解放しない(解放するなら注いで良い=Ignition→Nebula等)。
+                # 全員低価値なら従来通り付ける。実ラダー監査: 32敗中28局面が"死にゆくactiveへのエネ注ぎ"。
+                key = (0 if self._low_future_value(target, me, op, energy) else 1,) + key
             if key > best_key:
                 best_key, best = key, i
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
+
+    def _low_future_value(self, target_id, me, op, energy_id) -> bool:
+        """エネ投資先の将来価値が低いか(avoid_overstackの一般化)。
+        ①飽和 ②死亡濃厚active(can_ko_me=既存Analyzer。Boss/ケープ/回復の不確実性があるため
+          "確定"でなく相手現ライン火力ベースの高確率判定) かつ 今ターンより強い技を解放しない。
+        例外=解放する場合(Ignition{C}{C}{C}でNebula解放等)は「死ぬ前に価値を生む」ので注いで良い。"""
+        if self._is_saturated(target_id, me, op):
+            return True
+        if op.in_play_area != AreaType.ACTIVE:
+            return False
+        th = self.analyze_threat()
+        if not th.get("can_ko_me"):
+            return False
+        # このattachで「今払えないより強い技」が払えるようになるか(コスト数ベース)
+        spots = me.get("active") or []
+        idx = op.in_play_index
+        sp = spots[idx] if (idx is not None and 0 <= idx < len(spots)) else None
+        if sp is None:
+            return True
+        cur_e = len(sp.get("energyCards") or [])
+        e_info = self._cardinfo.get(energy_id)
+        provides = max(1, (e_info.type or "").count("{")) if e_info else 1   # Ignition {C}{C}{C}=3
+        info = self._cardinfo.get(target_id)
+        best_now = 0; best_unlocked = 0
+        for mv in (info.moves if info else ()):  # noqa
+            if (mv.name or "").startswith("[Ability]") or mv.cost is None:
+                continue
+            cost = mv.cost.count("{") + mv.cost.count("●")
+            try:
+                dmg = int(str(mv.damage or "0").rstrip("+×x"))
+            except ValueError:
+                dmg = 0
+            if cost <= cur_e:
+                best_now = max(best_now, dmg)
+            elif cost <= cur_e + provides:
+                best_unlocked = max(best_unlocked, dmg)
+        return best_unlocked <= best_now      # 解放なし=死にゆくactiveへの注ぎ=低価値
 
     def _is_saturated(self, target_id, me, op) -> bool:
         """対象が最大技コストぶんのエネを既に持つか(avoid_overstack用)。技情報が無ければ False。"""
