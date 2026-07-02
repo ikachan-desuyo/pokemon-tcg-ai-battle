@@ -72,13 +72,36 @@ Episode 1〜4 と実ラダー分析で確立した「勘で直さない」開発
   ハードコード（水優先）にしない。
 
 ### Future Value の一般形（Episode 5 の基盤・実装は凍結中）
-評価しているのは「エネ」でなく**リソース投資先の将来価値**。1つの抽象層として持つ:
+評価しているのは「エネ」でなく**リソース投資先の将来価値**。1つの抽象層として持つ。
+**期待値と実現可能性を分離する**（確率重み付け・最終形）:
 ```
-FutureValue = ImmediateGain + NextTurnGain - ResourceConsumption - OpportunityCost - Risk
+FutureValue = ImmediateValue
+            + P(next_turn) × NextTurnValue
+            − OpportunityCost
 ```
+「210点出せる」だけでは高評価になってしまう——**そこへ到達できる確率**を掛けて初めて期待値になる
+（例: Ignition→Nebula 210 は強いが、死にゆくactiveの上では P(next_turn) が低い）。
 適用先（同じ式で書ける）: Attach(どこへ貼る) / Fetch(何を取る) / Support(今サポを切るか) /
 Boss(今使うか) / Bench(今埋める価値) / Evolution(今進化させる価値)。
 interpret_move / infer_plan / infer_opening / infer_trainer_roles と並ぶ**汎用推論層**として設計する。
+P(next_turn) は新Analyzer不要——既存の analyze_threat(can_ko_me/hits_to_lose) がそのまま確率の素材になる。
+
+**評価単位は「カード」でなく「行動(Action)」**: Attach Water / Attach Ignition / Fetch Water /
+Play Boss / Play Lillie / Bench Staryu ——これら全てが Action であり、同じ式で採点する:
+`ActionScore = ImmediateValue + P(next_turn) × NextTurnValue − OpportunityCost`
+Attach Logic / Fetch Logic / Support Logic を別々に持つ必要はない——全部「次の1アクションの評価」。
+Episode 5 の中心概念 = **ActionEvaluator**。
+
+### アーキテクチャの階層（Episode 1〜5 で構築した推論スタック）
+```
+Card → interpret_move(Move理解・payability)
+     → infer_plan(Game Plan)
+     → infer_opening(Opening Strategy)
+     → infer_trainer_roles(Trainer役割)
+     → FutureValue(ActionEvaluator)   ← Episode 5
+     → Decision
+```
+各Episodeは「暗黙知を明示的な推論へ置き換える作業」だった。採用判定は常に実ラダー(対面別勝率)。
 
 ### レビューの順番（確定・従来から反転）
 ```
