@@ -77,6 +77,7 @@ class DeckPlan:
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
     energy_supporters: tuple[int, ...] = ()   # エネ補給サポ(例:トウコ)。進化アタッカーが居てエネ切れ＝攻撃不可の時に優先して打つ
     eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
+    avoid_overstack: bool = False             # 最大技コストを満たした対象への追加エネを後回し=後継(ベンチ)を並行育成。既定OFF(出荷非破壊)
     setup_attacks: tuple[int, ...] = ()       # 準備技(サーチ/加速)のattackId群(例:コールサイン/あふれるねがい)
     setup_attack_min_damage: int = 0          # 火力技の最大ダメージがこの値未満なら、弱く殴らず準備技を使う
     wide_bench: bool = False                  # 盤面エネ依存火力(メガシンフォニア等)向け: 進化アタッカーが1体立ったら残るたねは進化させずベンチに残し母数にする
@@ -326,9 +327,30 @@ class DeckBot(Bot):
             key = (rule,
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
+            if self.plan.avoid_overstack:
+                # 過積み回避: 最大技コスト充足済みの対象は最下位へ=エネを後継(未充足のベンチ攻撃役)に回す。
+                # 全員飽和なら従来通り付ける(逃げエネ等の余地)。監査で判明した"act3-6エネ/コスト3に貼り続ける"穴の修正。
+                key = (0 if self._is_saturated(target, me, op) else 1,) + key
             if key > best_key:
                 best_key, best = key, i
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
+
+    def _is_saturated(self, target_id, me, op) -> bool:
+        """対象が最大技コストぶんのエネを既に持つか(avoid_overstack用)。技情報が無ければ False。"""
+        info = self._cardinfo.get(target_id)
+        if not info or not info.moves:
+            return False
+        need = 0
+        for mv in info.moves:
+            if (mv.name or "").startswith("[Ability]") or mv.cost is None:
+                continue
+            need = max(need, mv.cost.count("{") + mv.cost.count("●"))
+        if need <= 0:
+            return False
+        spots = (me.get("active") if op.in_play_area == AreaType.ACTIVE else me.get("bench")) or []
+        idx = op.in_play_index
+        sp = spots[idx] if (idx is not None and 0 <= idx < len(spots)) else None
+        return sp is not None and len(sp.get("energyCards") or []) >= need
 
     def _energy_rule_rank(self, energy, target) -> int:
         # energy_rules の上にあるものほど高ランク

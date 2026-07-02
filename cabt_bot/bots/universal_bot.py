@@ -73,6 +73,37 @@ def _energy_provides(ci) -> list[str]:
     return [m.group(1)] if m else []
 
 
+def infer_trainer_roles(ids, cards):
+    """Trainerの役割推定(認識のみ)。※カードDBはトレーナー効果文を持たない(rule=None)ため名前ベース。
+    「認識」と「使用タイミング」を分離: タイミングは既存の Decision Gate に接続する(ユーザ方針)——
+    boss→『KOを生む時のみ』/ recover→『回収価値がある時のみ』/ switch→『攻撃役を前に出す時のみ』。
+    ＝GateをONにすることでサポ枠の浪費(Boss早撃ち等)を抑え、Drawサポが自然に回るようにする。"""
+    boss, recover, switch = [], [], []
+    for i in ids:
+        ci = cards.get(i)
+        if not ci or ci.is_pokemon or "Energy" in (ci.name or ""):
+            continue
+        n = ci.name or ""
+        if "Boss" in n:
+            boss.append(i)
+        elif any(k in n for k in ("Stretcher", "Rescue")):
+            recover.append(i)
+        elif "Switch" in n:
+            switch.append(i)
+    return tuple(boss), tuple(recover), tuple(switch)
+
+
+def infer_opening(main_ids, cards) -> dict:
+    """Opening Strategy 層（Game Plan → 開幕戦略）。go_first を planの直属性でなくここから導出する
+    (将来、相手デッキを見たマッチアップ判断へ拡張するための薄い抽象・ユーザ指示)。
+    原則: 進化デッキ=先攻(T1攻撃不可でも土台を先に築くテンポ優先) / 全たねアグロ=後攻(先に殴れる)。
+    専用bot群(Mega/Archaludon=先攻, Lightning=後攻)と同じ判断を汎用原則で再現する。"""
+    main0 = main_ids[0] if main_ids else None
+    ci = cards.get(main0) if main0 else None
+    evolved_main = bool(ci) and not getattr(ci, "is_basic", True)
+    return {"go_first": evolved_main}
+
+
 def infer_plan(decklist) -> DeckPlan:
     """デッキリストから最小 plan を推論（デッキ非依存）。attackers / energy_rules / setup_energy / lethal。"""
     C = load_cards()
@@ -168,12 +199,19 @@ def infer_plan(decklist) -> DeckPlan:
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
+    opening = infer_opening(main, C)
+    boss, recover, switch = infer_trainer_roles(ids, C)
     return DeckPlan(
         name="Universal",
+        go_first=opening["go_first"],
+        boss_cards=boss,               # 認識=名前ベース / タイミング=既存Gate(KOを生む時のみ)
+        recover_cards=recover,         # 同(回収価値がある時のみ)
+        switch_cards=switch,           # 同(攻撃役を前に出す時のみ)
         attackers=tuple(attackers),
         key_cards=tuple(main[:2]),
         energy_rules=tuple(dict.fromkeys(rules)),
         lethal=True,                       # KOできる技を優先(デッキ非依存の普遍原則)
+        avoid_overstack=True,              # 飽和対象への追加エネを後回し=後継を並行育成(Attach監査49%=過積みの修正)
         setup_energy=setup or 0,
         card_values=card_values,
         play_priority=play_priority,
