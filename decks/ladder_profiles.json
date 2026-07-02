@@ -1,0 +1,23 @@
+{
+  "_note": "実ラダー(Kaggle)対戦相手の復元プロファイル。deckはリプレイのstep1 actionから完全復元(60枚は正確)。操縦はUniversalBot=近似(pilot_agreement参照)。ベンチ資産として環境からデッキが消えても保持する。",
+  "ladder_lucario": {
+    "archetype": "MegaLucario",
+    "source": "1000PARTY実対戦33戦(v5/v6, 2026-07)",
+    "variants_seen": 9,
+    "chosen_variant_games": 16,
+    "opp_elo_range": [600, 884],
+    "universal_plan": {"main": ["Mega Lucario ex", "Hariyama"], "go_first": true, "setup_energy": 2},
+    "pilot_agreement": {"T1-3": 0.60, "T4-7": 0.33, "T8+": 0.31, "overall": 0.41},
+    "ladder_reality": "提出botの実ラダー勝率30% (33戦)"
+  },
+  "ladder_archaludon": {
+    "archetype": "Archaludon",
+    "source": "1000PARTY実対戦13戦(v5/v6, 2026-07)",
+    "variants_seen": 5,
+    "chosen_variant_games": 6,
+    "opp_elo_range": [685, 880],
+    "universal_plan": {"main": ["Archaludon ex", "Duraludon"], "go_first": true, "setup_energy": 3},
+    "pilot_agreement": {"T1-3": 0.39, "T4-7": 0.42, "T8+": 0.29, "overall": 0.36},
+    "ladder_reality": "提出botの実ラダー勝率30% (13戦)"
+  }
+}

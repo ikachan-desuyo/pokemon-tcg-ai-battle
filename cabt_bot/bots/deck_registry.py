@@ -108,4 +108,8 @@ DECK_BOTS: dict[str, type] = {
     "alakazam": universal_for("alakazam"),   # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
     "froslass": FroslassBot,                 # 1位ログ由来: 水(メガユキメノコex)
     "scrafty": universal_for("scrafty"),     # Control原理: 手札干渉(メガズルズキンex)
+    # 実ラダー復元ベンチ(2026-07): 1000PARTYの実対戦相手の最頻デッキをUniversalBotで操縦。
+    # ローカル旧ベンチ(megaruka 87%/archaludon 70%勝ち)が実ラダー(同アーキ30%)を再現できない問題への回答。
+    "ladder_lucario": universal_for("ladder_lucario"),       # 実メタ最多(33戦)のMega Lucario ex
+    "ladder_archaludon": universal_for("ladder_archaludon"), # 実ラダーのArchaludon(Judge/Carmine型)
 }
