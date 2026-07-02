@@ -27,14 +27,26 @@ MEGA, TOUKO, BOSS, IGN, WATER = 1031, 1225, 1182, 17, 3
 
 # ============ Layer 0: Collector ============
 
+MY_TEAM = "1000PARTY"
+
+
 def load_game(ep):
-    """リプレイ正規化: 自側特定・自分の意思決定列 [(step, obs, action)] (off-by-one補正済)。"""
+    """リプレイ正規化: 自側特定・自分の意思決定列 [(step, obs, action)] (off-by-one補正済)。
+    自側特定はメタデータ(info.Agents の Name)を優先——デッキ内容による推定はミラー戦で誤認する
+    (初実運用で検出したH3バグ: Starmieミラーでは両デッキに1031が居るため常にagent0を自側と誤判定)。"""
     p = SC / "replays" / f"{ep}.json"
     if not p.exists():
         return None
     rj = json.load(open(p))
-    d0 = rj["steps"][1][0]["action"]
-    my = 0 if (d0 and MEGA in d0) else 1
+    my = None
+    agents = (rj.get("info") or {}).get("Agents") or []
+    for i, a in enumerate(agents):
+        if (a.get("Name") or "") == MY_TEAM:
+            my = i
+            break
+    if my is None:                                   # フォールバック(旧方式)
+        d0 = rj["steps"][1][0]["action"]
+        my = 0 if (d0 and MEGA in d0) else 1
     decisions = []
     for t in range(2, len(rj["steps"]) - 1):
         ob = rj["steps"][t][my].get("observation") or {}
