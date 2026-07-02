@@ -3,6 +3,10 @@
 Kaggle コンペ **[Pokémon TCG AI Battle Challenge](https://www.kaggle.com/competitions/pokemon-tcg-ai-battle)**
 （cabt エンジン / Simulation 部門）向け AI 対戦エージェント。
 
+> **目的は専用Botを再現することではない。**
+> **未知のデッキに対しても、説明可能な推論だけで適切な Game Plan を導ける UniversalBot を構築することである。**
+> （プロジェクト憲章: [docs/CHARTER.md](docs/CHARTER.md) / 開発プロセス: [docs/REVIEW_PROCESS.md](docs/REVIEW_PROCESS.md)）
+
 ## コンペ概要
 
 - **Simulation 部門**: エージェント同士の Elo ラダー。1試合10分、時間切れは負け。1日最大5提出。
