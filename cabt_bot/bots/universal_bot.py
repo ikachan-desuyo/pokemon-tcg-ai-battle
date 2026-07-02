@@ -110,17 +110,31 @@ def infer_plan(decklist) -> DeckPlan:
     ids = list(dict.fromkeys(int(x) for x in decklist))
     pokes = [i for i in ids if C.get(i) and C[i].is_pokemon]
 
+    # デッキが供給できるエネ型(payability判定用)。技の特定型シンボルが供給不能なら
+    # その技は"このデッキでは撃てない"＝攻撃役と数えない。
+    #   例: Relicanth Razor Fin {F}● は鋼単デッキでは原理的に不払い→攻撃役でなくエンジン役
+    #   (damage>0だけで攻撃役認定すると、撃てないポケモンを開幕activeに置いて詰む)
+    provided = set()
+    for i in ids:
+        provided.update(_energy_provides(C.get(i)))
+
+    def payable(im):
+        return all(t in provided for t in im["cost_syms"] if t != "C")
+
     def moves_of(i):
         return [interpret_move(mv) for mv in C[i].moves]
 
+    def usable_attacks(i):
+        return [im for im in moves_of(i) if im["is_attack"] and payable(im)]
+
     def maxdmg(i):
-        return max((im["est_damage"] for im in moves_of(i) if im["is_attack"]), default=0)
+        return max((im["est_damage"] for im in usable_attacks(i)), default=0)
 
     def best_attack(i):
-        atks = [im for im in moves_of(i) if im["is_attack"]]
+        atks = usable_attacks(i)
         return max(atks, key=lambda im: im["est_damage"]) if atks else None
 
-    damaging = [i for i in pokes if any(im["is_attack"] for im in moves_of(i))]
+    damaging = [i for i in pokes if usable_attacks(i)]
     # 進化線(previous_stage 名で辿る)を含めて attacker 役を集める＝前段のたねも役に含める
     name2id = {C[i].name: i for i in pokes}
 
