@@ -71,6 +71,27 @@ Episode 1〜4 と実ラダー分析で確立した「勘で直さない」開発
   する（例: 今120で倒せる→水（ベンチ50+イグニ温存+次ターン継続）/ 210で2枚取りできる→イグニでよい）。
   ハードコード（水優先）にしない。
 
+### Future Value の一般形（Episode 5 の基盤・実装は凍結中）
+評価しているのは「エネ」でなく**リソース投資先の将来価値**。1つの抽象層として持つ:
+```
+FutureValue = ImmediateGain + NextTurnGain - ResourceConsumption - OpportunityCost - Risk
+```
+適用先（同じ式で書ける）: Attach(どこへ貼る) / Fetch(何を取る) / Support(今サポを切るか) /
+Boss(今使うか) / Bench(今埋める価値) / Evolution(今進化させる価値)。
+interpret_move / infer_plan / infer_opening / infer_trainer_roles と並ぶ**汎用推論層**として設計する。
+
+### レビューの順番（確定・従来から反転）
+```
+人間レビュー → Explain → Root Cause Matrix → DecisionDiff → Kernel
+```
+DecisionDiff/Kernelは「どこを調べるか」を教えるが、「違和感」の発見は人間が圧倒的に速い。
+Kernel起点だった従来の順番をこの形に改める。
+
+### v7型の検証提出 判定ルーブリック
+- **採用**: 標的対面が両方 30→36%以上。
+- **保留**: 片方のみ改善（例 Lucario 30→40 / Arch 30→29）→ 改善しなかった側の原因を調べる。
+- **巻き戻し**: 両方不変/悪化 → 「行動は改善したが勝率に寄与せず」の知見として保存し次へ。
+
 ## 過去の実績（このプロセスが防いだ誤修正）
 - Override 71% → 評価器バグだった / Plan 25% → 検出アーティファクト / Recovery 142回 → 専用も同じ
 - ベンチ薄い → リソース不足(運) / Attach差53% → 半分は仕様 / 開幕T2 → 後攻アーティファクト
