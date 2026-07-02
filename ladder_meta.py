@@ -13,7 +13,7 @@ C = load_cards()
 SC = pathlib.Path(os.environ.get("SCRATCH",
     "/tmp/claude-0/-mnt-h-work-pokemon-tcg-ai-battle/2f724d4e-1596-4a25-8039-795c317c6f22/scratchpad"))
 REP = SC / "replays"; REP.mkdir(exist_ok=True)
-MY_SUBS = {54177340: "v5", 54238141: "v6", 54266472: "v7"}
+MY_SUBS = {54177340: "v5", 54238141: "v6", 54266472: "v7", 54272893: "v8"}
 
 # アーキタイプ判定: 代表カード(具体的→一般の順で判定)
 SIGS = [

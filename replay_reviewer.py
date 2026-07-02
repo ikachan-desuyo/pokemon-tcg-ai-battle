@@ -22,7 +22,7 @@ MAIN = int(SelectType.MAIN)
 OT = {int(getattr(OptionType, x)): x for x in dir(OptionType) if x.isupper()}
 PLAY = int(OptionType.PLAY); ATTACH = int(OptionType.ATTACH); ATTACK = int(OptionType.ATTACK)
 END = int(OptionType.END); RETREAT = int(OptionType.RETREAT)
-MEGA, TOUKO, BOSS, IGN, WATER = 1031, 1225, 1182, 17, 3
+MEGA, TOUKO, BOSS, IGN, WATER, STARYU = 1031, 1225, 1182, 17, 3, 1030
 
 
 # ============ Layer 0: Collector ============
@@ -209,8 +209,64 @@ def det_wall_retreat(g, sig):
             sig(f"WallRetreat|逃げ0壁から交代し攻撃なし|{nm(a.get('id'))}", g["ep"], turn)
 
 
+def det_valueless_support(g, sig):
+    """ValuelessSupportPlay: 効果対象が存在しないサポートでサポ権を消費(Fact)。
+    現デッキの具体例: Salvatore(1189=山札から進化)を、進化可能なポケモン(Staryu1030)が場に居ない時に使用。
+    (v8 ep83382354 T4 の人間発見: Mega単騎でセイジ→対象ゼロ→サポ権だけ消えた)"""
+    SAL = 1189
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        idx = ch.get("index")
+        if ch.get("type") != PLAY or idx is None or idx >= len(h) or h[idx] != SAL:
+            continue
+        inplay = {s.get("id") for s in ([(me.get("active") or [None])[0]] + list(me.get("bench") or [])) if s}
+        if STARYU not in inplay:
+            sig("ValuelessSupportPlay|Salvatore(進化対象なし)", g["ep"], cur.get("turn"))
+
+
+def det_last_stand(g, sig):
+    """LastStand: 確定敗北圏(ベンチ空×被KO圏×今ターン非致死)での資源運用をFactとして記録。
+    人間が1試合で気付く「詰み回避を探すべき局面」——リーリエ(引き直し=ベンチ札を探す唯一の生存線)の
+    扱いと、サポ権を何に使ったかを観測する。"""
+    from cabt_bot.state_encoder import line_threat
+    LIL = 1227
+    seen_turn = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        turn = cur.get("turn")
+        if turn in seen_turn:
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        bench = [b for b in (me.get("bench") or []) if b]
+        if bench or not a or not oa:
+            continue
+        dmg_in = line_threat(oa.get("id")) or 0
+        cc = C.get(a.get("id")); oc = C.get(oa.get("id"))
+        if cc and oc and cc.weakness and oc.type == cc.weakness:
+            dmg_in *= 2
+        if (a.get("hp") or 999) > dmg_in:
+            continue                                        # 被KO圏でない
+        my_dmg = attack_dmg(a)
+        if my_dmg >= (oa.get("hp") or 999):
+            continue                                        # 今ターン倒せるなら詰みでない
+        seen_turn.add(turn)
+        h = hand_ids(me)
+        lil = "リーリエ手札あり" if LIL in h else "リーリエなし"
+        sup = "サポ権未使用" if not cur.get("supporterPlayed") else "サポ権使用済"
+        sig(f"LastStand|単騎×被KO×非致死|{lil}|{sup}", g["ep"], turn)
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
-             det_wasted_investment, det_wall_retreat]
+             det_wasted_investment, det_wall_retreat,
+             det_valueless_support, det_last_stand]
 
 
 # ============ Layer 2: Aggregator ============
