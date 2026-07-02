@@ -101,6 +101,19 @@ def check_isolated_run(tar_path: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         with tarfile.open(tar_path) as t:
             t.extractall(tmp)
+        # 5a) ランタイムデータ自己完結検査(Fail Fast)。JP_Card_Data.csv欠落→line_threat=0が
+        #     v5〜v7の実戦で脅威ライン系を静かに無効化した事故の再発防止。
+        rc = subprocess.run([sys.executable, "-c",
+            "import sys; sys.path.insert(0,'.')\n"
+            "from cabt_bot.runtime_check import run_runtime_checks\n"
+            "run_runtime_checks(strict=True)\n"
+            "from cabt_bot.state_encoder import line_threat\n"
+            "lt=line_threat(1031); assert lt>0, f'line_threat(1031)={lt}'\n"
+            "print('runtime data OK: line_threat(1031)=', lt)\n"],
+            cwd=tmp, capture_output=True, text=True)
+        if rc.returncode != 0:
+            fail(f"ランタイムデータ検査に失敗(提出物のデータ欠落):\n{rc.stdout}\n{rc.stderr}")
+        print(f"{_OK} {rc.stdout.strip()}")
         # Kaggle と同様に __file__ 無しで exec して main.py を読み込む
         # （import だと __file__ が定義され、本番固有のバグを見逃すため）。
         runner = (

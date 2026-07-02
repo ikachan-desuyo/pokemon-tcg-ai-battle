@@ -53,6 +53,13 @@ def _load_decklist() -> list[int]:
         return []
 
 
+# Runtime Self Check(Fail Fast): 提出環境で推論層のランタイムデータが揃っているかを起動時に検査。
+# 意図的に try の外＝失敗したら agent ごと落ちて Kaggle 検証エピソードが即エラーになる。
+# (v5〜v7では JP_Card_Data.csv 欠落が silent fallback で握り潰され、脅威ライン系機能が
+#  実戦で無効のまま数提出ぶん気付けなかった。警告でなく失敗にする。)
+from cabt_bot.runtime_check import run_runtime_checks
+run_runtime_checks(strict=True)
+
 # 提出デッキ(MegaStarmie)を理想的に回す専用 DeckBot。検証で SearchBot より
 # 高速かつ同等以上（探索は天井を破れず激遅=10分制限のリスク）だったため採用。
 try:

@@ -81,10 +81,14 @@ def main() -> int:
         shutil.copytree(ROOT / "cabt_bot", stage / "cabt_bot",
                         ignore=shutil.ignore_patterns("__pycache__", "arena.py"))
         # カードデータは実行時に使う cards.json のみ（cards.csv は概観用で不要）。
-        cards_json = ROOT / "data" / "cards.json"
-        if cards_json.exists():
-            (stage / "data").mkdir()
-            shutil.copy2(cards_json, stage / "data" / "cards.json")
+        # data/: cards.json(カードDB) + JP_Card_Data.csv(脅威ライン=ランタイム必須)。
+        # JP CSV は v5〜v7 で同梱漏れ→line_threat=0 silent降格の事故があった(必須化)。
+        (stage / "data").mkdir()
+        for fname in ("cards.json", "JP_Card_Data.csv"):
+            f = ROOT / "data" / fname
+            if not f.exists():
+                raise SystemExit(f"必須データが見つかりません: {f}")
+            shutil.copy2(f, stage / "data" / fname)
         if cg is not None:
             shutil.copytree(cg, stage / "cg", ignore=shutil.ignore_patterns("__pycache__"))
 
