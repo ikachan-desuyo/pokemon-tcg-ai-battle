@@ -7,6 +7,24 @@ Kaggle コンペ **[Pokémon TCG AI Battle Challenge](https://www.kaggle.com/com
 > **未知のデッキに対しても、説明可能な推論だけで適切な Game Plan を導ける UniversalBot を構築することである。**
 > （プロジェクト憲章: [docs/CHARTER.md](docs/CHARTER.md) / 開発プロセス: [docs/REVIEW_PROCESS.md](docs/REVIEW_PROCESS.md)）
 
+## アーキテクチャの全体循環
+
+UniversalBot（前向きの推論: Card→Decision）と ReplayReviewer（後ろ向きの観測: Decision→Card）は双対であり、
+実ラダーを介して閉じたループを成す:
+
+```
+        Card → Plan → Decision          （UniversalBot: プレイする推論）
+          ↑              │
+     Hypothesis        Replay           （実ラダー: 唯一の判定器）
+          ↑              │
+      Observation ←──────┘              （ReplayReviewer: 観測する推論）
+```
+
+- 観測が既存推論層で**説明できる** → 修正候補（修正と採用は分離、採用は実ラダーの対面別勝率で判定）
+- 観測が**説明できない**（Unknown）→ 蓄積 → **新しい推論層（次のEpisode）が必然的に導かれる**
+
+＝「AIを書くプロジェクト」ではなく「**AIがAIを改善するループを構築するプロジェクト**」。
+
 ## コンペ概要
 
 - **Simulation 部門**: エージェント同士の Elo ラダー。1試合10分、時間切れは負け。1日最大5提出。

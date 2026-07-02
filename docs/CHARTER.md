@@ -38,7 +38,22 @@ Kernel から問題を探すのではなく、**人間が感じた違和感を E
 ベンチ薄＝リソース不足 / MegaLucario＝判断でなく構造 / 「DBに無いから終了」＝早すぎる断定。
 これらを素早く捨てられたからこそ現在の設計がある。）
 
-## 6. 推論スタック
+## 6. Episode生成の原則
+**新しいEpisodeは設計者が発明するものではない。**
+**ReplayReviewerが継続的に観測した Unknown の蓄積から、必然的に導かれるものである。**
+
+新しい推論層（Episode）が生まれる条件:
+```
+Unknown（既存仮説H1〜H5で説明不能）
+  → 同種の Unknown が繰り返し観測される
+  → 既存の全推論層で説明不能と確認される
+  → 新しい推論層の候補となる
+```
+実例: Towko→イグニ（Unknown）→ ActionEvaluator（Episode 5）／
+Telepath主役崩壊（Card単体で説明不能）→ Deck Intent Inference（Episode 6候補）。
+この原則により、アーキテクチャは思いつきで膨らまず、実データに基づいて必然的にのみ進化する。
+
+## 7. 推論スタック
 ```
 Card
   ↓ interpret_move        (Move理解・payability)
