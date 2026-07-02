@@ -1,14 +1,22 @@
 # ReplayReviewer 設計書（Episode 5 前段・設計のみ／実装なし）
 
-## 目的
-提出Botのリプレイを **AI自身がレビュー**し、「違和感の検出→説明可能な仮説への変換」までを自動化する。
-人間レビューは「AIが説明できなかった残差」の最終確認のみに縮小する。
+## 目的（一文定義）
+> **ReplayReviewerの目的は、リプレイから修正案を出すことではない。**
+> **リプレイから新しい説明可能な仮説を発見し、既存の推論層で説明できるかを検証することである。**
+> **説明できなかったものだけが、新しい推論層の候補となる。**
 
+**ReplayReviewerは「レビューAI」ではなく「観測装置（観測AI）」である。**
 ```
-提出 → リプレイ取得 → ReplayReviewer → 修正候補ランキング → (人間: 未説明分のみ確認)
+Replay → Observation → Hypothesis Test → Root Cause
 ```
+これは単なるデバッグツールではなく、**推論アーキテクチャ（Episode 5, 6, 7…）を進化させるための観測装置**:
+```
+実ラダー → 観測 → 仮説棄却(H1〜H5) ─┬─ 既存推論層で説明可能 → 修正候補
+                                    └─ Unknown（説明不能）   → 新しいEpisode（新しい推論層）の種
+```
+＝「新しい機能を思いついたから追加する」のではなく、**説明できない現象が現れたときだけ
+アーキテクチャを拡張する**という開発哲学の装置化。
 
-**ReplayReviewerはBotではない。UniversalBotと同じ認識論を持つ「レビューする推論システム」である。**
 - 人間の代わりに判断しない。**違和感を検出し、最も矛盾のない説明仮説に変換する**のが責務。
 - 出力する仮説は憲章§1に従う: Explainできる／他仮説と比較できる／実測で棄却できる。
 
@@ -28,13 +36,16 @@
 3系統。**検出器は「この事象が起きた」だけを出力し、良し悪しを判断しない。**
 
 **(a) Hindsight検出器**（未来を知る立場からの無駄検出）
-| 検出器 | 事実 | 過去の実例 |
-|---|---|---|
-| WastedInvestment | 貼ったエネ/道具が1ターン以内に対象ごと失われた | 死にゆくactiveへのエネ(28/32) |
-| UnusedRight | サポ権/エネ権/攻撃権を未使用でEND | リーリエEND(15) |
-| MissedLethal | その手番に即勝利手が存在（カーネル1手判定）したのに選ばず | Boss勝ち逃し(1) |
-| ResourceDeadEnd | 取得したカードが終局まで未使用 | (新規) |
-| TempoStall | 攻撃可能ターンの非攻撃／主役未育成のまま敗北 | 無攻撃事故 |
+3つの抽象カテゴリの下に具体検出器を置く（Episode 5 の Future Value と同型の分類）:
+```
+Investment（投資）             Opportunity（機会）        Resource（資源）
+├── WastedInvestment ★28/32   ├── MissedLethal ★Boss1   ├── DeadEnd（取得カード未使用）
+├── DelayedInvestment          ├── UnusedRight ★リーリエ15 ├── Overflow（過剰供給）
+├── UnderInvestment            └── MissedTempo ★無攻撃    └── Starvation（枯渇死）
+└── OverInvestment ★過積み
+```
+★=このセッションで実証済みの原型あり。カテゴリが Future Value と揃っているため、
+Investment系の発見はそのまま ActionEvaluator の入力仕様になる。
 
 **(b) Cross-policy検出器**（同一局面の別ポリシー比較）
 | 検出器 | 事実 |
@@ -64,8 +75,10 @@
 | H3 測定アーティファクト | off-by-one/turn-parity/集計定義の検査 | 開幕T2→後攻の偶数ターン |
 | H4 判断gap | カーネルregret＋DecisionDiff駆動要因が一貫支持 | イグニAttach先9/10収束 |
 | H5 構造（デッキ/相性） | 判断一致率が高いのに負けが偏る | Lucario=88%一致でも30% |
-| **H6 未説明** | 全仮説が棄却された残差 | → **唯一の人間送り** |
+| **H6 Unknown（新規パターン）** | 全仮説が棄却された残差 | → **人間送り＝新しい知識の候補** |
 
+- **H6は失敗ではない。Episodeを生む種である**（実例: Towko→イグニは当初Unknown→Future Value/Episode 5へ、
+  Telepath崩壊はUnknown→Deck Intent/Episode 6候補へ）。H6の蓄積状況がアーキテクチャ拡張の唯一の根拠になる。
 - 生き残った仮説＝「最も矛盾のない説明」。複数生存時は併記（断定しない）。
 - **カーネルの既知限界を仮説検証に織り込む**: regretの絶対値は信用しない（単一determinization）。
   方向の一貫性（N件中M件が同方向）だけを証拠として扱う。
@@ -82,25 +95,27 @@ Priority C: 1〜2件のみ → 記録のみ（Boss勝ち逃し型）
 ```
 
 ### Layer 6: Responsibility Router → 出力④責務分類
-「どう直すか」は出力しない（修正と採用の分離）。**どの推論層の責務か**だけを分類:
+「どう直すか」は出力しない（修正と採用の分離）。**抽象責務 → 具体層**の2段で分類する
+（抽象層を持つことで Episode 7 以降に具体層が増えても Router は変わらない）:
 ```
-fetch/取得選択    → ActionEvaluator(Fetch FV) / infer_trainer_roles
-attach先         → ActionEvaluator(Attach FV)
-技・攻撃選択      → interpret_move / Decision
-サポ/Boss判断     → Decision(既存Gate)
-主役誤認・payability → infer_plan → (救えなければ) データ限界 / Deck Intent Inference
-opening          → infer_opening
-未説明(H6)       → Human Review Queue
+抽象責務       具体層(現在)                        例
+Card       → interpret_move                      30×スケーリング
+Deck       → infer_plan / Deck Intent Inference  Telepath主役誤認
+Action     → ActionEvaluator(Fetch/Attach FV)    Towko取得・attach先
+Policy     → infer_opening / Decision(Gate)      リーリエ・Boss・T1壁
+Kernel     → evaluate_decision/evaluate_plan     測定器自体の限界
+Unknown(H6)→ Human Queue                         新Episode候補
 ```
 
-## 人間の位置付け（変更後）
+## 人間の位置付け（変更後）: Reviewer から **Teacher** へ
 ```
-AI: 検出 → AI: 頻度化 → AI: 仮説検証 → AI: Matrix/優先度/責務 → Human: H6(未説明)の確認 + 月次サンプル監査
+AI: 観測 → AI: 頻度化 → AI: 仮説検証 → AI: Matrix/優先度/責務 → Human: H6(Unknown)の確認 + 月次サンプル監査
 ```
-- Phase 8（毎提出後レビュー）は**残す**が、人間の負荷は「H6キューの確認」と「Reviewerの出力を数件抜き打ち検証する監査」に縮小。
+- Phase 8（毎提出後レビュー）は**残す**が、人間の負荷は「Unknownキューの確認」と「Reviewer出力の抜き打ち監査」に縮小。
 - 監査が必要な理由: 検出器は自分が符号化した違和感しか見つけられない（カバレッジ限界）。
-  人間がH6以外で新種の違和感を見つけたら、それは**新しい検出器の仕様**としてLayer 1に追加する
-  （＝人間レビューの成果が検出器として蓄積され、レビューAIが成長する構造）。
+- **人間＝Teacher**: 人間が新種の違和感を見つけたら、それは**新しい検出器の仕様**としてLayer 1に追加する。
+  `Human → Unknown発見 → Detector追加 → ReplayReviewer進化` ——人間の発見が検出器として蓄積され、
+  観測装置が成長する構造（UniversalBotの思想と同型）。
 
 ## 既存資産とのマッピング（新規実装は薄い接着層のみ）
 | Layer | 既存資産（このセッションで実証済み） |
