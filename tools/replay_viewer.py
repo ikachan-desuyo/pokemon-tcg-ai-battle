@@ -169,8 +169,50 @@ def build(replay_path):
     last_cur = None
     last_act = 0
     prev_logs = None
-    hand_cards = [[], []]   # 各プレイヤーの最後に判明した手札(本人ACTIVE時に更新)。常時表示用。
+    hand_cards = [[], []]   # 各プレイヤーの最後に判明した手札(本人ACTIVE時に更新+ログでパッチ)。常時表示用。
     seen_events = set()     # 表示済みの実イベント(serialで一意特定)。視点違いの再掲を除去。
+    seen_patch = set()      # 手札パッチ適用済みイベント(バグ修正: サイド取得→手札 等を非行動側にも反映)
+    # 事前パス(全視点・全ログ): サイド取得カード名を各プレイヤーの時系列キューに(serialで重複排除)。
+    # 相手視点ではREVERSE(cardId無し)のため、公開情報「サイド残枚数の減少」をタイミング源にして
+    # このキューから名前を即時反映する(=『取ったのに手札に出ない』窓の解消)。
+    take_q = [[], []]
+    _tq_seen = set()
+    for _st in steps:
+        for _a in _st:
+            for _lg in ((_a.get("observation") or {}).get("logs") or []):
+                if (_lg.get("type") == int(LogType.MOVE_CARD)
+                        and _lg.get("fromArea") == int(AreaType.PRIZE)
+                        and _lg.get("toArea") == int(AreaType.HAND)
+                        and _lg.get("cardId") is not None and _lg.get("serial") is not None):
+                    _k = (_lg.get("playerIndex"), _lg.get("serial"))
+                    if _k in _tq_seen:
+                        continue
+                    _tq_seen.add(_k)
+                    take_q[_lg["playerIndex"]].append(cname(_lg["cardId"]))
+    prize_len = [None, None]   # 公開サイド残枚数の追跡(減少=取得の瞬間)
+
+    def _patch_hand(lg):
+        """ドロー/カード移動ログで hand_cards を逐次更新。本人obsが来たら真値で上書きされる。
+        ＝『サイドを取ったのに手札に出ない』(取得直後にターンが渡り本人obsが無い)問題の修正。"""
+        pi = lg.get("playerIndex"); cid = lg.get("cardId")
+        if pi not in (0, 1):
+            return
+        t = lg.get("type")
+        if t == int(LogType.DRAW) and cid is not None:
+            hand_cards[pi].append(cname(cid))
+        elif t == int(LogType.MOVE_CARD) and cid is not None:
+            if lg.get("fromArea") == int(AreaType.PRIZE):
+                return  # サイド取得はサイド残枚数の減少(公開情報)で即時反映済み=二重加算防止
+            if lg.get("toArea") == int(AreaType.HAND):
+                hand_cards[pi].append(cname(cid))
+            elif lg.get("fromArea") == int(AreaType.HAND):
+                n = cname(cid)
+                if n in hand_cards[pi]:
+                    hand_cards[pi].remove(n)
+                elif "？" in hand_cards[pi]:
+                    hand_cards[pi].remove("？")
+        elif t == int(LogType.DRAW_REVERSE):
+            hand_cards[pi].append("？")   # 非公開ドロー(枚数のみ既知)
     for st in steps:
         # status=="ACTIVE" のエージェントが行動者。その視点(本人手札可視・逐次更新)を盤面/ログ/手番に採用。
         # ＝P0もP1も自分の手番中は1手ずつ進行し、相手の手番中は潰さず本人視点で詳細表示できる。
@@ -184,8 +226,26 @@ def build(replay_path):
         last_act = act_idx
         obs = st[act_idx]["observation"]
         cur = obs.get("current") or last_cur
+        # 先にログでパッチ(serial重複排除・表示用の切り捨てとは独立に適用)→本人obsがあれば真値で上書き
+        for lg in (obs.get("logs") or []):
+            if lg.get("serial") is None:
+                continue
+            sig = (lg.get("type"), lg.get("playerIndex"), lg.get("serial"),
+                   lg.get("serialTarget"), lg.get("fromArea"), lg.get("toArea"))
+            if sig in seen_patch:
+                continue
+            seen_patch.add(sig)
+            _patch_hand(lg)
         if obs.get("current"):
             last_cur = obs["current"]
+            # 公開サイド残枚数の減少=取得の瞬間 → 事前パスのキューからカード名を即時反映
+            for pi in (0, 1):
+                pl = len(obs["current"]["players"][pi].get("prize") or [])
+                if prize_len[pi] is not None and pl < prize_len[pi]:
+                    for _ in range(prize_len[pi] - pl):
+                        if take_q[pi]:
+                            hand_cards[pi].append(take_q[pi].pop(0))
+                prize_len[pi] = pl
             # 行動中プレイヤーの手札(自視点で中身が見える)を記録＝以後その手札を常時表示。
             me = obs["current"]["players"][act_idx]
             hand_cards[act_idx] = [cname(c.get("id") if isinstance(c, dict) else c)
@@ -222,8 +282,18 @@ def build(replay_path):
             pv = [_player(cur["players"][0]), _player(cur["players"][1])]
             for pi in (0, 1):
                 if hand_cards[pi]:
-                    pv[pi]["handCards"] = hand_cards[pi]
-                    pv[pi]["hand"] = len(hand_cards[pi])
+                    cards = list(hand_cards[pi])
+                    pub = cur["players"][pi].get("handCount")   # 公開情報の枚数=正
+                    if isinstance(pub, int):
+                        while len(cards) < pub:
+                            cards.append("？")
+                        while len(cards) > pub and "？" in cards:
+                            cards.remove("？")
+                        while len(cards) > pub:
+                            cards.pop()                          # パッチ漏れ(非公開シャッフル等)の安全弁
+                        hand_cards[pi][:] = cards
+                    pv[pi]["handCards"] = cards
+                    pv[pi]["hand"] = len(cards)
             view = {
                 "turn": cur.get("turn"),
                 "active_player": cur.get("yourIndex", act_idx),
