@@ -58,6 +58,44 @@ def run(bot_key, deck_file, opp_key="deck", opp_deck="deck", games=6, max_steps=
     return checked, violations
 
 
+def terminal_check(games=3):
+    """終局状態の回帰ガード: サイド全取得の勝者(残0枚)が『6枚残り』扱いされる反転バグの再発防止。
+    勝者視点の prize_diff >= 敗者視点、かつ prize残0の側は my_prizes==0 であること。"""
+    dl = _load("deck")
+    n = ok = 0
+    for _ in range(games):
+        b0 = R.DECK_BOTS["deck"](decklist=dl); b1 = R.DECK_BOTS["deck"](decklist=dl)
+        obs, _sd = battle_start(dl, dl); steps = 0; final = None
+        while obs is not None and steps < 600:
+            st = to_observation_class(obs).current
+            if st and st.result != -1:
+                final = (obs["current"], st.result); break
+            if not (obs.get("select") and obs["select"].get("option")):
+                break
+            who = st.yourIndex if st else 0
+            ret = (b0 if who == 0 else b1).select(Observation.from_dict(obs)) or [0]
+            obs = battle_select(ret); steps += 1
+        battle_finish()
+        if not final:
+            continue
+        cur, w = final; n += 1
+        b0._cur = cur
+        b0._eval_player = w; prw = b0.analyze_prize()
+        b0._eval_player = 1 - w; prl = b0.analyze_prize()
+        b0._eval_player = None; b0._cur = None
+        cond = prw["prize_diff"] >= prl["prize_diff"]
+        for pi in (0, 1):
+            pz = cur["players"][pi].get("prize")
+            if pz is not None and len(pz) == 0:
+                b0._cur = cur; b0._eval_player = pi
+                cond = cond and (b0.analyze_prize()["my_prizes"] == 0)
+                b0._eval_player = None; b0._cur = None
+        ok += bool(cond)
+    print(f"terminal_check: {ok}/{n} 終局状態が健全")
+    if ok < n:
+        raise SystemExit(1)
+
+
 def main():
     # 攻撃形の異なる複数デッキで検査（Basic/進化/2進化）
     cases = [
@@ -81,10 +119,10 @@ def main():
         else:
             print(f"PASS {bot_key}: 0違反 / {checked}局面")
     print(f"--- 合計 {total_checked}局面を検査, 違反 {total_viol}件 ---")
-    if ok:
-        print("all invariants hold")
-    else:
+    if not ok:
         raise SystemExit(1)
+    terminal_check()
+    print("all invariants hold")
 
 
 if __name__ == "__main__":

@@ -575,8 +575,12 @@ class DeckBot(Bot):
         if not cur or not cur.get("players"):
             return out
         oi = self._me_index()
-        myp = len(cur["players"][oi].get("prize") or []) or 6
-        opz = len(cur["players"][1 - oi].get("prize") or []) or 6
+        # ※ `len(...) or 6` は禁物: サイドを全取得した勝者(残0枚)が「6枚残り」扱いになり
+        #   勝った終局ほど評価が悪化する反転バグになる(実測: 勝者視点-22 vs 敗者視点+244)。
+        _mp = cur["players"][oi].get("prize")
+        _op = cur["players"][1 - oi].get("prize")
+        myp = len(_mp) if _mp is not None else 6
+        opz = len(_op) if _op is not None else 6
         out.update(my_prizes=myp, opp_prizes=opz, prize_diff=opz - myp)
         return out
 
@@ -651,8 +655,9 @@ class DeckBot(Bot):
             oe += len(s.get("energyCards") or [])
             if not getattr(self._cardinfo.get(s.get("id")), "is_basic", True):
                 oevo += 1
-        out.update(turn=cur.get("turn", 0), my_prizes=len(me.get("prize") or []) or 6,
-                   opp_prizes=len(opp.get("prize") or []) or 6, my_attackers=ma, my_evolved=mevo,
+        _mp = me.get("prize"); _op = opp.get("prize")   # 残0枚を6扱いにしない(analyze_prizeと同じ反転バグ回避)
+        out.update(turn=cur.get("turn", 0), my_prizes=(len(_mp) if _mp is not None else 6),
+                   opp_prizes=(len(_op) if _op is not None else 6), my_attackers=ma, my_evolved=mevo,
                    opp_evolved=oevo, my_energy=me_e, opp_energy=oe)
         return out
 
@@ -741,6 +746,9 @@ class DeckBot(Bot):
         fil = lambda n: [(8 if i % 3 == 0 else 3) for i in range(n)]
         oa = [] if (op["active"] and op["active"][0]) else [8]
         saved_cur = self._cur
+        # rollout中の self.select は _opp_seen/_matchup/plan を書き換える(マッチアップ検出)。
+        # 決定化された仮想の相手カードで汚染すると実戦の判断が狂うため、丸ごと退避→復元する。
+        saved_opp_seen = set(self._opp_seen); saved_matchup = self._matchup; saved_plan = self.plan
         try:
             state = search_begin(o, pool[:dc], pool[dc:dc + pc], fil(op["deckCount"]),
                                  fil(len(op["prize"])), fil(op["handCount"]), oa, False)
@@ -771,6 +779,7 @@ class DeckBot(Bot):
         finally:
             self._eval_player = None
             self._cur = saved_cur
+            self._opp_seen = saved_opp_seen; self._matchup = saved_matchup; self.plan = saved_plan
             try:
                 search_end()
             except Exception:
@@ -818,6 +827,8 @@ class DeckBot(Bot):
             return [0]
 
         saved_cur = self._cur
+        # evaluate_decision と同じ状態リーク対策(rollout中のselectによる _opp_seen/_matchup/plan 汚染を復元)
+        saved_opp_seen = set(self._opp_seen); saved_matchup = self._matchup; saved_plan = self.plan
         trajectories = []; viol_total = 0; seed_terminal_comps = []; chain = []; cap_chain = []
         init_caps = None
         if record_chain:                                   # 決定"前"の能力集合(既存能力は新規獲得に数えない)
@@ -859,7 +870,7 @@ class DeckBot(Bot):
                 except Exception:
                     continue
                 traj = []; turns_done = 0; pending = [first_idx]; last_comp = None; prev_ms = None
-                rec = record_chain and seed == seeds[0]
+                rec = record_chain and len(seeds) > 0 and seed == seeds[0]
                 cap_prev = dict(init_caps) if (rec and init_caps) else None; attacked = False
                 for _ in range(400):
                     ob = state.observation; c = ob.current
@@ -945,6 +956,7 @@ class DeckBot(Bot):
         finally:
             self._eval_player = None
             self._cur = saved_cur
+            self._opp_seen = saved_opp_seen; self._matchup = saved_matchup; self.plan = saved_plan
             try:
                 search_end()
             except Exception:
