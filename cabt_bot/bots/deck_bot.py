@@ -113,6 +113,7 @@ class DeckBot(Bot):
         self._atk_no_weak = None
         self._cur = None
         self._sel = None
+        self._attach_turn = None    # 手貼りを行ったターン(assume_hand_attach の判定に使用)
         self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
         self._resolver_log = []     # Resolver v1 の Explain Log(候補・改善量・採用理由)
@@ -184,6 +185,7 @@ class DeckBot(Bot):
         if OptionType.ATTACH in g:
             a = self._pick_attach(g[OptionType.ATTACH], options, hand, me)
             if a is not None:
+                self._attach_turn = (self._cur or {}).get("turn")
                 return [a]
         # 展開・進化・エネ付けを終えた後にリーリエ（手札を全部山に戻して引き直す）を判断。
         # ＝戻したくないエネ等を先に使い切ってから引き直す。
@@ -1260,8 +1262,13 @@ class DeckBot(Bot):
                 return True
         return False
 
-    def _active_attack_potential(self):
-        """現バトル場アタッカーの (払えるワザの最大ダメージ, 弱点無視か)。攻撃不可なら(0,False)。"""
+    def _active_attack_potential(self, assume_hand_attach: bool = False):
+        """現バトル場アタッカーの (払えるワザの最大ダメージ, 弱点無視か)。攻撃不可なら(0,False)。
+
+        assume_hand_attach=True は「このターンまだ手貼りしておらず手札にエネがあるなら、
+        貼った後の火力」で評価する(MAIN処理順はPLAY→ATTACHなのでサポ判断は常に手貼り前)。
+        ボスゲートとガスト対象選択の判断ペアのみ使用。_active_lethal_now/補給サポ判定は
+        「今付いているエネだけ」の意味論なのでデフォルト(False)のまま。"""
         import re
         cur = self._cur
         if not cur:
@@ -1278,6 +1285,13 @@ class DeckBot(Bot):
         e = 0
         for ec in act.get("energyCards") or []:
             e += 3 if (ec.get("id") in self.plan.volatile_energies and evolved) else 1
+        if assume_hand_attach and cur.get("turn") != self._attach_turn:
+            inc = 0
+            for c in me.get("hand") or []:
+                hid = c.get("id")
+                if self._is_energy(hid):
+                    inc = max(inc, 3 if (hid in self.plan.volatile_energies and evolved) else 1)
+            e += inc
         if e <= 0:
             return 0, False
         best, ign = 0, False
@@ -1457,7 +1471,7 @@ class DeckBot(Bot):
         cur = self._cur
         if not cur:
             return False
-        dmg, ign = self._active_attack_potential()
+        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
         if dmg <= 0:
             return False
         opp = cur["players"][1 - cur["yourIndex"]]
@@ -1494,7 +1508,7 @@ class DeckBot(Bot):
             return None
         opp_idx = 1 - cur["yourIndex"]
         opp = cur["players"][opp_idx]
-        dmg, ign = self._active_attack_potential()
+        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
         spread = self.plan.spread_damage
         cand = []
         for i, op in enumerate(sel.options):
