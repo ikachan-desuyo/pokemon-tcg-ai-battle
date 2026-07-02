@@ -16,6 +16,7 @@ from .yukinooh_bot import MegaYukinoohBot
 from .alakazam_bot import AlakazamBot
 from .froslass_bot import FroslassBot
 from .scrafty_bot import ScraftyBot
+from .universal_bot import universal_for
 
 # Mega Starmie（Nebula 主軸）
 STARMIE_PLAN = DeckPlan(
@@ -102,7 +103,9 @@ DECK_BOTS: dict[str, type] = {
     "gardevoir": MegaGardevoirBot,
     "archaludon": ArchaludonBot,
     "archaludon_il": ImitationBot,
-    "alakazam": AlakazamBot,        # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
-    "froslass": FroslassBot,        # 1位ログ由来: 水(メガユキメノコex)
-    "scrafty": ScraftyBot,          # Control原理: 手札干渉(メガズルズキンex)
+    # コンボ/Control系は config bot が壊れていた(無攻撃100%/82%)ため UniversalBot に置換(Benchmark Health回収)。
+    # 旧 AlakazamBot/ScraftyBot はクラスとして残置(比較用)。
+    "alakazam": universal_for("alakazam"),   # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
+    "froslass": FroslassBot,                 # 1位ログ由来: 水(メガユキメノコex)
+    "scrafty": universal_for("scrafty"),     # Control原理: 手札干渉(メガズルズキンex)
 }

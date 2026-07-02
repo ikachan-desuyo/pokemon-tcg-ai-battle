@@ -238,3 +238,19 @@ class UniversalBot(DeckBot):
         if plan is None and decklist is not None:
             plan = infer_plan(decklist)
         super().__init__(plan=plan, decklist=decklist)
+
+
+def universal_for(deck_stem: str) -> type:
+    """decks/<stem>.csv を既定デッキとする UniversalBot サブクラスを作る（deck_registry 用・引数なし生成可）。
+    複雑archetype(コンボ/Control)で壊れていた config bot をベンチ相手として置換する(Benchmark Health回収)。"""
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[2] / "decks" / f"{deck_stem}.csv"
+
+    class _UniversalDeckBot(UniversalBot):
+        def __init__(self, decklist=None, plan: DeckPlan | None = None) -> None:
+            if decklist is None:
+                decklist = [int(x) for x in path.read_text().split() if x.strip()]
+            super().__init__(decklist=decklist, plan=plan)
+
+    _UniversalDeckBot.__name__ = f"Universal_{deck_stem}"
+    return _UniversalDeckBot
