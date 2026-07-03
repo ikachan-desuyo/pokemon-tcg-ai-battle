@@ -38,8 +38,16 @@ def interpret_move(mv) -> dict:
     返り値: {is_attack, est_damage, cost_syms}。"""
     name = mv.name or ""
     if name.startswith(_ABILITY):
-        return {"is_attack": False, "est_damage": 0, "cost_syms": []}
+        return {"is_attack": False, "est_damage": 0, "cost_syms": [], "partner": None}
     syms = _cost_syms(mv.cost)
+    # 相方依存: 「ベンチに X が居ないと何もしない」(例: ソルロック Cosmic Beam→ルナトーン)。
+    # ダメージ欄だけ見ると無条件70に見える=ペアの理解が Game Plan に必須(人間レビュー2巡目)。
+    partner = None
+    if mv.effect:
+        m = re.search(r"don[’']t have ([\w\s.'’-]+?) on your Bench, this attack does nothing",
+                      mv.effect)
+        if m:
+            partner = m.group(1).strip()
     est = 0
     if mv.damage:
         m = re.match(r"(\d+)", str(mv.damage))
@@ -56,7 +64,8 @@ def interpret_move(mv) -> dict:
                 est = int(m.group(1)) * 10 * _EST_COUNT    # counters×10dmg×代表個数(可変)
             elif re.search(r"for each|times the number|damage .*×|×.*damage", eff):
                 est = 60                        # 倍率不明の可変=中程度と見なし攻撃役認識
-    return {"is_attack": (mv.cost is not None) and est > 0, "est_damage": est, "cost_syms": syms}
+    return {"is_attack": (mv.cost is not None) and est > 0, "est_damage": est,
+            "cost_syms": syms, "partner": partner}
 
 
 def _energy_provides(ci) -> list[str]:
@@ -202,14 +211,23 @@ def infer_plan(decklist) -> DeckPlan:
             if pid in main_line:
                 break
             main_line.add(pid); cur = C.get(pid)
-    # play_priority = 火力ベース + 加点(前段=土台 +20)。固定値でなく加点＝大量タイを避ける(将来デッキにも自然)。
+    # 相方依存(ペア)土台: 攻撃役の技が要求する相方(例: ソルロック→ルナトーン)。
+    # 相方が居ないと技が「何もしない」＝火力ゼロの土台と同じ扱いで早く置く(人間レビュー2巡目)。
+    partners = set()
+    for i in attackers:
+        for im in moves_of(i):
+            p = im.get("partner")
+            if p and p in name2id:
+                partners.add(name2id[p])
+    # play_priority = 火力ベース + 加点(前段=土台 +20 / ペア相方 +15)。固定値でなく加点＝大量タイを避ける。
     card_values = {}
     play_priority = {}
-    for i in attackers:
+    for i in attackers | partners:
         d = maxdmg(i)
         card_values[i] = min(100, 50 + d // 3)
         base = 50 + min(40, d // 5)                    # 火力ベース(0火力=50, 高火力ほど高い)
-        play_priority[i] = base + (20 if i in main_line else 0)   # 前段(土台)に加点
+        play_priority[i] = (base + (20 if i in main_line else 0)
+                            + (15 if i in partners else 0))
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 

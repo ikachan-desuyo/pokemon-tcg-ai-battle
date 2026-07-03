@@ -22,7 +22,7 @@ def play_recorded(mk_me, mk_opp, deck_me, deck_opp, label):
     """1試合をKaggle互換のreplay JSONとして記録(+検出器用decisions)。自分=agent0。"""
     me_bot = mk_me(); opp_bot = mk_opp()
     steps = []
-    decisions = []
+    decisions = [[], []]   # 両サイドの意思決定(相手ベンチマークbotも監査対象)
     obs, _sd = battle_start(deck_me, deck_opp)
     n = 0; final_cur = None; winner = -1
     try:
@@ -42,9 +42,10 @@ def play_recorded(mk_me, mk_opp, deck_me, deck_opp, label):
                      {"status": "INACTIVE", "observation": {}}]
             entry[who] = {"status": "ACTIVE", "observation": obs, "action": list(sel)}
             steps.append(entry)
-            if who == 0 and obs.get("current"):
-                decisions.append((len(steps) - 1, obs, list(sel)))
-                final_cur = obs.get("current")
+            if obs.get("current"):
+                decisions[who].append((len(steps) - 1, obs, list(sel)))
+                if who == 0:
+                    final_cur = obs.get("current")
             obs = battle_select(sel); n += 1
     finally:
         battle_finish()
@@ -60,7 +61,9 @@ def play_recorded(mk_me, mk_opp, deck_me, deck_opp, label):
         stats["opp_pz"] = len(final_cur["players"][1].get("prize") or [])
     path = OUT / f"{label}.json"
     json.dump(rj, open(path, "w"))
-    return {"ep": label, "my": 0, "decisions": decisions}, stats, path
+    games = [{"ep": label, "my": 0, "decisions": decisions[0]},
+             {"ep": f"{label}(相手bot)", "my": 1, "decisions": decisions[1]}]
+    return games, stats, path
 
 
 def main():
@@ -77,13 +80,14 @@ def main():
     for tag, opp_key, opp_deck, n_games in matchups:
         od = [int(x) for x in open(f"decks/{opp_deck}.csv").read().split() if x.strip()]
         for gi in range(n_games):
-            game, stats, path = play_recorded(
+            games, stats, path = play_recorded(
                 lambda: R.DECK_BOTS["deck"](decklist=dl),
                 lambda: R.DECK_BOTS[opp_key](decklist=od),
                 dl, od, f"{tag}-{gi}")
             all_stats.append(stats)
-            for det in RR.DETECTORS:
-                det(game, sig)
+            for game in games:
+                for det in RR.DETECTORS:
+                    det(game, sig)
     n = len(all_stats)
     wins = sum(1 for s in all_stats if s["win"])
     print(f"=== ローカル最終QAセッション: {n}戦 (勝率 {100*wins//n}%) ===")

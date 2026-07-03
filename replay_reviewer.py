@@ -75,7 +75,15 @@ def hand_ids(me):
 
 
 def attack_dmg(spot):
-    e = len(spot.get("energyCards") or []) if spot else 0
+    """Mega Starmieの実効火力。イグニは進化ポケ上で無3扱い(枚数だけ数えると
+    イグニ1枚のNebula Beam 210圏を120と誤評価→MissedLethal偽陽性: lucario-5:T11)。"""
+    if not spot:
+        return 0
+    ci = C.get(spot.get("id"))
+    evolved = bool(ci) and not getattr(ci, "is_basic", True)
+    e = 0
+    for ec in (spot.get("energyCards") or []):
+        e += 3 if (ec.get("id") == IGN and evolved) else 1
     return 210 if e >= 3 else (120 if e >= 1 else 0)
 
 
@@ -271,9 +279,136 @@ def det_last_stand(g, sig):
         sig(f"LastStand|単騎×被KO×非致死|{lil}|{sup}", g["ep"], turn)
 
 
+def _move_partner_req(m):
+    """技の効果文から「ベンチに X が居ないと何もしない」の X を抽出。無ければ None。"""
+    import re
+    mt = re.search(r"don[’']t have ([\w\s.'’-]+?) on your Bench, this attack does nothing",
+                   m.effect or "")
+    return mt.group(1).strip() if mt else None
+
+
+def _spread_amount(spot):
+    """撒き技のベンチダメージ量(効果文「does N damage to 1 of your opponent's Benched」)。無ければ0。"""
+    import re
+    ci = C.get((spot or {}).get("id"))
+    if not ci:
+        return 0
+    for m in ci.moves:
+        mt = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
+        if mt:
+            return int(mt.group(1))
+    return 0
+
+
+def det_dead_move(g, sig):
+    """DeadMoveAttack: 条件未成立で「何もしない」技での攻撃(例: ルナトーン不在のCosmic Beam)。
+    attackIdと技の対応が取れないため、activeの**全ダメージ技**の条件が未成立の場合のみ発火
+    (=どの技を選んでいても0ダメ確定。技が複数あり一部だけ死んでいるケースは発火しない=誤検出ゼロ設計)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) != "ATTACK":
+            continue
+        a = (me.get("active") or [None])[0]
+        ci = C.get((a or {}).get("id"))
+        if not ci or not ci.moves:
+            continue
+        bench_names = {nm(b.get("id")) for b in (me.get("bench") or []) if b}
+        dmg_moves = [m for m in ci.moves if m.damage]
+        if not dmg_moves:
+            continue
+        reqs = [_move_partner_req(m) for m in dmg_moves]
+        if all(r is not None and r not in bench_names for r in reqs):
+            sig(f"DeadMoveAttack|{ci.name}|{reqs[0]}ベンチ不在で0ダメ攻撃", g["ep"], cur.get("turn"))
+
+
+def det_partner_unbenched(g, sig):
+    """PartnerUnbenched: 場のポケモンの技が要求する相方がベンチ不在・手札に相方あり・
+    PLAY選択肢実在なのに、出さずにターンを閉じた(ATTACK/END)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        bench = [b for b in (me.get("bench") or []) if b]
+        bench_names = {nm(b.get("id")) for b in bench}
+        board = [s for s in ([(me.get("active") or [None])[0]] + bench) if s]
+        need = set()
+        for s in board:
+            ci = C.get(s.get("id"))
+            for m in (ci.moves if ci else []):
+                r = _move_partner_req(m)
+                if r and r not in bench_names:
+                    need.add(r)
+        if not need:
+            continue
+        h = hand_ids(me)
+        for o in (sel.get("option") or []):
+            if o.get("type") == PLAY and o.get("index") is not None and o["index"] < len(h):
+                ci = C.get(h[o["index"]])
+                if ci and ci.name in need:
+                    sig(f"PartnerUnbenched|{ci.name}を出さずに手番終了(場に依存技)", g["ep"], cur.get("turn"))
+                    break
+
+
+def det_spread_skew(g, sig):
+    """SpreadSkew: 撒き(ベンチ50等)の対象選択で、最大脅威線の進化前(たね×撒き2発以内で狩れる)が
+    候補に居たのに、今KOでもない別対象を選んだ。KO圏(撒き>=残HP)選択は正当=発火しない。"""
+    from cabt_bot.state_encoder import line_threat
+    prev_attack = False
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not sel:
+            continue
+        if sel.get("type") == MAIN:
+            prev_attack = bool(ch) and OT.get(ch.get("type")) == "ATTACK"
+            continue
+        if not prev_attack:
+            continue
+        prev_attack = False
+        opts = sel.get("option") or []
+        if not opts or not all(o.get("playerIndex") == 1 - g["my"] for o in opts):
+            continue
+        spread = _spread_amount((me.get("active") or [None])[0])
+        if spread <= 0:
+            continue
+        cands = []
+        for j, o in enumerate(opts):
+            spots = (opp.get("active") if o.get("area") == 4 else opp.get("bench")) or []
+            if o.get("index") is not None and 0 <= o["index"] < len(spots) and spots[o["index"]]:
+                cands.append((j, spots[o["index"]]))
+        if not ch or not cands:
+            continue
+        pick = next((sp for j, sp in cands if j == act[0]), None)
+        if not pick:
+            continue
+        if spread >= (pick.get("hp") or 9999):
+            continue                        # 今KOを取った=正当
+        # 最大脅威線の進化前: たね × line_threat が候補全体の最大(=真の主力線) × 撒き2発以内で狩れる。
+        # 「候補中のスナイプ可能な最大」だと二番手線(Makuhita等)を主力線と誤認する(QAで検出した誤検出)。
+        max_th = max((line_threat(sp.get("id")) or 0) for _, sp in cands)
+        best = None
+        for j, sp in cands:
+            ci = C.get(sp.get("id"))
+            th = line_threat(sp.get("id")) or 0
+            if (ci and ci.is_pokemon and ci.is_basic and th >= 180 and th >= max_th
+                    and 2 * spread >= (sp.get("hp") or 9999)):
+                if best is None or th > best[1]:
+                    best = (sp, th)
+        if best and best[0].get("id") != pick.get("id"):   # 同種個体間の選択は対象外
+            sig(f"SpreadSkew|主力線進化前({nm(best[0].get('id'))})を外し{nm(pick.get('id'))}へ撒き",
+                g["ep"], cur.get("turn"))
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
-             det_valueless_support, det_last_stand]
+             det_valueless_support, det_last_stand,
+             det_dead_move, det_partner_unbenched, det_spread_skew]
 
 
 # ============ Layer 2: Aggregator ============

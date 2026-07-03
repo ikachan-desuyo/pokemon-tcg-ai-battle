@@ -15,33 +15,37 @@ from cabt_bot.bots import deck_registry as R
 import replay_reviewer as RR
 
 # 提出ブロック対象(=直すまで提出しない Known 問題)。それ以外はレポートのみ(Fact)。
+# 相手ベンチマークbot側の検出もブロック対象(ベンチマーク健全性が崩れると全測定が信用できない)。
 BLOCKING_PREFIXES = [
     "ValuelessSupportPlay",                                  # 無価値サポでサポ権消費
     "MissedLethal",                                          # 勝ち筋逃し
     "WallRetreat",                                           # 逃げ0壁の無意味な交代
     "LastStand|単騎×被KO×非致死|リーリエ打てたのに未使用",       # 確定敗北圏でドローサポ未活用(選択肢実在時のみ)
+    "DeadMoveAttack",                                        # 条件未成立の0ダメ技で攻撃(人間レビュー2巡目)
+    "SpreadSkew",                                            # 撒き先が主力線進化前を外す(人間レビュー2巡目)
+    "PartnerUnbenched",                                      # 依存技の相方を出さず手番終了(同上・現0件)
 ]
 
 
 def play_and_record(mk_me, mk_opp, deck_me, deck_opp, label):
-    """ローカル1試合を実行し、ReplayReviewer互換のgame dictへ(自分=agent0)。"""
+    """ローカル1試合を実行し、ReplayReviewer互換のgame dictへ(両サイド分)。
+    相手側(ベンチマークbot)も監査対象=人間が1試合見れば相手の異常にも気付くため。"""
     me_bot = mk_me(); opp_bot = mk_opp()
-    decisions = []
+    decisions = [[], []]
     step_i = [0]
 
-    def me_agent(obs_dict):
-        sel = me_bot.select(Observation.from_dict(obs_dict)) or [0]
-        if obs_dict.get("current"):
-            decisions.append((step_i[0], obs_dict, list(sel)))
-        step_i[0] += 1
-        return sel
+    def mk_agent(bot, side):
+        def agent(obs_dict):
+            sel = bot.select(Observation.from_dict(obs_dict)) or [0]
+            if obs_dict.get("current"):
+                decisions[side].append((step_i[0], obs_dict, list(sel)))
+            step_i[0] += 1
+            return sel
+        return agent
 
-    def opp_agent(obs_dict):
-        step_i[0] += 1
-        return opp_bot.select(Observation.from_dict(obs_dict)) or [0]
-
-    run_match(me_agent, opp_agent, deck_me, deck_opp)
-    return {"ep": label, "my": 0, "decisions": decisions}
+    run_match(mk_agent(me_bot, 0), mk_agent(opp_bot, 1), deck_me, deck_opp)
+    return [{"ep": label, "my": 0, "decisions": decisions[0]},
+            {"ep": f"{label}(相手bot)", "my": 1, "decisions": decisions[1]}]
 
 
 def qa(games_per_matchup=10):
@@ -61,13 +65,14 @@ def qa(games_per_matchup=10):
     for tag, opp_key, opp_deck in matchups:
         od = [int(x) for x in open(f"decks/{opp_deck}.csv").read().split() if x.strip()]
         for g_i in range(games_per_matchup):
-            game = play_and_record(
+            games = play_and_record(
                 lambda: R.DECK_BOTS["deck"](decklist=dl),
                 lambda: R.DECK_BOTS[opp_key](decklist=od),
                 dl, od, f"local-{tag}-{g_i}")
             n += 1
-            for det in RR.DETECTORS:
-                det(game, sig)
+            for game in games:
+                for det in RR.DETECTORS:
+                    det(game, sig)
     print(f"=== 提出前QAゲート: ローカル{n}試合 ===")
     blocking = []
     for key, c in counts.most_common():

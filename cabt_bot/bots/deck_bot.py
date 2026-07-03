@@ -199,6 +199,13 @@ class DeckBot(Bot):
             return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACK in g:
             idxs = g[OptionType.ATTACK]
+            # 相方不在で「何もしない」技しか無ければ空撃ちせずEND(DeadMoveAttackの修正)。
+            live = [i for i in idxs
+                    if not self._dead_by_partner(self._atk_texts().get(options[i].attack_id, ""))]
+            if not live and OptionType.END in g:
+                return [g[OptionType.END][0]]
+            if live:
+                idxs = live
             # Turn Evaluator 限定接続: 「攻撃 vs 育成」の1判断のみ委譲(flag)。リーサルは必ず攻撃。
             if self.plan.use_turn_evaluator and OptionType.END in g:
                 lethal = self._lethal_choice(idxs, options) if self.plan.lethal else None
@@ -482,9 +489,31 @@ class DeckBot(Bot):
             return c.type if c else None
         return None
 
+    def _dead_by_partner(self, effect_text: str) -> bool:
+        """技の効果文が要求する相方(『ベンチに X が居ないと何もしない』)が自ベンチ不在＝技が死んでいるか。
+        例: ソルロック Cosmic Beam はルナトーン不在だと0ダメ(人間レビュー2巡目で発覚した理解漏れ)。"""
+        import re
+        m = re.search(r"don[’']t have ([\w\s.'’-]+?) on your Bench, this attack does nothing",
+                      effect_text or "")
+        if not m:
+            return False
+        need = m.group(1).strip()
+        cur = self._cur
+        if not cur:
+            return True
+        me = cur["players"][self._me_index()]
+        for b in (me.get("bench") or []):
+            if b:
+                ci = self._cardinfo.get(b.get("id"))
+                if ci and ci.name == need:
+                    return False
+        return True
+
     def _dmg(self, op: Option) -> int:
         if op.attack_id is None:
             return 0
+        if self._dead_by_partner(self._atk_texts().get(op.attack_id, "")):
+            return 0                                   # 条件未成立=この技は何もしない
         base = self._attack_table().get(op.attack_id, 0)
         # 可変ダメージは『現在の盤面』から計算する（期待値でなく実値）。固定技は None → base。
         var = self._var_dmg(op.attack_id, base)
@@ -1298,6 +1327,8 @@ class DeckBot(Bot):
         for m in info.moves:
             if not m.damage:
                 continue
+            if self._dead_by_partner(m.effect or ""):
+                continue                       # 相方不在で「何もしない」技は火力に数えない
             cost = m.cost or ""
             need = len(re.findall(r"\{[A-Z]\}", cost)) + cost.count("●")
             if need > e:                       # 概算: 付与エネ数で払えるワザのみ
@@ -1553,6 +1584,13 @@ class DeckBot(Bot):
         ＝(局面別のキー, i) を返す。i は呼び出し側で付与。"""
         koable = 1 if spread >= hp else 0            # 撒きだけで今KOできるか(低HPベンチ)
         fhp = _line_attacker_hp(cid)                 # 進化後に前に出てくる火力枠のHP
+        # 進化前スナイプ: 最大脅威線の進化前(たね)を撒き2発以内で狩れるなら、進化される前に芽を摘む
+        # のが reduce(将来KO回数削減)より優先(人間レビュー2巡目: リオル80を外しMakuhita/Hariyamaへ
+        # 撒いた6局面の修正)。同点時は従来キーで決まる。
+        ci = self._cardinfo.get(cid)
+        snipe = 1 if (ci and ci.is_basic and threat >= 180
+                      and threat >= (self._opp_main_line or 0)
+                      and 2 * spread >= hp and fhp > hp) else 0
         maxhp = sp.get("maxHp") or fhp or hp
         cur_dmg = max(0, maxhp - hp) if sp.get("maxHp") else 0
         remaining = max(0, fhp - cur_dmg)            # 火力枠HP - 引き継ぎダメージ
@@ -1567,8 +1605,8 @@ class DeckBot(Bot):
         phase = self._game_phase()
         pv = self._prize_value(cid)
         if phase == "late":             # 後半=詰め: reduce同点なら『撒き後2回で倒せる』主力を優先
-            return (koable, reduce, threat, two_ko, pv, -hp)
-        return (koable, reduce, threat, pv, -hp)     # 序盤・中盤: 軟化(将来KO削減＋脅威線に蓄積)
+            return (koable, snipe, reduce, threat, two_ko, pv, -hp)
+        return (koable, snipe, reduce, threat, pv, -hp)  # 序盤・中盤: スナイプ>軟化(将来KO削減+脅威線蓄積)
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)
