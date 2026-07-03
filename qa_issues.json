@@ -11,7 +11,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "Playability Gate欠如(前提条件の未確認)"
  },
  "LillieLastStand": {
   "status": "Graduated",
@@ -25,7 +26,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "緊急時Gate欠如"
  },
  "WallRetreat": {
   "status": "Graduated",
@@ -39,7 +41,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "Playability Gate欠如(前提条件の未確認)"
  },
  "MissedLethal(Boss順序)": {
   "status": "Graduated",
@@ -54,7 +57,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "評価タイミング(順序: 手貼り前に判断)"
  },
  "DeadMoveAttack": {
   "status": "Graduated",
@@ -68,7 +72,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "Playability Gate欠如(前提条件の未確認)"
  },
  "SpreadSkew": {
   "status": "Graduated",
@@ -82,7 +87,8 @@
    0,
    0
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "優先度序列の設計(将来脅威の評価)"
  },
  "FetchSkew": {
   "status": "Open",
@@ -94,7 +100,8 @@
    111
   ],
   "regressions": 0,
-  "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材"
+  "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
+  "cause": "Fetch Future Value(観測素材・凍結中)"
  },
  "LastStand": {
   "status": "Open",
@@ -104,7 +111,12 @@
   "cycles": [
    19
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
+  "ev": {
+   "cost": "大",
+   "gain": "小"
+  }
  },
  "UnusedSupporterRight": {
   "status": "Open",
@@ -114,7 +126,12 @@
   "cycles": [
    33
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
+  "ev": {
+   "cost": "中(A/B/C/D分類が先)",
+   "gain": "要分類(過去ExplainでB=価値比較ミスは1件のみ=大半H1温存の可能性)"
+  }
  },
  "WastedInvestment": {
   "status": "Open",
@@ -124,6 +141,11 @@
   "cycles": [
    22
   ],
-  "regressions": 0
+  "regressions": 0,
+  "cause": "Attach Future Value欠如(Episode5凍結中)",
+  "ev": {
+   "cost": "大",
+   "gain": "小-中(v7分析で84%は正当なunlock投資)"
+  }
  }
 }

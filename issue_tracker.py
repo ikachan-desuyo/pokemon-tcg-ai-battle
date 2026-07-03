@@ -56,7 +56,9 @@ def update(counts: dict, date: str | None = None):
 
 
 def report(reg: dict) -> str:
-    """Top3 Known(前回比%)＋ライフサイクル表。レビュー報告4項目の④(Known再発件数)の材料。"""
+    """Top3 Known(前回比%+修正EV)＋原因(Cause)ビュー＋ライフサイクル表。
+    レビュー報告4項目の④(Known再発件数)の材料。Cause=複数Issueが収束する原因グループ
+    (将来の主キー候補。現象が違っても同じ原因ならまとめてRegressed検出できる)。"""
     lines = []
     live = []
     for name, iss in reg.items():
@@ -65,15 +67,26 @@ def report(reg: dict) -> str:
             continue
         if cyc[-1] > 0:
             prev = cyc[-2] if len(cyc) >= 2 else None
-            live.append((cyc[-1], prev, name))
-    lines.append("--- Top3 Known(観測カウンタ除く・前回比) ---")
+            live.append((cyc[-1], prev, name, iss))
+    lines.append("--- Top3 Known(観測カウンタ除く・前回比・修正EV) ---")
     if not live:
         lines.append("  (現サイクルのKnown発火なし)")
-    for c, prev, name in sorted(live, reverse=True)[:3]:
+    for c, prev, name, iss in sorted(live, key=lambda x: -x[0])[:3]:
         pc = f"前回{prev}件({'+' if c > prev else ''}{(c - prev) * 100 // prev}%)" if prev else "初回"
-        lines.append(f"  {name}: {c}件 | {pc}")
-    lines.append("--- Issueライフサイクル ---")
+        ev = iss.get("ev") or {}
+        evs = f" | コスト{ev.get('cost')}/期待改善{ev.get('gain')}" if ev else ""
+        lines.append(f"  {name}: {c}件 | {pc}{evs}")
+    # 原因(Cause)ビュー: Issueをcauseで束ね、配下に1つでもRegressed/Openがあれば原因レベルで表示
+    lines.append("--- 原因(Cause)ビュー ---")
+    causes: dict = {}
+    for name, iss in reg.items():
+        causes.setdefault(iss.get("cause") or "(未分類)", []).append((name, iss))
     order = {"Regressed": 0, "Open": 1, "Confirmed": 2, "Fix Applied": 3, "Graduated": 4}
+    for cause, items in sorted(causes.items(),
+                               key=lambda x: min(order.get(i.get("status"), 9) for _, i in x[1])):
+        st = min((i.get("status") for _, i in items), key=lambda s: order.get(s, 9))
+        lines.append(f"  [{st:<11}] {cause}: " + ", ".join(n for n, _ in items))
+    lines.append("--- Issueライフサイクル ---")
     for name, iss in sorted(reg.items(), key=lambda x: order.get(x[1].get("status"), 9)):
         cyc = iss.get("cycles") or []
         tail = "→".join(str(c) for c in cyc[-5:])
