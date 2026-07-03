@@ -1,0 +1,129 @@
+{
+ "ValuelessSupport": {
+  "status": "Graduated",
+  "detector": "ValuelessSupportPlay",
+  "match": "ValuelessSupportPlay",
+  "fix": "前提条件Gate(evolve_supporters+_has_evolution_target)",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   15,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "LillieLastStand": {
+  "status": "Graduated",
+  "detector": "LastStand(リーリエ打てたのに未使用)",
+  "match": "LastStand|単騎×被KO×非致死|リーリエ打てたのに未使用",
+  "fix": "Lillie緊急Gate(単騎×被KO圏×手札にたね/ポフィン無し)",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   11,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "WallRetreat": {
+  "status": "Graduated",
+  "detector": "WallRetreat",
+  "match": "WallRetreat",
+  "fix": "後段_should_repositionに先攻T1ガード",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   2,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "MissedLethal(Boss順序)": {
+  "status": "Graduated",
+  "detector": "MissedLethal",
+  "match": "MissedLethal",
+  "fix": "assume_hand_attach(ボスゲート/ガスト選択を手貼り後火力で評価)+検出器のイグニ3エネ換算修正",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   1,
+   1,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "DeadMoveAttack": {
+  "status": "Graduated",
+  "detector": "DeadMoveAttack",
+  "match": "DeadMoveAttack",
+  "fix": "interpret_move partner解釈+_dead_by_partner(相方不在の技=0評価/全滅ならEND)+play_priority相方+15",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   16,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "SpreadSkew": {
+  "status": "Graduated",
+  "detector": "SpreadSkew",
+  "match": "SpreadSkew",
+  "fix": "_spread_keyにsnipe項(主力線たね×撒き2発圏をreduceより優先)",
+  "first_seen": "2026-07-03",
+  "graduated": "2026-07-03",
+  "cycles": [
+   19,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "FetchSkew": {
+  "status": "Open",
+  "detector": "FetchSkew",
+  "match": "FetchSkew",
+  "observational": true,
+  "first_seen": "2026-07-03",
+  "cycles": [
+   111
+  ],
+  "regressions": 0,
+  "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材"
+ },
+ "LastStand": {
+  "status": "Open",
+  "detector": "LastStand",
+  "match": "LastStand",
+  "first_seen": "2026-07-03",
+  "cycles": [
+   19
+  ],
+  "regressions": 0
+ },
+ "UnusedSupporterRight": {
+  "status": "Open",
+  "detector": "UnusedSupporterRight",
+  "match": "UnusedSupporterRight",
+  "first_seen": "2026-07-03",
+  "cycles": [
+   33
+  ],
+  "regressions": 0
+ },
+ "WastedInvestment": {
+  "status": "Open",
+  "detector": "WastedInvestment",
+  "match": "WastedInvestment",
+  "first_seen": "2026-07-03",
+  "cycles": [
+   22
+  ],
+  "regressions": 0
+ }
+}

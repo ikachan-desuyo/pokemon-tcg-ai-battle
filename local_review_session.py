@@ -72,9 +72,11 @@ def main():
                 ("lucario", "ladder_lucario", "ladder_lucario", 20),
                 ("arch", "ladder_archaludon", "ladder_archaludon", 20)]
     counts = Counter(); reps = defaultdict(list); all_stats = []
+    fam_side = {"self": Counter(), "opp": Counter()}   # 検出ファミリ別×側(自bot/相手bot)
 
     def sig(key, ep, turn):
         counts[key] += 1
+        fam_side["opp" if "(相手bot)" in ep else "self"][key.split("|")[0]] += 1
         if len(reps[key]) < 3:
             reps[key].append(f"{ep}:T{turn}")
     for tag, opp_key, opp_deck, n_games in matchups:
@@ -91,6 +93,25 @@ def main():
     n = len(all_stats)
     wins = sum(1 for s in all_stats if s["win"])
     print(f"=== ローカル最終QAセッション: {n}戦 (勝率 {100*wins//n}%) ===")
+    # Known推移の機械比較: サイクル毎に同形式で保存し、前回比(再発件数の増減)を必ず出す。
+    # =Reviewerの成熟でなく「改善ループが収束しているか」の測定(ユーザ指示)。
+    trend_path = SC / "known_trend.json"
+    prev = json.load(open(trend_path)) if trend_path.exists() else {}
+    for side, label in (("self", "自bot"), ("opp", "相手bot")):
+        print(f"--- Known推移({label}側・件/60戦, 前回比) ---")
+        pv = prev.get(side, {})
+        for f in sorted(set(fam_side[side]) | set(pv)):
+            c = fam_side[side].get(f, 0); d = c - pv.get(f, 0)
+            mark = f"{'+' if d > 0 else ''}{d}" if pv else "初回計測"
+            print(f"  {f}: {c} (前回比 {mark})")
+    json.dump({s: dict(c) for s, c in fam_side.items()}, open(trend_path, "w"))
+    # Issue Tracker: ライフサイクル(Open→Confirmed→Fix Applied→Graduated→Regressed)を更新。
+    # 卒業済みIssueが再発したら⚠警告(品質管理システムとしてのReplayReviewer)。
+    import issue_tracker
+    reg, alerts = issue_tracker.update(dict(counts))
+    for a in alerts:
+        print(a)
+    print(issue_tracker.report(reg))
     from qa_gate import BLOCKING_PREFIXES
     blocking = [(k, c) for k, c in counts.items() if any(k.startswith(p) for p in BLOCKING_PREFIXES)]
     print(f"QA検出器(大標本再確認): BLOCKING {sum(c for _, c in blocking)}件")
