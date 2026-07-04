@@ -302,11 +302,21 @@ def det_last_stand(g, sig):
     from cabt_bot.state_encoder import line_threat
     LIL, POFFIN_ = 1227, 1086
     last_of_turn = {}
+    lil_turns = set()      # そのターン中にリーリエのPLAY選択肢が実在した(ターン単位評価)
+    lil_played = set()     # そのターン中にリーリエを実際に打った(=未使用でない)
     for t, ob, act in g["decisions"]:
         cur = ob.get("current")
         sel, ch = chosen(ob, act)
         if not ch or not cur or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
+        h0 = hand_ids(cur["players"][g["my"]])
+        if any(o.get("type") == PLAY and o.get("index") is not None
+               and o["index"] < len(h0) and h0[o["index"]] == LIL
+               for o in (sel.get("option") or [])):
+            lil_turns.add(cur.get("turn"))
+        if (ch.get("type") == PLAY and ch.get("index") is not None
+                and ch["index"] < len(h0) and h0[ch["index"]] == LIL):
+            lil_played.add(cur.get("turn"))
         if OT.get(ch.get("type")) in ("ATTACK", "END"):     # ターンを閉じる選択=最終MAIN
             last_of_turn[cur.get("turn")] = ob
     for turn, ob in last_of_turn.items():
@@ -322,16 +332,25 @@ def det_last_stand(g, sig):
             dmg_in *= 2
         if (a.get("hp") or 999) > dmg_in:
             continue
-        if attack_dmg(a) >= (oa.get("hp") or 999):
+        if turn in lil_played:
+            continue                                        # そのターンにリーリエを打っている
+        # 「攻撃が致死ならスキップ」は勝ち切れる(このKOで残サイドを取り切る)場合のみ。
+        # KOしても勝たなければ単騎リスクは続き、リーリエ(サポ)と攻撃は両立する(lucario-10の教訓)。
+        if (attack_dmg(a) >= (oa.get("hp") or 999)
+                and _pv(oa.get("id")) >= len(me.get("prize") or [])):
             continue
         h = hand_ids(me)
         if any(C.get(x) and C[x].is_pokemon and C[x].is_basic for x in h) or POFFIN_ in h:
             continue                                        # 置けば済む=リーリエ不要
-        # リーリエのPLAY選択肢が実在したか(先攻T1はエンジンがサポ禁止=選択肢が無い→bot誤りでない)
+        # リーリエが「そのターン中のどこかで」打てたか(ターン単位評価=選択肢実在の教訓5回目)。
+        # 最終MAIN時点だけ見ると、他サポ(ヒルダ等)が先にサポ権を消費したケースを
+        # 「打てない(非ブロッキング)」と誤分類する(lucario-10: リーリエ2枚在手でヒルダ2回→敗北)。
+        lil_playable = turn in lil_turns
         sel = ob.get("select") or {}
-        lil_playable = any(o.get("type") == PLAY and o.get("index") is not None
-                           and o["index"] < len(h) and h[o["index"]] == LIL
-                           for o in (sel.get("option") or []))
+        if not lil_playable:
+            lil_playable = any(o.get("type") == PLAY and o.get("index") is not None
+                               and o["index"] < len(h) and h[o["index"]] == LIL
+                               for o in (sel.get("option") or []))
         lil = ("リーリエ打てたのに未使用" if lil_playable else
                ("リーリエ手札あり(打てない)" if LIL in h else "リーリエなし"))
         sup = "サポ権未使用" if not cur.get("supporterPlayed") else "サポ権使用済"
@@ -711,6 +730,25 @@ def det_energy_stuck_no_lillie(g, sig):
         if not lil:
             continue
         a = (me.get("active") or [None])[0]
+        # 山のエネ枯れ推定(保守的): デッキのエネ最小構成13枚を仮定し、可視エネ(盤面+トラッシュ)を
+        # 引いた山残エネで6ドローの命中率を概算。0.55未満ならbotの見送りは正当としてスキップ
+        # (bot側はp_drawで正確に判断: lucario-11:T10=0.0, lucario-18:T8=0.54の境界正当見送り)。
+        vis_e = sum(len(sp.get("energyCards") or []) for sp in
+                    [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if sp)
+        vis_e += sum(1 for c in (me.get("discard") or [])
+                     if C.get(c.get("id")) and not C[c.get("id")].is_pokemon
+                     and "Energy" in (C[c.get("id")].name or ""))
+        deck_n = me.get("deckCount") or len(me.get("deck") or []) or 0
+        pool = deck_n + len(me.get("prize") or [])   # 未見エネは山+サイドに分散(サイド落ち希釈)
+        rem = max(0, 13 - vis_e)
+        p_hit = 0.0
+        if pool > 0 and rem > 0:
+            miss = 1.0
+            for k in range(min(6, pool)):
+                miss *= max(0, pool - rem - k) / (pool - k)
+            p_hit = 1 - miss
+        if p_hit < 0.75:
+            continue    # 明確に掘れる場合のみ発火(境界はbotのp_draw=0.55判断を信頼)
         # 生きたミツル(重傷150+×生存反転可)を手札に持つ場合、リーリエは意図的に温存される
         # (流すとミツルを失う=LillieOverLiveHealと表裏)。このケースはエネ掘り未使用でも正当。
         if WALLY in h and a:
@@ -905,6 +943,24 @@ def det_gust_target_skew(g, sig):
                     inc = max(inc, 3 if (x == IGN and evolved_a) else 1)
             e_a += inc
         dmg = _dmg_with_units((a or {}).get("id"), e_a)
+        # 相方依存技(Cosmic Beam等)は相方不在なら0=「KOできた」と誤算しない(lucario-3:T4)
+        bench_names_ = {nm(b.get("id")) for b in (me.get("bench") or []) if b}
+        ci_chk = C.get((a or {}).get("id"))
+        if ci_chk and dmg > 0:
+            import re as _re3
+            ok = 0
+            for m in ci_chk.moves:
+                if not m.damage:
+                    continue
+                need = len(_re3.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                mt = _re3.match(r"(\d+)", str(m.damage))
+                if not mt or need > e_a:
+                    continue
+                req = _move_partner_req(m)
+                if req and req not in bench_names_:
+                    continue
+                ok = max(ok, int(mt.group(1)))
+            dmg = ok
         pick = _spot_of(cur, g["my"], ch)
         if not pick:
             continue
@@ -1004,6 +1060,39 @@ def det_weak_advance(g, sig):
             sig(f"WeakAdvance|耐える壁を退きエネ付きたね{nm(pick.get('id'))}を前進", g["ep"], cur.get("turn"))
 
 
+def det_basic_unbenched(g, sig):
+    """BasicUnbenched: 単騎(ベンチ空)なのに、そのターン中に出せたたねポケモンを出さず
+    ターンを閉じた(手札シャッフルで流す等=ベンチ切れ負けのリスク。arch-8:T2の教訓)。"""
+    playable_turns = {}                                 # turn -> たねPLAY選択肢があった
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if any(b for b in (me.get("bench") or []) if b):
+            continue                                    # 単騎の時のみ
+        h = hand_ids(me)
+        for o in (sel.get("option") or []):
+            if (o.get("type") == PLAY and o.get("index") is not None and o["index"] < len(h)
+                    and C.get(h[o["index"]]) and C[h[o["index"]]].is_pokemon
+                    and C[h[o["index"]]].is_basic):
+                playable_turns[cur.get("turn")] = nm(h[o["index"]])
+                break
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        turn = cur.get("turn")
+        if turn not in playable_turns:
+            continue
+        if any(b for b in (me.get("bench") or []) if b):
+            continue                                    # 結局出した(解決済み)
+        sig(f"BasicUnbenched|単騎なのに出せた{playable_turns[turn]}を出さず手番終了", g["ep"], turn)
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1013,7 +1102,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_heal_missed, det_cape_skew, det_energy_stuck_no_lillie,
              det_setup_skew, det_dead_evolution_pick, det_lillie_over_live_heal,
              det_doomed_no_retreat,
-             det_gust_target_skew, det_promotion_skew, det_weak_advance]
+             det_gust_target_skew, det_promotion_skew, det_weak_advance,
+             det_basic_unbenched]
 
 
 # ============ Layer 2: Aggregator ============

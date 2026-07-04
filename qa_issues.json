@@ -18,6 +18,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -29,7 +31,7 @@
   "match": "LastStand|単騎×被KO×非致死|リーリエ打てたのに未使用",
   "fix": "Lillie緊急Gate(単騎×被KO圏×手札にたね/ポフィン無し)",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-03",
+  "graduated": "2026-07-04",
   "cycles": [
    11,
    0,
@@ -42,10 +44,15 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
+   2,
    0
   ],
-  "regressions": 0,
-  "cause": "緊急時Gate欠如"
+  "regressions": 2,
+  "cause": "緊急時Gate欠如",
+  "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
  "WallRetreat": {
   "status": "Graduated",
@@ -56,6 +63,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -92,6 +101,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -107,6 +118,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -141,6 +154,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -162,7 +177,9 @@
    104,
    102,
    117,
-   111
+   111,
+   119,
+   106
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -183,7 +200,9 @@
    20,
    24,
    22,
-   11
+   11,
+   23,
+   28
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -208,7 +227,9 @@
    20,
    23,
    15,
-   4
+   4,
+   24,
+   27
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -233,7 +254,9 @@
    19,
    19,
    24,
-   11
+   11,
+   17,
+   12
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -257,6 +280,8 @@
    0,
    2,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -275,6 +300,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
    0,
    0,
    0,
@@ -303,12 +330,14 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
  },
  "BossNoPathGain": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "BossNoPathGain",
   "match": "BossNoPathGain",
   "cause": "サイド算術の欠如(1枚取りが必要KO回数を増やすかを見ない)",
@@ -324,7 +353,9 @@
    0,
    0,
    0,
-   1
+   1,
+   0,
+   0
   ],
   "regressions": 1,
   "note": "cycles[1]の1件(arch-17)は検出器偽陽性(手貼り火力を見ず)と判定済み"
@@ -345,12 +376,14 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "EnergyStuckNoLillie": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "EnergyStuckNoLillie",
   "match": "EnergyStuckNoLillie",
   "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
@@ -363,9 +396,11 @@
    0,
    0,
    3,
-   0
+   0,
+   0,
+   4
   ],
-  "regressions": 0,
+  "regressions": 1,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
  },
  "HealMissed": {
@@ -380,9 +415,11 @@
    1,
    0,
    0,
+   0,
+   2,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "CapeSkew": {
   "status": "Graduated",
@@ -394,6 +431,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0
@@ -411,6 +450,8 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -425,6 +466,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0
   ],
@@ -441,9 +484,11 @@
   "cycles": [
    1,
    0,
+   0,
+   2,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "DoomedNoRetreat": {
   "status": "Graduated",
@@ -456,12 +501,14 @@
   "cycles": [
    2,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "GustTargetSkew": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "GustTargetSkew",
   "match": "GustTargetSkew",
   "cause": "選択ロジックの誤用(ボス引き出しに撒きキー=snipe項が漏出)",
@@ -470,9 +517,11 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
-   0
+   0,
+   0,
+   1
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "PromotionSkew": {
   "status": "Graduated",
@@ -484,6 +533,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -494,6 +545,22 @@
   "match": "WeakAdvance",
   "cause": "脅威モデルが悲観的すぎ(ライン最大210固定)=エネ0の相手にも壁を退いて素材を晒す",
   "fix": "_incoming_next_turn(現エネ+1で払える技×観測済み進化のみ)で壁の生存を現実評価。耐えるならたね前進せず",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "BasicUnbenched": {
+  "status": "Graduated",
+  "detector": "BasicUnbenched",
+  "match": "BasicUnbenched",
+  "cause": "単騎リスク管理の欠如(ベンチ0でもたねの展開が優先されない)",
+  "fix": "_play_score: ベンチ空なら手札のたねを最優先96(任意のたね)。相手archbotがRelicanth在手のままJudgeで流した事例",
   "first_seen": "2026-07-04",
   "graduated": "2026-07-04",
   "cycles": [

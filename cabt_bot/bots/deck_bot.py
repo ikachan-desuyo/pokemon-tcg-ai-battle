@@ -288,8 +288,20 @@ class DeckBot(Bot):
             return 0.0
 
     def _play_score(self, cid, hand):
+        # 単騎の緊急展開: ベンチが空なら手札のたねを最優先で置く(ベンチ切れ負け防止の普遍原則。
+        # QA: 相手archbotがRelicanth在手のままJudgeで流して単騎敗北リスク)。
+        ci0 = self._cardinfo.get(cid)
+        if ci0 and ci0.is_pokemon and ci0.is_basic:
+            me0 = self._me()
+            if me0 is not None and not any(b for b in (me0.get("bench") or []) if b):
+                return 96
         if cid == LILLIE:
-            return None  # リーリエは展開・進化・エネ付けを終えた後（_main後段）で判断する
+            # 緊急時(単騎×被KO圏×手札に生存手段なし)は最優先=他サポ(ヒルダ83等)にサポ権を
+            # 先に消費させない(人間レビュー8巡目: 単騎でリーリエ2枚を持ちながらヒルダ2回で敗北。
+            # 山にたね/ポフィン7枚=引ければ生存できた)。通常時は従来通り_main後段で判断。
+            if self._lillie_emergency():
+                return 95
+            return None
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
@@ -1718,22 +1730,37 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _lillie_emergency(self) -> bool:
+        """緊急時Gate: 単騎 × 被KO圏 × 現手札に生存手段なし(たねポケ/ポフィン無し)
+        → 引き直しが唯一の生存線(条件は意図的に限定=乱発防止)。"""
+        me = self._me()
+        if not me or any(b for b in (me.get("bench") or []) if b):
+            return False
+        th = self.analyze_threat()
+        if not th.get("can_ko_me"):
+            return False
+        hand = me.get("hand") or []
+        has_basic = any(
+            (c.get("id") in self._cardinfo and self._cardinfo[c.get("id")].is_pokemon
+             and self._cardinfo[c.get("id")].is_basic) for c in hand)
+        has_poffin = any(c.get("id") == POFFIN for c in hand)
+        if has_basic or has_poffin:
+            return False
+        # 生きたミツル(回復で被KO圏→生存圏に反転)も生存手段=緊急でない。回復を優先し
+        # リーリエで流さない(QA: 単騎重傷でミツルを差し置きリーリエ2件の修正)。
+        if any(c.get("id") in self.plan.heal_return_cards for c in hand):
+            act = (me.get("active") or [None])[0]
+            if act and (act.get("maxHp") or 0) > self._incoming_threat(act):
+                return False
+        return True
+
     def _should_use_lillie(self) -> bool:
         """リーリエの決心: 手札を山に戻して6枚(早期=サイド6なら8枚)引く。
         キー札は温存し、引き直しで純増 or 必要資源(エネ/アタッカー)を高確率で引ける時に使う。"""
         me = self._me()
         hand = (me.get("hand") or []) if me else []
-        # ===== 緊急時Gate(条件は意図的に限定=乱発防止。QA: リーリエ未活用C 4件+既知15件の修正) =====
-        # 単騎 × 被KO圏 × 現手札に生存手段なし(たねポケ/ポフィン無し) → 引き直しが唯一の生存線。
-        if me and not any(b for b in (me.get("bench") or []) if b):
-            th = self.analyze_threat()
-            if th.get("can_ko_me"):
-                has_basic = any(
-                    (c.get("id") in self._cardinfo and self._cardinfo[c.get("id")].is_pokemon
-                     and self._cardinfo[c.get("id")].is_basic) for c in hand)
-                has_poffin = any(c.get("id") == POFFIN for c in hand)
-                if not has_basic and not has_poffin:
-                    return True
+        if self._lillie_emergency():
+            return True
         if not self.deck_counts:  # 構成不明 → 従来の保守的条件
             return not (self._has_key(hand) or len(hand) >= 4)
         prizes_left = len(me.get("prize") or []) if me else 6

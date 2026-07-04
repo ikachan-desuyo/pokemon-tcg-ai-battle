@@ -1,24 +1,24 @@
 {
  "replays": [
   {
-   "file": "lucario-10.json",
-   "label": "lucario-10 逆転負け(自5枚取り)"
-  },
-  {
    "file": "arch-13.json",
    "label": "arch-13 長期戦負け18T"
   },
   {
-   "file": "mirror-19.json",
-   "label": "mirror-19 接戦負け(5-6)"
+   "file": "mirror-0.json",
+   "label": "mirror-0 逆転負け6T(5-3)"
   },
   {
-   "file": "mirror-2.json",
-   "label": "mirror-2 接戦負け16T"
+   "file": "mirror-3.json",
+   "label": "mirror-3 接戦負け14T"
   },
   {
-   "file": "arch-15.json",
-   "label": "arch-15 難しい勝ち21T"
+   "file": "arch-18.json",
+   "label": "arch-18 難しい勝ち21T"
+  },
+  {
+   "file": "mirror-18.json",
+   "label": "mirror-18 長期戦負け20T"
   }
  ]
 }

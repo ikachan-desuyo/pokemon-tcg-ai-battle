@@ -37,7 +37,8 @@ BLOCKING_PREFIXES = [
     "DoomedNoRetreat",                                       # 被KO確定×不利トレードで残留(人間レビュー6巡目)
     "GustTargetSkew",                                        # 引き出し先がKO×サイド最大でない(人間レビュー7巡目)
     "PromotionSkew",                                         # 昇格が耐える主力を選ばない(人間レビュー7巡目)
-    "WeakAdvance",                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
+    "WeakAdvance",
+    "BasicUnbenched",                                        # 単騎でたね在手なのに未展開(8巡目)                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
 ]
 
 
