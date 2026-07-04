@@ -19,6 +19,8 @@ htmlcov/
 # Kaggle / 対戦ログ
 *.json.log
 replays/
+!docs/replays/
+!docs/replays/**
 *.replay
 
 # 大容量の参照データ（GitHub の 100MB 制限超のため追跡しない）

@@ -77,6 +77,10 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <p>Kaggle のエピソード(対戦ログ)JSON を選ぶと、盤面・手札・イベントをステップ再生できます。</p>
   <p class="dim">JSONファイルをここにドラッグ&ドロップ、または↓から選択</p>
   <label class="filebtn">ログJSONを選択<input id="file" type="file" accept=".json,application/json" hidden></label>
+  <div id="reglist" style="display:none;margin-top:22px">
+    <p class="dim">または登録済みリプレイから選択:</p>
+    <div id="regbtns" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
+  </div>
   <div id="err"></div>
 </div></div>
 
@@ -89,6 +93,7 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
     <span id="pos" class="dim"></span>
   </div>
   <span class="dim">← → で移動</span>
+  <select id="regsel" style="display:none;background:#0c1322;color:#dde6f5;border:1px solid #2c3a55;border-radius:8px;padding:5px 8px;font-size:12px"></select>
   <label class="filebtn" style="padding:5px 12px;font-size:12px;margin:0">別のログ<input id="file2" type="file" accept=".json" hidden></label>
 </header>
 <div id="wrap" style="display:none">
@@ -261,4 +266,40 @@ $('#board').addEventListener('touchend',e=>{if(tsx==null)return;const dx=e.chang
 const dz=$('#drop');
 dz.ondragover=e=>{e.preventDefault();};
 dz.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);};
+// 登録済みリプレイ(docs/replays/manifest.json)の一覧・直リンク(?replay=<file>)対応。
+// file://での閲覧やmanifest不在時は静かに無効(従来のファイル選択のみ)。
+async function loadRegistered(f){
+  try{
+    const r=await fetch('replays/'+f,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    load(await r.json());
+    history.replaceState(null,'','?replay='+encodeURIComponent(f));
+  }catch(err){$('#err').textContent='登録リプレイの読み込み失敗: '+err.message;}
+}
+(async function(){
+  try{
+    const r=await fetch('replays/manifest.json',{cache:'no-store'});
+    if(!r.ok)return;
+    const man=await r.json();
+    const list=(man.replays||[]);
+    if(!list.length)return;
+    const box=$('#regbtns');
+    list.forEach(it=>{
+      const b=document.createElement('button');
+      b.className='filebtn';
+      b.style.cssText='margin:0;padding:8px 14px;font-size:13px;background:#1d3a6e';
+      b.textContent=it.label||it.file;
+      b.onclick=()=>loadRegistered(it.file);
+      box.appendChild(b);
+    });
+    $('#reglist').style.display='block';
+    const sel=$('#regsel');
+    sel.innerHTML='<option value="">登録リプレイ…</option>'
+      +list.map(it=>`<option value="${it.file}">${it.label||it.file}</option>`).join('');
+    sel.style.display='inline-block';
+    sel.onchange=e=>{if(e.target.value)loadRegistered(e.target.value);};
+    const q=new URLSearchParams(location.search).get('replay');
+    if(q)loadRegistered(q);
+  }catch(e){}
+})();
 </script></body></html>
