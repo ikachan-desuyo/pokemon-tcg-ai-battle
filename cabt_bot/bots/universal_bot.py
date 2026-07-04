@@ -233,6 +233,9 @@ def infer_plan(decklist) -> DeckPlan:
 
     opening = infer_opening(main, C)
     boss, recover, switch = infer_trainer_roles(ids, C)
+    # HPブーストツール(名前ベース認識。ケープ=+100)。activeの被KO圏→生存圏の反転を最優先
+    hp_tools = {i: 100 for i in ids
+                if C.get(i) and not C[i].is_pokemon and "Cape" in (C[i].name or "")}
     return DeckPlan(
         name="Universal",
         go_first=opening["go_first"],
@@ -243,6 +246,7 @@ def infer_plan(decklist) -> DeckPlan:
         key_cards=tuple(main[:2]),
         energy_rules=tuple(dict.fromkeys(rules)),
         lethal=True,                       # KOできる技を優先(デッキ非依存の普遍原則)
+        hp_boost_tools=hp_tools,           # ケープ等: 被KO圏→生存圏の反転を最優先
         avoid_overstack=True,              # 飽和対象への追加エネを後回し=後継を並行育成(Attach監査49%=過積みの修正)
         setup_energy=setup or 0,
         card_values=card_values,

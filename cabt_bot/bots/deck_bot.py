@@ -68,6 +68,7 @@ class DeckPlan:
     hold_energies: tuple[int, ...] = ()       # これらのエネは energy_rules の付け先以外には貼らない（温存）
     volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
     conserve_volatile: bool = False           # 今のエネで相手バトル場をKOできるなら volatile(イグニ)を温存（番末トラッシュの無駄回避）
+    hp_boost_tools: dict = field(default_factory=dict)  # HP増加ツール{id:+HP}(例:ケープ100)。activeの被KO圏→生存圏の反転を最優先
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
@@ -114,6 +115,8 @@ class DeckBot(Bot):
         self._cur = None
         self._sel = None
         self._attach_turn = None    # 手貼りを行ったターン(assume_hand_attach の判定に使用)
+        self._opp_ene_mark = None   # (turn, 相手の場のエネ総数)。手札エネ推論の基準点
+        self._opp_no_attach_streak = 0  # 相手が手貼りせず終えた連続ターン数(≥1で手札エネ薄の示唆)
         self._opp_seen = set()      # 相手の場で見えたカードidの累積（相手デッキ判定に使用）
         self._opp_main_line = None  # 相手の最大脅威ライン(line_threat最大)。マッチアップ別処理の起点
         self._resolver_log = []     # Resolver v1 の Explain Log(候補・改善量・採用理由)
@@ -181,6 +184,12 @@ class DeckBot(Bot):
         # イグニはベンチに付けられないため、前進後に手札のイグニ→ネビュラを成立させる。
         if (self.plan.reposition and self.plan.eager_reposition
                 and OptionType.RETREAT in g and self._should_reposition_eager(me, hand)):
+            return [g[OptionType.RETREAT][0]]
+        # 死亡確定×不利トレードの前逃げ(人間レビュー6巡目⑤): 前の攻撃役(サイド2+)が次ターン被KO
+        # 確定圏で、残って殴っても取れるサイド<失うサイド、かつベンチの主力後続が今ターン攻撃可能なら
+        # 手貼り前に退く(前の付きエネはどうせ失われる=退却コストは実質ゼロ。退いた後に後続へ貼る)。
+        # ※普遍原則のためrepositionフラグ非依存(UniversalBotにも適用)。
+        if OptionType.RETREAT in g and self._should_retreat_doomed(me, hand):
             return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACH in g:
             a = self._pick_attach(g[OptionType.ATTACH], options, hand, me)
@@ -286,6 +295,23 @@ class DeckBot(Bot):
         if cid in self.plan.heal_return_cards:
             if self._active_lethal_now():
                 return None
+            # 重傷(150+)なら進化加速サポ(セイジ58)より優先(人間レビュー5巡目①: HP120のactiveを
+            # 放置して3体目のメガを立てるより回復)。ボス(62=サイド獲得)は上のまま。
+            # ただし回復が生存反転になる場合のみ(満タンでも相手最大火力のワンパン圏なら回復は無意味
+            # =テンポ損。回帰でarch77→68を検出した過剰発火の修正)。
+            if self._attacker_damaged(150):
+                me2 = self._me()
+                act2 = ((me2 or {}).get("active") or [None])[0]
+                if act2 and (act2.get("maxHp") or 0) > self._incoming_threat(act2):
+                    return 60
+                # ベンチの重傷攻撃役が撒き(相手のJetting50等)圏内なら回復価値あり
+                # (人間レビュー7巡目④: ベンチMega50を放置して撒きで喪失)。
+                for sp in (me2 or {}).get("bench") or []:
+                    if (sp and sp.get("id") in self.plan.attackers
+                            and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
+                            and (sp.get("hp") or 999) <= 50):
+                        return 60
+                return None
             return 50 if self._attacker_damaged() else None
         # エネ補給サポ(トウコ等): 進化アタッカーが居て攻撃できない(エネ切れ)なら優先＝攻撃を早める
         if cid in self.plan.energy_supporters and self._attacker_needs_energy():
@@ -321,6 +347,22 @@ class DeckBot(Bot):
         return best
 
     def _pick_attach(self, idxs, options, hand, me):
+        # HPブーストツール(ケープ等): activeを「被KO圏→生存圏」に反転できるなら最優先で前に貼る。
+        # avoid_overstackは死亡濃厚activeへの投資を避けるが、ケープは死亡条件そのものを変えるため
+        # エネと同じ扱いにしない(人間レビュー5巡目②: 相手の最大火力を計算して貼り先を決める)。
+        for i in idxs:
+            op = options[i]
+            tool = self._hand_id(hand, op.index)
+            boost = (self.plan.hp_boost_tools or {}).get(tool)
+            if not boost or op.in_play_area != AreaType.ACTIVE:
+                continue
+            act = (me.get("active") or [None])[0]
+            if not act or act.get("id") not in self.plan.attackers:
+                continue
+            th = self._incoming_threat(act)
+            hp = act.get("hp") or 0
+            if hp <= th < hp + boost:
+                return i
         best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
@@ -339,6 +381,11 @@ class DeckBot(Bot):
                 # 今のエネで相手バトル場をKOできるなら、イグニは温存（より安い技で十分）
                 if self.plan.conserve_volatile and self._active_lethal_now():
                     continue
+                # 手札の基本エネ1枚で最大技が今ターン払える(恒久エネ完成=毎ターン打てる状態)なら
+                # イグニは温存(番末に消えて次ターン貼り直しになる。人間レビュー4巡目②③:
+                # 水2枚+手札水でイグニを貼った局面の修正)。
+                if self._basic_attach_suffices(me, op, hand):
+                    continue
             key = (rule,
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
@@ -351,6 +398,30 @@ class DeckBot(Bot):
             if key > best_key:
                 best_key, best = key, i
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
+
+    def _basic_attach_suffices(self, me, op, hand) -> bool:
+        """volatile(イグニ等)でなく手札の基本エネ1枚で、attach対象の最大コスト技が今ターン払えるか。
+        払えるなら恒久エネの方が価値が高い(番末に消えず、次ターン以降も貼り直しなしで技が打てる)。"""
+        import re
+        target = self._target_id(me, op.in_play_area, op.in_play_index)
+        info = self._cardinfo.get(target)
+        if not info:
+            return False
+        spots = (me.get("active") if op.in_play_area == AreaType.ACTIVE else me.get("bench")) or []
+        sp = (spots[op.in_play_index]
+              if op.in_play_index is not None and 0 <= op.in_play_index < len(spots) else None)
+        if not sp:
+            return False
+        perm = sum(1 for e in (sp.get("energyCards") or [])
+                   if e.get("id") not in self.plan.volatile_energies)
+        need = max((len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                    for m in info.moves if m.damage), default=0)
+        if need == 0 or perm + 1 < need:
+            return False
+        return any(self._is_energy(c.get("id"))
+                   and c.get("id") not in self.plan.volatile_energies
+                   and self._energy_rule_rank(c.get("id"), target) > 0
+                   for c in (hand or []))
 
     def _low_future_value(self, target_id, me, op, energy_id) -> bool:
         """エネ投資先の将来価値が低いか(avoid_overstackの一般化)。
@@ -1158,9 +1229,65 @@ class DeckBot(Bot):
                 wall = self._first_of(sel, self.plan.setup_wall)
                 if wall is not None:
                     return [wall]
-            pref = self._first_of(sel, self.plan.attackers)  # 進化前が居れば前に
-            if pref is not None:
-                return [pref]
+            # 開幕active: 進化する土台(例:Makuhita/リオル)はベンチで育て、単独で殴れる
+            # アタッカー(例:ソルロック)を前に(人間レビュー6巡目①: 手札順の先頭ではなく効果で選ぶ)。
+            best_i, best_key = None, (-1, -1, -1)
+            for i, op in enumerate(sel.options):
+                cid = self._opt_card_id(op)
+                if cid is None:
+                    continue
+                info = self._cardinfo.get(cid)
+                if not info or not info.is_pokemon:
+                    continue
+                dmg = max((int(m.damage) for m in info.moves
+                           if m.damage and str(m.damage).isdigit()), default=0)
+                # 「土台を前に晒さない」を最優先(攻撃不能な非土台を前に置く方が、主力土台を
+                # 晒すよりまし=arch: Relicanth前>Duraludon前)。次いでアタッカー・火力。
+                key = (0 if self._is_evolving_base(cid) else 1,
+                       1 if cid in self.plan.attackers else 0,
+                       dmg)
+                if key > best_key:
+                    best_key, best_i = key, i
+            if best_i is not None:
+                return [best_i]
+        # 回復(ミツル等)の対象選択: 最も重傷の攻撃役を回復(人間レビュー7巡目④)。
+        cc = getattr(sel, "context_card", None)
+        if cc is not None and getattr(cc, "card_id", None) in self.plan.heal_return_cards:
+            best_i, best_dmg = None, -1
+            for i, op in enumerate(sel.options):
+                me2 = self._me() or {}
+                spots = (me2.get("active") if op.area == AreaType.ACTIVE else me2.get("bench")) or []
+                sp = (spots[op.index] if op.index is not None and 0 <= op.index < len(spots) else None)
+                if not sp:
+                    continue
+                d = (sp.get("maxHp") or 0) - (sp.get("hp") or 0)
+                if sp.get("id") in self.plan.attackers:
+                    d += 40                               # 攻撃役を優先
+                if d > best_dmg:
+                    best_dmg, best_i = d, i
+            if best_i is not None:
+                return [best_i]
+        # 昇格/退避先(自分の新しいバトル場)選択: 相手の最大火力を1発耐える攻撃役を優先
+        # (人間レビュー7巡目③: HP230のメガが居るのに壁や瀕死メガを前に出していた)。
+        if (isinstance(ctx, SelectContext) and ctx in (SelectContext.TO_ACTIVE, SelectContext.SWITCH)
+                and sel.options and all(getattr(o, "player_index", None) == (self._cur or {}).get("yourIndex")
+                                        for o in sel.options)):
+            best_i, best_key = None, None
+            for i, op in enumerate(sel.options):
+                me2 = self._me() or {}
+                spots = (me2.get("active") if op.area == AreaType.ACTIVE else me2.get("bench")) or []
+                sp = (spots[op.index] if op.index is not None and 0 <= op.index < len(spots) else None)
+                if not sp:
+                    continue
+                th = self._incoming_threat(sp)
+                key = (1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
+                       1 if sp.get("id") in self.plan.attackers else 0,
+                       len(sp.get("energyCards") or []),
+                       sp.get("hp") or 0)
+                if best_key is None or key > best_key:
+                    best_key, best_i = key, i
+            if best_i is not None:
+                return [best_i]
         give = isinstance(ctx, SelectContext) and ctx in _GENERIC_GIVE
         take = isinstance(ctx, SelectContext) and ctx in _GENERIC_TAKE
         if give:
@@ -1201,13 +1328,39 @@ class DeckBot(Bot):
         return False
 
     def _should_switch(self) -> bool:
-        """入替系: バトル場が攻撃役(進化前含む)でなく、ベンチに攻撃役が居る時のみ。"""
+        """入替系: ①バトル場が攻撃役でなくベンチに攻撃役が居る(前進) ②前の攻撃役が被KO確定圏で
+        ベンチに満タンの進化攻撃役が居る(温存=退けて守る)。②は常設エネ投資なし×このターン攻撃を
+        失わない(手貼り権+手札エネ)場合のみ(人間レビュー3巡目③: 120HPのメガを晒して喪失の修正)。"""
         me = self._me()
         if not me or not self.plan.attackers:
             return False
         act = (me.get("active") or [None])[0]
-        if not act or act.get("id") in self.plan.attackers:
-            return False  # 場が空 or 既に攻撃役が前
+        if not act:
+            return False
+        cur = self._cur or {}
+        if act.get("id") in self.plan.attackers:
+            # 温存パス: 次の相手ターンにKO確定圏なら、満タンの後続に交代して前を守る
+            th = self.analyze_threat()
+            if not th.get("can_ko_me"):
+                return False
+            if any(e.get("id") not in self.plan.volatile_energies
+                   for e in (act.get("energyCards") or [])):
+                return False              # 常設エネ投資あり=退くと損失
+            # このターンの攻撃を失わないこと。前が攻撃可能なら、交代後も攻撃できる(手貼り権+手札エネ)
+            # 時のみ。前がどうせ攻撃不可(エネ0×手札エネ0等)なら失う攻撃が無い=温存だけで交代してよい
+            # (QA: 手札エネ0の被KO圏放置4件の修正)。
+            dmg, _ = self._active_attack_potential(assume_hand_attach=True)
+            if dmg > 0 and (cur.get("energyAttached") or not any(
+                    self._is_energy(c.get("id")) for c in (me.get("hand") or []))):
+                return False
+            for sp in me.get("bench") or []:
+                if not sp or sp.get("id") not in self.plan.attackers:
+                    continue
+                info = self._cardinfo.get(sp.get("id"))
+                if (info and not info.is_basic and sp.get("hp") == sp.get("maxHp")
+                        and (sp.get("hp") or 0) > (act.get("hp") or 0)):
+                    return True
+            return False
         for sp in me.get("bench") or []:
             if sp and sp.get("id") in self.plan.attackers:
                 return True
@@ -1264,8 +1417,15 @@ class DeckBot(Bot):
         if act[0].get("id") in self.plan.attackers:
             return False  # 既に攻撃役が前
         for sp in me.get("bench") or []:
-            if sp and sp.get("id") in self.plan.attackers and (sp.get("energies") or []):
-                return True  # エネ持ちの攻撃役がベンチに居る
+            if not sp or sp.get("id") not in self.plan.attackers or not (sp.get("energies") or []):
+                continue
+            info = self._cardinfo.get(sp.get("id"))
+            if info and info.is_basic:
+                # 脆いたね(将来の進化素材)は前に晒さない: 壁が相手の次打(現実的評価=現エネ+1で
+                # 払える技)を耐えるなら壁のまま(人間レビュー7巡目①: 20点のためエネ付きStaryu喪失)。
+                if (act[0].get("hp") or 0) > self._incoming_next_turn(act[0]):
+                    continue
+            return True  # 攻撃役がベンチに居る(進化済 or 壁が持たない場合のみたね)
         return False
 
     def _should_reposition_eager(self, me, hand) -> bool:
@@ -1360,6 +1520,104 @@ class DeckBot(Bot):
         c = self._cardinfo.get(target_id)
         weak = c.weakness if c else None
         return base * 2 if (weak and my_type and weak == my_type and not ign) else base
+
+    def _should_retreat_doomed(self, me, hand) -> bool:
+        """死亡確定×不利トレードの前逃げ判定。①前が攻撃役×サイド2+ ②被KO確定圏 ③残って殴っても
+        取れるサイド<失うサイド(有利トレードなら残って殴る) ④ベンチの主力後続が今ターン攻撃可能。"""
+        if not me:
+            return False
+        cur = self._cur or {}
+        act = (me.get("active") or [None])[0]
+        if not act or act.get("id") not in self.plan.attackers:
+            return False
+        if self._prize_value(act.get("id")) < 2:
+            return False
+        th = self._incoming_threat(act)
+        if th <= 0 or (act.get("hp") or 999) > th:
+            return False                       # 被KO圏でない
+        # 残って殴った場合のトレード: 相手activeをKOでき、その価値が自分の損失以上なら残る
+        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
+        opp = cur["players"][1 - cur["yourIndex"]]
+        oa = (opp.get("active") or [None])[0]
+        if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)
+                and self._prize_value(oa.get("id")) >= self._prize_value(act.get("id"))):
+            return False                       # 有利(同等以上の)トレード=受け入れて殴る
+        # ベンチの主力後続が今ターン攻撃できるか(エネ有 or 手貼り権+手札エネ)
+        not_attached = not cur.get("energyAttached")
+        have_energy = any(self._is_energy(c.get("id")) for c in (hand or []))
+        for sp in me.get("bench") or []:
+            if not sp or sp.get("id") not in self.plan.attackers:
+                continue
+            info = self._cardinfo.get(sp.get("id"))
+            if not info or info.is_basic:
+                continue
+            if (sp.get("hp") or 0) <= self._incoming_threat(sp):
+                continue                       # 後続も即死圏なら意味がない
+            if (sp.get("energyCards") or []) or (not_attached and have_energy):
+                return True
+        return False
+
+    def _is_evolving_base(self, cid) -> bool:
+        """このデッキ内に cid から進化するカードがあるか(=進化線の土台。開幕はベンチで育てる)。"""
+        info = self._cardinfo.get(cid)
+        if not info:
+            return False
+        for did in (self.deck_counts or {}):
+            d = self._cardinfo.get(did)
+            if d and d.previous_stage and d.previous_stage == info.name:
+                return True
+        return False
+
+    def _incoming_next_turn(self, my_spot) -> int:
+        """次の相手ターンの現実的な最大被ダメ(弱点込み): 相手activeライン(進化1段含む)の技のうち
+        「現エネ+手貼り1枚(イグニ観測済みなら+3)」で払える最大。ライン最大(line_threat)より現実的
+        (人間レビュー7巡目①: エネ0のStaryu相手に210を恐れて壁を退いていた)。"""
+        import re
+        cur = self._cur
+        if not cur or not my_spot:
+            return 0
+        opp = cur["players"][1 - cur["yourIndex"]]
+        oa = (opp.get("active") or [None])[0]
+        if not oa:
+            return 0
+        e = len(oa.get("energyCards") or []) + (3 if any(
+            v in self._opp_seen for v in (17,)) else 1)
+        oi = self._cardinfo.get(oa.get("id"))
+        moves = list(oi.moves) if oi else []
+        for did, di in self._cardinfo.items():
+            # 進化1段先の技も想定。ただし相手の場で観測済みのカードのみ(DB全体を見ると
+            # 相手デッキに無い別進化形の技を拾い過大評価する)。
+            if (oi and di.previous_stage == oi.name and di.is_pokemon
+                    and did in self._opp_seen):
+                moves += list(di.moves)
+        best = 0
+        for m in moves:
+            if not m.damage:
+                continue
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            mt = re.match(r"(\d+)", str(m.damage))
+            if mt and need <= e:
+                best = max(best, int(mt.group(1)))
+        cc = self._cardinfo.get(my_spot.get("id"))
+        if cc and oi and cc.weakness and oi.type == cc.weakness:
+            best *= 2
+        return best
+
+    def _incoming_threat(self, my_spot) -> int:
+        """相手バトル場ラインの最大火力(弱点込み)=このポケモンが次の相手ターンに受けうる最大ダメージ。"""
+        cur = self._cur
+        if not cur or not my_spot:
+            return 0
+        opp = cur["players"][1 - cur["yourIndex"]]
+        oa = (opp.get("active") or [None])[0]
+        if not oa:
+            return 0
+        t = _line_threat(oa.get("id")) or 0
+        cc = self._cardinfo.get(my_spot.get("id"))
+        oc = self._cardinfo.get(oa.get("id"))
+        if cc and oc and cc.weakness and oc.type == cc.weakness:
+            t *= 2
+        return t
 
     def _prize_value(self, cid) -> int:
         """KOされた時に相手が取るサイド枚数。メガex=3, ex=2, それ以外=1。"""
@@ -1478,12 +1736,55 @@ class DeckBot(Bot):
                     return True
         if not self.deck_counts:  # 構成不明 → 従来の保守的条件
             return not (self._has_key(hand) or len(hand) >= 4)
+        prizes_left = len(me.get("prize") or []) if me else 6
+        draw_n = 8 if prizes_left >= 6 else 6
+        # 生きた状況札の温存(人間レビュー6巡目④): 重傷×生存反転のミツル等、今まさに条件が成立
+        # している状況札を引き直しで流さない(リーリエは温存し、状況札を先に消化する)。
+        if any(c.get("id") in self.plan.heal_return_cards for c in hand):
+            act_h = ((me or {}).get("active") or [None])[0]
+            if (self._attacker_damaged(150) and act_h
+                    and (act_h.get("maxHp") or 0) > self._incoming_threat(act_h)):
+                return False
+        # 主力線dig(人間レビュー6巡目②): 主力ライン(key_cards[0]の線)が場に1体も無く、手札からも
+        # 立てられないなら、リーリエで土台(たね)を掘りに行く(死に手札=ハリテヤマ2枚等より質を優先)。
+        main0 = (self.plan.key_cards or (None,))[0]
+        if main0 is not None and me:
+            chain = {main0}
+            cur_i = self._cardinfo.get(main0)
+            name2id = {self._cardinfo[i].name: i for i in (self.deck_counts or {}) if i in self._cardinfo}
+            while cur_i and cur_i.previous_stage in name2id:
+                pid = name2id[cur_i.previous_stage]
+                if pid in chain:
+                    break
+                chain.add(pid); cur_i = self._cardinfo.get(pid)
+            board_ids = {sp.get("id") for sp in
+                         [(me.get("active") or [None])[0]] + list(me.get("bench") or []) if sp}
+            hand_ids_ = {c.get("id") for c in hand}
+            bases = {i for i in chain
+                     if self._cardinfo.get(i) and self._cardinfo[i].is_basic}
+            if (not (chain & board_ids) and not (bases & hand_ids_)
+                    and self._p_draw(bases, draw_n, include_hand=True) >= 0.3):
+                return True
+        # エネ掘り(人間レビュー5巡目③⑤): 場のアタッカーがエネ不足で最大技を打てず手札エネ0なら、
+        # 手札の枚数(純増減)やキー温存より質を優先して引き直す(キーは山に戻るだけで失われない。
+        # 山のエネ残量は_p_drawが考慮。「手札は多いが死んでいる」状態こそ引き直しの価値がある)。
+        if me and not any(self._is_energy(cd.get("id")) for cd in hand):
+            act0 = (me.get("active") or [None])[0]
+            if act0 and act0.get("id") in self.plan.attackers:
+                dmg_now, _ = self._active_attack_potential()
+                info0 = self._cardinfo.get(act0.get("id"))
+                import re as _re
+                full = 0
+                for m in (info0.moves if info0 else []):
+                    mt = _re.match(r"(\d+)", m.damage or "")
+                    if mt:
+                        full = max(full, int(mt.group(1)))
+                if dmg_now < full and self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55:
+                    return True
         blocked = (self._has_key(hand) if self.plan.strict_lillie_guard
                    else self._has_deployable_key(hand))
         if blocked:
             return False  # キーは山に戻さない（既定=この番に展開できるキーのみ／strict=全キー）
-        prizes_left = len(me.get("prize") or []) if me else 6
-        draw_n = 8 if prizes_left >= 6 else 6
         if len(hand) >= draw_n:
             return False  # 引き直すと純減＝他にやることがある
         if len(hand) <= draw_n - 2:
@@ -1518,7 +1819,17 @@ class DeckBot(Bot):
         if best_bench == 0:
             return False                       # ベンチにKOできる相手なし → 打たない
         if not can_ko_active:
-            return True                        # 前を倒せない → ベンチのKO対象を引っ張る
+            # 勝ち筋チェック(人間レビュー4巡目①④): ボス経路のKO回数(引っ張りKO自体+1)が
+            # 直行経路より「増える」場合のみ温存し主力へ蓄積(例: 残5・メガ3=直行2回 vs ボス1+2=3回)。
+            # 同数なら打つ=引っ張った相手は今確実にKOできるが、前は1発で倒せない(arch-17の教訓)。
+            import math
+            me2 = cur["players"][cur["yourIndex"]]
+            need = len(me2.get("prize") or []) or 6
+            board = [x for x in ([act] + list(opp.get("bench") or [])) if x]
+            main_pv = max((self._prize_value(x.get("id")) for x in board), default=1)
+            if 1 + math.ceil(max(0, need - best_bench) / main_pv) > math.ceil(need / main_pv):
+                return False
+            return True                        # 前を倒せない×勝ち筋を遅らせない → 引っ張る
         # 相手の主力アタッカーの進化前(発展中の脅威)がベンチでKO可能で、前が主力でない(脅威が低い)なら、
         # サイド数が同等でもボスで進化前を狩る＝主力の発展を阻害。ただし前を倒して勝ち切れるなら覆さない。
         me = cur["players"][cur["yourIndex"]]
@@ -1540,7 +1851,11 @@ class DeckBot(Bot):
         opp_idx = 1 - cur["yourIndex"]
         opp = cur["players"][opp_idx]
         dmg, ign = self._active_attack_potential(assume_hand_attach=True)
-        spread = self.plan.spread_damage
+        # 撒きキー(_spread_key)は攻撃効果のベンチ選択(DAMAGE)のみ。ボス等の引き出し(SWITCH)は
+        # KO×サイド価値で選ぶ(人間レビュー7巡目②: ボスでMega90(3枚KO)でなくStaryu70(snipe)を
+        # 引いた謎行動=撒きロジックの誤用)。
+        spread = (self.plan.spread_damage
+                  if getattr(sel, "context", None) == SelectContext.DAMAGE else 0)
         cand = []
         for i, op in enumerate(sel.options):
             if op.player_index != opp_idx:
@@ -1666,6 +1981,21 @@ class DeckBot(Bot):
                     self._opp_seen.add(sp["id"])
         if self._opp_seen:
             self._opp_main_line = max(_line_threat(c) for c in self._opp_seen)
+        # 相手手札エネ推論(人間レビュー5巡目④・Fact収集): 手貼りは1ターン1回なので、相手が
+        # 場のエネ総数を増やさずターンを終え続ける=手札にエネが無い可能性が高い。
+        # 手札全入れ替え(リーリエ等)の観測は困難なため連続ターン数のみ保持(判断材料。消費者は未接続)。
+        tot = sum(len(sp.get("energyCards") or [])
+                  for area in ("active", "bench") for sp in (opp.get(area) or []) if sp)
+        t = cur.get("turn", 0)
+        if self._opp_ene_mark is not None and t > self._opp_ene_mark[0]:
+            if tot <= self._opp_ene_mark[1]:
+                self._opp_no_attach_streak += 1
+            else:
+                self._opp_no_attach_streak = 0
+        if self._opp_ene_mark is None or t != self._opp_ene_mark[0]:
+            self._opp_ene_mark = (t, tot)
+        else:
+            self._opp_ene_mark = (t, max(tot, self._opp_ene_mark[1]))
 
     def _classify_opponent(self):
         """相手の場で見えたカードからアーキタイプを判別。判別不能ならNone(=ベース処理テーブル)。
@@ -1788,14 +2118,56 @@ class DeckBot(Bot):
         cid = self._opt_card_id(op)
         if cid is None:
             return 42
+        # spread型デッキの文脈評価: 相手バトル場が1エネ技(Jetting等)圏内なら、基本エネ(1エネ技+撒き)を
+        # volatile(イグニ=大技単発)より優先(人間レビュー3巡目①: FetchSkew|1エネ圏○ 52件/60戦の修正。
+        # 「前を倒せる+ベンチ50」>「前を倒せるだけ」の比較)。
+        if (self.plan.spread_damage and self._is_energy(cid)
+                and cid not in self.plan.volatile_energies
+                and self._opp_active_in_cheap_range()):
+            return 92
+        # 死んだ進化カードの抑制(人間レビュー6巡目③): 進化元が場にも手札にも居ない進化ポケは
+        # 持ってきても置けない=価値を大きく下げる(土台のたねを先に取るべき)。
+        # ※取得ゾーン(山/公開/トラッシュ)のみ。場に居るポケモン(昇格/対象選択)へ適用すると
+        #   全候補が30に潰れて先頭選びに退化する(人間レビュー7巡目で発覚したバグ)。
+        c = self._cardinfo.get(cid)
+        if (c and c.is_pokemon and not c.is_basic and c.previous_stage
+                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)):
+            me = self._me() or {}
+            names = set()
+            for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+                if sp:
+                    ci2 = self._cardinfo.get(sp.get("id"))
+                    if ci2:
+                        names.add(ci2.name)
+            for cd in me.get("hand") or []:
+                ci2 = self._cardinfo.get(cd.get("id"))
+                if ci2:
+                    names.add(ci2.name)
+            if c.previous_stage not in names:
+                return 30
         if cid in self.plan.card_values:
             return self.plan.card_values[cid]
         if cid in self.plan.attackers:
             return 95
-        c = self._cardinfo.get(cid)
         if c and c.hp is not None:
             return 80 if (c.rule and "ex" in (c.rule or "").lower()) else 60
         return 42
+
+    def _opp_active_in_cheap_range(self) -> bool:
+        """相手バトル場が撒き技(1エネ技=Jetting等)のダメージ圏内か。エネfetch選択の文脈評価用。"""
+        cur = self._cur
+        if not cur:
+            return False
+        opp = cur["players"][1 - cur["yourIndex"]]
+        oa = (opp.get("active") or [None])[0]
+        if not oa:
+            return False
+        dmg = 0
+        for nm_ in self.plan.spread_attacks:
+            aid = self._attack_name_ids().get(nm_)
+            if aid is not None:
+                dmg = max(dmg, self._attack_table().get(aid, 0))
+        return dmg > 0 and (oa.get("hp") or 999) <= dmg
 
     def _attack_table(self) -> dict:
         if self._atk_dmg is None:

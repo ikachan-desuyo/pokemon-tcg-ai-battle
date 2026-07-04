@@ -24,6 +24,20 @@ BLOCKING_PREFIXES = [
     "DeadMoveAttack",                                        # 条件未成立の0ダメ技で攻撃(人間レビュー2巡目)
     "SpreadSkew",                                            # 撒き先が主力線進化前を外す(人間レビュー2巡目)
     "PartnerUnbenched",                                      # 依存技の相方を出さず手番終了(同上・現0件)
+    "MissedFreeAdvance",                                     # 逃げ0壁でEND=攻撃機会喪失(人間レビュー3巡目)
+    "DoomedNoSwitch",                                        # 被KO圏の攻撃役を温存せず喪失(人間レビュー3巡目)
+    "BossNoPathGain",                                        # 勝ち筋を早めない1枚取りボス(人間レビュー4巡目)
+    "VolatileOverPermanent",                                 # 恒久エネ完成を捨ててイグニ貼付(人間レビュー4巡目)
+    "HealMissed",                                            # 重傷activeで回復サポより低価値サポ(人間レビュー5巡目)
+    "CapeSkew",                                              # ケープの貼り先が生存反転を逃す(人間レビュー5巡目)
+    "EnergyStuckNoLillie",                                   # エネ不足×手札エネ0×リーリエ未使用(人間レビュー5巡目)
+    "SetupSkew",                                             # 開幕activeに進化土台(人間レビュー6巡目)
+    "DeadEvolutionPick",                                     # 進化元不在の進化ポケをサーチ(人間レビュー6巡目)
+    "LillieOverLiveHeal",                                    # 生きた状況札をリーリエで流す(人間レビュー6巡目)
+    "DoomedNoRetreat",                                       # 被KO確定×不利トレードで残留(人間レビュー6巡目)
+    "GustTargetSkew",                                        # 引き出し先がKO×サイド最大でない(人間レビュー7巡目)
+    "PromotionSkew",                                         # 昇格が耐える主力を選ばない(人間レビュー7巡目)
+    "WeakAdvance",                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
 ]
 
 

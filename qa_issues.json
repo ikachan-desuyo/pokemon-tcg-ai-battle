@@ -9,6 +9,15 @@
   "cycles": [
    15,
    0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -24,6 +33,15 @@
   "cycles": [
    11,
    0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -38,6 +56,15 @@
   "graduated": "2026-07-03",
   "cycles": [
    2,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0,
    0
   ],
@@ -55,10 +82,21 @@
    1,
    1,
    0,
+   0,
+   0,
+   0,
+   1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
-  "cause": "評価タイミング(順序: 手貼り前に判断)"
+  "cause": "評価タイミング(順序: 手貼り前に判断)",
+  "note": "2026-07-04のRegressed判定は検出器偽陽性(lucario-1:T11=勝ち筋のエネがトウコ由来で1サポ制約と両立不能=H2)。検出器を選択肢実在+ターン単位+手貼り込み評価に修正(教訓4回目)。botの再発ではない"
  },
  "DeadMoveAttack": {
   "status": "Graduated",
@@ -69,6 +107,15 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0,
    0
   ],
@@ -85,6 +132,15 @@
   "cycles": [
    19,
    0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -97,6 +153,15 @@
   "observational": true,
   "first_seen": "2026-07-03",
   "cycles": [
+   111,
+   110,
+   117,
+   101,
+   104,
+   122,
+   104,
+   102,
+   117,
    111
   ],
   "regressions": 0,
@@ -109,13 +174,23 @@
   "match": "LastStand",
   "first_seen": "2026-07-03",
   "cycles": [
-   19
+   19,
+   17,
+   19,
+   16,
+   17,
+   16,
+   20,
+   24,
+   22,
+   11
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
-  "ev": {
-   "cost": "大",
-   "gain": "小"
+  "evidence": {
+   "frequency": 19,
+   "rejected": 19,
+   "note": "今サイクル19件は全て非ブロッキング署名(リーリエなし/打てない)=H2:選択肢なし。ブロッキング署名(打てたのに未使用)は0=LillieLastStandとして卒業済"
   }
  },
  "UnusedSupporterRight": {
@@ -124,13 +199,23 @@
   "match": "UnusedSupporterRight",
   "first_seen": "2026-07-03",
   "cycles": [
-   33
+   33,
+   40,
+   36,
+   44,
+   33,
+   14,
+   20,
+   23,
+   15,
+   4
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
-  "ev": {
-   "cost": "中(A/B/C/D分類が先)",
-   "gain": "要分類(過去ExplainでB=価値比較ミスは1件のみ=大半H1温存の可能性)"
+  "evidence": {
+   "frequency": 33,
+   "confirmed": 1,
+   "note": "Support QA Explain(30戦)のA/B/C/D分類でB(真の価値比較ミス)=1件のみ確認。A/C/Dの正確な内訳は未再集計=次サイクルで蓄積。33件の大半は相手bot側"
   }
  },
  "WastedInvestment": {
@@ -139,13 +224,282 @@
   "match": "WastedInvestment",
   "first_seen": "2026-07-03",
   "cycles": [
-   22
+   22,
+   18,
+   12,
+   16,
+   19,
+   17,
+   19,
+   19,
+   24,
+   11
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
-  "ev": {
-   "cost": "大",
-   "gain": "小-中(v7分析で84%は正当なunlock投資)"
+  "evidence": {
+   "frequency": 22,
+   "rejected_ratio": "v7層別分析で84%が正当なunlock投資(同ファミリの実測)",
+   "note": "hindsight検出=結果論を含む。Confirmed/Rejectedの本計数は未実施"
   }
+ },
+ "DoomedNoSwitch": {
+  "status": "Graduated",
+  "detector": "DoomedNoSwitch",
+  "match": "DoomedNoSwitch",
+  "first_seen": "2026-07-04",
+  "cycles": [
+   4,
+   0,
+   0,
+   0,
+   0,
+   0,
+   2,
+   0,
+   0
+  ],
+  "regressions": 0,
+  "graduated": "2026-07-04",
+  "cause": "緊急時Gate欠如(温存: 被KO圏の攻撃役を退けて守る)",
+  "fix": "_should_switch温存パス(被KO圏×満タン後続×常設エネ投資なし×攻撃を失わない)。過剰条件(手札エネ必須)を「前が攻撃可能な場合のみ」に緩和",
+  "note": "2026-07-04の再発2件は検出器偽陽性(壁Cinderaceを後続候補と誤認)。候補をline_threat>=180に限定して修正。botの再発ではない"
+ },
+ "MissedFreeAdvance": {
+  "status": "Graduated",
+  "detector": "MissedFreeAdvance",
+  "match": "MissedFreeAdvance",
+  "cause": "評価タイミング(順序: 手貼り前に判断)",
+  "fix": "STARMIE_PLANにeager_reposition=True(後段repositionは『ベンチにエネ有』要求のためイグニ主体では構造的不発)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   4,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "FetchIgnition(1エネ圏)": {
+  "status": "Graduated",
+  "detector": "FetchSkew(1エネ圏○×Ignition)",
+  "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
+  "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
+  "fix": "_opt_valueにspread文脈(相手1エネ圏なら基本エネ92>イグニ90=Jetting+撒き50>Nebula単発)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   52,
+   0,
+   0,
+   0,
+   1,
+   0,
+   0,
+   0,
+   0
+  ],
+  "regressions": 1
+ },
+ "BossNoPathGain": {
+  "status": "Regressed",
+  "detector": "BossNoPathGain",
+  "match": "BossNoPathGain",
+  "cause": "サイド算術の欠如(1枚取りが必要KO回数を増やすかを見ない)",
+  "fix": "_should_play_boss: ボス経路KO回数(1+ceil((残-取)/主力))>直行ceil(残/主力)の時のみ温存。同数は打つ(今確実にKOできる価値)。検出器も手貼り込み火力で同式",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   19,
+   1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1
+  ],
+  "regressions": 1,
+  "note": "cycles[1]の1件(arch-17)は検出器偽陽性(手貼り火力を見ず)と判定済み"
+ },
+ "VolatileOverPermanent": {
+  "status": "Graduated",
+  "detector": "VolatileOverPermanent",
+  "match": "VolatileOverPermanent",
+  "cause": "エネの永続価値の欠如(volatileは番末に消える=恒久完成が優位)",
+  "fix": "_pick_attach: 手札の基本エネ1枚で最大技が今ターン払えるならイグニ温存(_basic_attach_suffices)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   9,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "EnergyStuckNoLillie": {
+  "status": "Graduated",
+  "detector": "EnergyStuckNoLillie",
+  "match": "EnergyStuckNoLillie",
+  "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
+  "fix": "_should_use_lillieにエネ掘り(最大技不達×手札エネ0×p_draw>=0.55)を枚数/キー温存ゲートより前に。検出器は実カードの最大技コスト基準(3固定はMega Brave 2エネを誤検出)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   5,
+   3,
+   0,
+   0,
+   3,
+   0
+  ],
+  "regressions": 0,
+  "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
+ },
+ "HealMissed": {
+  "status": "Graduated",
+  "detector": "HealMissed",
+  "match": "HealMissed",
+  "cause": "Support Value(サポ権の価値比較)+相手最大火力の計算欠如",
+  "fix": "_play_scoreミツル: 重傷150+かつ回復が生存反転になる場合のみ60(>セイジ58)。無条件60はarch対面77→68の回帰を生み生存反転条件で83に回復",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "CapeSkew": {
+  "status": "Graduated",
+  "detector": "CapeSkew",
+  "match": "CapeSkew",
+  "cause": "相手最大火力の計算欠如(ケープの貼り先=被KO圏→生存圏の反転)",
+  "fix": "_pick_attachにhp_boost_tools反転優先(avoid_overstackの死亡濃厚判定を上書き=ケープは死亡条件を変える)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "SetupSkew": {
+  "status": "Graduated",
+  "detector": "SetupSkew",
+  "match": "SetupSkew",
+  "cause": "開幕盤面の効果評価欠如(手札順の先頭アタッカーを置くだけ)",
+  "fix": "SETUP_ACTIVE選択をランク化: 非土台(このデッキで進化しない)>アタッカー>火力。土台(Makuhita/リオル/Duraludon)はベンチで育てる",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "DeadEvolutionPick": {
+  "status": "Graduated",
+  "detector": "DeadEvolutionPick",
+  "match": "DeadEvolutionPick",
+  "cause": "サーチ選択が置けるか(進化元の有無)を見ない=静的card_values(Mega100>リオル56)",
+  "fix": "_opt_value: 進化元が場にも手札にも無い進化ポケは30に減価(土台を先に取る)。検出器は「候補内に土台が居たのに進化側を取った」場合のみ",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   2,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "LillieOverLiveHeal": {
+  "status": "Graduated",
+  "detector": "LillieOverLiveHeal",
+  "match": "LillieOverLiveHeal",
+  "cause": "Support Value(状況札の温存順序: 条件成立中の札を引き直しで流さない)",
+  "fix": "_should_use_lillie: 生きたミツル(重傷150+×生存反転)在手なら引き直さない",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "DoomedNoRetreat": {
+  "status": "Graduated",
+  "detector": "DoomedNoRetreat",
+  "match": "DoomedNoRetreat",
+  "cause": "サイド算術(残って殴って取れるサイド<失うサイドの不利トレード)+退却コストの誤認(死亡確定なら付きエネは実質無料)",
+  "fix": "_should_retreat_doomed: 被KO確定×サイド2+×不利トレード×後続攻撃可なら手貼り前に退く(repositionフラグ非依存=Universal含む)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   2,
+   0,
+   0
+  ],
+  "regressions": 0
+ },
+ "GustTargetSkew": {
+  "status": "Graduated",
+  "detector": "GustTargetSkew",
+  "match": "GustTargetSkew",
+  "cause": "選択ロジックの誤用(ボス引き出しに撒きキー=snipe項が漏出)",
+  "fix": "_ko_gust_pick: _spread_keyはDAMAGE(攻撃効果)のみ。SWITCH(ボス)はKO×サイド価値",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0
+ },
+ "PromotionSkew": {
+  "status": "Graduated",
+  "detector": "PromotionSkew",
+  "match": "PromotionSkew",
+  "cause": "昇格/退避先の生存評価欠如+死進化減価が盤面ポケモンを汚染し全候補30点(先頭選び)",
+  "fix": "_opt_value減価を取得ゾーン限定+TO_ACTIVE/SWITCH自側に生存優先キー(耐える>攻撃役>エネ>HP)",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0
+ },
+ "WeakAdvance": {
+  "status": "Graduated",
+  "detector": "WeakAdvance",
+  "match": "WeakAdvance",
+  "cause": "脅威モデルが悲観的すぎ(ライン最大210固定)=エネ0の相手にも壁を退いて素材を晒す",
+  "fix": "_incoming_next_turn(現エネ+1で払える技×観測済み進化のみ)で壁の生存を現実評価。耐えるならたね前進せず",
+  "first_seen": "2026-07-04",
+  "graduated": "2026-07-04",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0
  }
 }

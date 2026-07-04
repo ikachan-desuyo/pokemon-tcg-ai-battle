@@ -74,17 +74,47 @@ def hand_ids(me):
     return [c.get("id") for c in (me.get("hand") or [])]
 
 
+def _dmg_with_units(cid, e):
+    """カードcidがエネ換算e個で払える技の最大ダメージ(汎用)。"""
+    import re
+    ci = C.get(cid)
+    if not ci or e <= 0:
+        return 0
+    best = 0
+    for m in ci.moves:
+        if not m.damage:
+            continue
+        need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+        mt = re.match(r"(\d+)", str(m.damage))
+        if mt and need <= e:
+            best = max(best, int(mt.group(1)))
+    return best
+
+
 def attack_dmg(spot):
-    """Mega Starmieの実効火力。イグニは進化ポケ上で無3扱い(枚数だけ数えると
-    イグニ1枚のNebula Beam 210圏を120と誤評価→MissedLethal偽陽性: lucario-5:T11)。"""
+    """そのポケモンが現在の付きエネ(イグニは進化ポケ上で無3扱い)で払える技の最大ダメージ。
+    カードデータから汎用計算(Starmie固定の120/210マップはMega Lucario(130/270)等を誤算し
+    相手bot側検出で偽陽性を生んだ)。"""
+    import re
     if not spot:
         return 0
     ci = C.get(spot.get("id"))
-    evolved = bool(ci) and not getattr(ci, "is_basic", True)
-    e = 0
-    for ec in (spot.get("energyCards") or []):
-        e += 3 if (ec.get("id") == IGN and evolved) else 1
-    return 210 if e >= 3 else (120 if e >= 1 else 0)
+    if not ci:
+        return 0
+    evolved = not getattr(ci, "is_basic", True)
+    e = sum(3 if (ec.get("id") == IGN and evolved) else 1
+            for ec in (spot.get("energyCards") or []))
+    if e == 0:
+        return 0
+    best = 0
+    for m in ci.moves:
+        if not m.damage:
+            continue
+        need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+        mt = re.match(r"(\d+)", str(m.damage))
+        if mt and need <= e:
+            best = max(best, int(mt.group(1)))
+    return best
 
 
 # ============ Layer 1: Detectors (Factのみ) ============
@@ -140,23 +170,52 @@ def det_unused_supporter(g, sig):
 
 
 def det_missed_lethal(g, sig):
-    """MissedLethal: 残りサイド1・手札にBoss・ベンチにKO圏(現エネの技で)なのにATTACK/ENDで勝たず。"""
+    """MissedLethal: 残りサイド1・BossのPLAY選択肢が実在(=サポ権未使用×手札にBoss)・
+    今の付きエネ+手貼りで届く技でベンチKO圏、なのにBossを打たなかった。
+    選択肢実在確認(4回目の教訓): サポ権使用済みや、勝ち筋のエネ自体がサポ由来(トウコ)で
+    1サポ制約と両立不能なケース(lucario-1:T11=H2)を偽陽性にしない。"""
+    boss_turns = set()                                  # そのターン中にBossを打った=見逃しでない
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
-        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+        h = hand_ids(me)
+        if ch.get("type") == PLAY and ch.get("index") is not None \
+                and ch["index"] < len(h) and h[ch["index"]] == BOSS:
+            boss_turns.add(cur.get("turn"))
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
-        if len(me.get("prize") or []) != 1 or BOSS not in hand_ids(me):
+        if len(me.get("prize") or []) != 1 or cur.get("turn") in boss_turns:
+            continue
+        h = hand_ids(me)
+        boss_playable = any(o.get("type") == PLAY and o.get("index") is not None
+                            and o["index"] < len(h) and h[o["index"]] == BOSS
+                            for o in (sel.get("option") or []))
+        if not boss_playable:
             continue
         a = (me.get("active") or [None])[0]
-        dmg = attack_dmg(a)
+        if not a:
+            continue
+        ci = C.get(a.get("id"))
+        evolved = bool(ci) and not getattr(ci, "is_basic", True)
+        e = sum(3 if (ec.get("id") == IGN and evolved) else 1
+                for ec in (a.get("energyCards") or []))
+        if not cur.get("energyAttached"):
+            inc = 0
+            for x in h:
+                if C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or ""):
+                    inc = max(inc, 3 if (x == IGN and evolved) else 1)
+            e += inc                                    # 手貼り権+手札エネ=貼った後の火力(イグニ×進化=+3)
+        dmg = _dmg_with_units(a.get("id"), e)
         oa = (opp.get("active") or [None])[0]
         act_ko = bool(oa) and (oa.get("hp") or 999) <= dmg
         bench_ko = any(b and (b.get("hp") or 999) <= dmg for b in (opp.get("bench") or []))
         if bench_ko and not act_ko:
-            sig("MissedLethal|Boss未使用でベンチ勝ち筋逃し", g["ep"], cur.get("turn"))
+            sig("MissedLethal|Boss打てたのにベンチ勝ち筋逃し", g["ep"], cur.get("turn"))
 
 
 def det_wasted_investment(g, sig):
@@ -405,10 +464,556 @@ def det_spread_skew(g, sig):
                 g["ep"], cur.get("turn"))
 
 
+def det_missed_free_advance(g, sig):
+    """MissedFreeAdvance: 逃げ0のエネなし壁でEND。退けばベンチの進化アタッカーが前に出て
+    今ターン攻撃可能(エネ有 or 手貼り権+手札エネ)だったのに手番を渡した(人間レビュー2巡目②)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != END:
+            continue
+        opts = sel.get("option") or []
+        if not any(o.get("type") == RETREAT for o in opts):
+            continue
+        a = (me.get("active") or [None])[0]
+        if not a or (a.get("energyCards") or []):
+            continue                                    # 前が攻撃準備済みなら対象外
+        ci = C.get(a.get("id"))
+        if ci and ci.retreat:                           # 逃げコストあり=無料でない
+            continue
+        can_pay = (not cur.get("energyAttached")
+                   and any(C.get(c.get("id")) and not C[c.get("id")].is_pokemon
+                           and "Energy" in (C[c.get("id")].name or "") for c in (me.get("hand") or [])))
+        for b in (me.get("bench") or []):
+            if not b:
+                continue
+            bi = C.get(b.get("id"))
+            if not bi or bi.is_basic or not any(m.damage for m in bi.moves):
+                continue
+            if (b.get("energyCards") or []) or can_pay:
+                sig(f"MissedFreeAdvance|逃げ0壁でEND({nm(b.get('id'))}前進で攻撃可)", g["ep"], cur.get("turn"))
+                break
+
+
+def det_doomed_no_switch(g, sig):
+    """DoomedNoSwitch: 前の攻撃役が次の相手ターンKO確定圏 × ベンチに満タンの進化攻撃役 ×
+    入れ替えのPLAY選択肢実在 × 前に常設エネ投資なし、なのに入れ替えず手番を閉じた(温存機会の喪失)。
+    (人間レビュー2巡目③: 120HPのメガを晒して喪失。イグニ=volatileは投資と数えない)"""
+    from cabt_bot.state_encoder import line_threat
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not a or not oa:
+            continue
+        dmg_in = line_threat(oa.get("id")) or 0
+        cc = C.get(a.get("id")); oc = C.get(oa.get("id"))
+        if cc and oc and cc.weakness and oc.type == cc.weakness:
+            dmg_in *= 2
+        if dmg_in <= 0 or (a.get("hp") or 999) > dmg_in:
+            continue                                    # 被KO圏でない
+        if any(e.get("id") != IGN for e in (a.get("energyCards") or [])):
+            continue                                    # 常設エネ投資あり=退くと損失(温存対象外)
+        if cur.get("energyAttached"):
+            continue                                    # 手貼り済み=温存の判断窓は閉じた後(交代は攻撃を失う)
+        h = me.get("hand") or []
+        sw = any(o.get("type") == PLAY and o.get("index") is not None and o["index"] < len(h)
+                 and "Switch" in (C.get(h[o["index"]].get("id")).name if C.get(h[o["index"]].get("id")) else "")
+                 for o in (sel.get("option") or []))
+        if not sw:
+            continue
+        for b in (me.get("bench") or []):
+            if not b:
+                continue
+            bi = C.get(b.get("id"))
+            if (bi and not bi.is_basic and any(m.damage for m in bi.moves)
+                    and (line_threat(b.get("id")) or 0) >= 180
+                    and b.get("hp") == b.get("maxHp") and (b.get("hp") or 0) > (a.get("hp") or 0)):
+                # 後続候補は主力線(threat>=180)のみ。壁(Cinderace等=Stage2だが主力でない)への
+                # 交代提案は誤検出(QA: Staryu×Cinderace 2件)
+                sig(f"DoomedNoSwitch|被KO圏の{nm(a.get('id'))}を温存せず(入替可×満タン{nm(b.get('id'))})",
+                    g["ep"], cur.get("turn"))
+                break
+
+
+def _pv(cid):
+    """KO時に取れるサイド枚数(メガex=3, ex=2, 他=1)。"""
+    c = C.get(cid)
+    rule = (c.rule or "").lower() if c else ""
+    if "mega" in rule and "ex" in rule:
+        return 3
+    return 2 if "ex" in rule else 1
+
+
+def det_boss_no_path_gain(g, sig):
+    """BossNoPathGain: ボスでベンチ1枚を取っても必要KO回数(残サイド÷主力サイド価値)が減らない
+    局面での使用=勝ち筋を早めない1枚取り(人間レビュー4巡目①④: サイド算術。残5でメガ3×2回=残4でも2回)。"""
+    import math
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        if not (ch.get("type") == PLAY and ch.get("index") is not None
+                and ch["index"] < len(h) and h[ch["index"]] == BOSS):
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        # 火力はこのターンの手貼りを含めて評価(botのassume_hand_attachと同じ意味論。
+        # arch-17:T11=水を貼って210でex200を引っ張った正当ボスを偽陽性にしない)
+        ci = C.get((a or {}).get("id"))
+        evolved = bool(ci) and not getattr(ci, "is_basic", True)
+        e = sum(3 if (ec.get("id") == IGN and evolved) else 1
+                for ec in ((a or {}).get("energyCards") or []))
+        if not cur.get("energyAttached"):
+            inc = 0
+            for x in h:
+                if C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or ""):
+                    inc = max(inc, 3 if (x == IGN and evolved) else 1)
+            e += inc                                    # イグニ×進化=+3(botのassume_hand_attachと同義)
+        dmg = _dmg_with_units(a.get("id"), e)
+        if oa and (oa.get("hp") or 999) <= dmg:
+            continue                        # 前を倒せる状況のボスは別判断(より大きなサイド)
+        board = [x for x in ([oa] + list(opp.get("bench") or [])) if x]
+        main_pv = max((_pv(x.get("id")) for x in board), default=1)
+        koable = [x for x in (opp.get("bench") or []) if x and (x.get("hp") or 999) <= dmg]
+        if not koable:
+            continue
+        best = max(_pv(x.get("id")) for x in koable)
+        need = len(me.get("prize") or []) or 6
+        # ボス経路のKO回数(引っ張りKO自体を+1) > 直行経路のみ発火。同数なら「今確実にKOできる」
+        # ボスが優位(前は1発で倒せない=実ターン数はもっとかかる。arch-17:T11=H1の教訓)。
+        if 1 + math.ceil(max(0, need - best) / main_pv) > math.ceil(need / main_pv):
+            sig(f"BossNoPathGain|1枚取りが必要KO回数を増やす(残{need}÷主力{main_pv})",
+                g["ep"], cur.get("turn"))
+
+
+def det_volatile_over_permanent(g, sig):
+    """VolatileOverPermanent: 基本エネ1枚で最大技が今ターン払える(恒久エネで毎ターン打てる状態が完成)
+    のにvolatile(イグニ)をactiveへ貼った=番末に消え次ターン貼り直し(人間レビュー4巡目②③)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != ATTACH or ch.get("inPlayArea") != 4:
+            continue
+        h = hand_ids(me)
+        idx = ch.get("index")
+        if idx is None or idx >= len(h) or h[idx] != IGN:
+            continue
+        a = (me.get("active") or [None])[0]
+        if not a:
+            continue
+        perm = sum(1 for e in (a.get("energyCards") or []) if e.get("id") != IGN)
+        if perm + 1 >= 3 and WATER in h:    # Nebula ●●●=3: 水1枚で恒久3枚が完成する状況
+            sig("VolatileOverPermanent|基本エネで恒久3枚完成なのにイグニ貼付", g["ep"], cur.get("turn"))
+
+
+WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
+
+
+def _incoming(a, oa):
+    """相手activeライン最大火力(弱点込み)=aが次の相手ターンに受けうる最大ダメージ。"""
+    from cabt_bot.state_encoder import line_threat
+    if not a or not oa:
+        return 0
+    t = line_threat(oa.get("id")) or 0
+    cc = C.get(a.get("id")); oc = C.get(oa.get("id"))
+    if cc and oc and cc.weakness and oc.type == cc.weakness:
+        t *= 2
+    return t
+
+
+def det_heal_missed(g, sig):
+    """HealMissed: activeが重傷(150+)でミツル(回復)がPLAY可能なのに、別のサポを使った
+    (かつ現エネで相手activeをKOできない=回復ターンの価値が高い)。(人間レビュー5巡目①)"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        if not (ch.get("type") == PLAY and ch.get("index") is not None and ch["index"] < len(h)):
+            continue
+        played = h[ch["index"]]
+        ci = C.get(played)
+        if not ci or ci.stage != "Supporter" or played == WALLY:
+            continue
+        if played in (TOUKO, BOSS):
+            continue    # エネ補給サポ=攻撃成立/ボス=サイド獲得(算術ゲート済)。回復との比較はH1
+        wally_playable = any(o.get("type") == PLAY and o.get("index") is not None
+                             and o["index"] < len(h) and h[o["index"]] == WALLY
+                             for o in (sel.get("option") or []))
+        if not wally_playable:
+            continue
+        a = (me.get("active") or [None])[0]
+        if not a or (a.get("maxHp") or 0) - (a.get("hp") or 0) < 150:
+            continue
+        oa = (opp.get("active") or [None])[0]
+        if oa and (oa.get("hp") or 999) <= attack_dmg(a):
+            continue                                    # 今KOできるなら攻撃優先=回復不要
+        sig(f"HealMissed|重傷activeでミツルでなく{ci.name}を使用", g["ep"], cur.get("turn"))
+
+
+def det_cape_skew(g, sig):
+    """CapeSkew: ケープをベンチに貼ったが、activeに貼れば「被KO圏→生存圏」に反転できた。
+    (人間レビュー5巡目②: 相手の出しうる最大火力を計算して貼り先を決める)"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        if (ch.get("type") != ATTACH or ch.get("index") is None
+                or ch["index"] >= len(h) or h[ch["index"]] != CAPE
+                or ch.get("inPlayArea") == 4):
+            continue                                    # ケープをベンチへ貼った選択のみ対象
+        from cabt_bot.state_encoder import line_threat as _lt
+        a = (me.get("active") or [None])[0]
+        ca = C.get((a or {}).get("id"))
+        if (not a or not ca or ca.is_basic or not any(m.damage for m in ca.moves)
+                or (_lt(a.get("id")) or 0) < 180):
+            continue    # activeが主力線(threat>=180)の進化アタッカーの時のみ
+                        # (壁Cinderace=Stage2だが主力でない、へのケープ温存は正当)
+        oa = (opp.get("active") or [None])[0]
+        th = _incoming(a, oa)
+        hp = a.get("hp") or 0
+        if hp <= th < hp + 100:
+            sig("CapeSkew|activeに貼れば被KO圏→生存圏だったのにベンチへ", g["ep"], cur.get("turn"))
+
+
+def det_energy_stuck_no_lillie(g, sig):
+    """EnergyStuckNoLillie: 場のアタッカーがエネ不足で最大技を打てず、手札エネ0、
+    リーリエがPLAY可能なのに引き直さずターンを閉じた(手札の質より枚数を優先した惰性)。
+    (人間レビュー5巡目③⑤: 山にエネが残っているなら掘りに行く)"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        h = hand_ids(me)
+        if any(C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or "") for x in h):
+            continue                                    # 手札にエネあり=対象外
+        lil = any(o.get("type") == PLAY and o.get("index") is not None
+                  and o["index"] < len(h) and h[o["index"]] == LILLIE_
+                  for o in (sel.get("option") or []))
+        if not lil:
+            continue
+        a = (me.get("active") or [None])[0]
+        # 生きたミツル(重傷150+×生存反転可)を手札に持つ場合、リーリエは意図的に温存される
+        # (流すとミツルを失う=LillieOverLiveHealと表裏)。このケースはエネ掘り未使用でも正当。
+        if WALLY in h and a:
+            oa0 = (opp.get("active") or [None])[0]
+            if ((a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
+                    and (a.get("maxHp") or 0) > _incoming(a, oa0)):
+                continue
+        ci = C.get((a or {}).get("id"))
+        if not a or not ci or ci.is_basic or not any(m.damage for m in ci.moves):
+            continue                                    # 進化アタッカーが前のケースに限定
+        evolved = not ci.is_basic
+        e = sum(3 if (ec.get("id") == IGN and evolved) else 1
+                for ec in (a.get("energyCards") or []))
+        # 「エネ不足」は実カードの最大技コストで判定(3固定だとMega Brave 2エネ270等を誤検出)
+        import re as _re2
+        need = max((len(_re2.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                    for m in ci.moves if m.damage), default=0)
+        if need == 0 or e >= need or e == 0:
+            continue                                    # 最大技可 / 0=別問題(そもそも回っていない)
+        sig("EnergyStuckNoLillie|エネ不足×手札エネ0×リーリエ未使用でターン終了", g["ep"], cur.get("turn"))
+
+
+def _is_base_of_db_line(cid):
+    """カードDB上、cidから進化するカードが存在するか(=進化線の土台)。"""
+    ci = C.get(cid)
+    if not ci:
+        return False
+    return any(c.previous_stage == ci.name for c in C.values() if c.previous_stage)
+
+
+def det_setup_skew(g, sig):
+    """SetupSkew: 開幕activeに進化線の土台(Makuhita/リオル等)を置いた。単独で殴れる非土台の
+    候補(ソルロック等)が手札に居たなら、土台はベンチで育てるべき(人間レビュー6巡目①)。"""
+    for t, ob, act in g["decisions"]:
+        cur = ob.get("current")
+        sel = ob.get("select") or {}
+        if not cur or cur.get("turn", 9) > 0 or sel.get("context") != 1 or not act:
+            continue
+        opts = sel.get("option") or []
+        me = cur["players"][g["my"]]
+        hand = me.get("hand") or []
+        def cid_of(o):
+            i = o.get("index")
+            return hand[i].get("id") if i is not None and i < len(hand) else None
+        ch = opts[act[0]] if act[0] < len(opts) else {}
+        chosen_id = cid_of(ch)
+        if chosen_id is None or not _is_base_of_db_line(chosen_id):
+            continue
+        for o in opts:
+            oc = cid_of(o)
+            ci = C.get(oc) if oc else None
+            if (ci and ci.is_pokemon and not _is_base_of_db_line(oc)
+                    and any(m.damage for m in ci.moves)):
+                sig(f"SetupSkew|開幕activeに土台{nm(chosen_id)}(非土台{nm(oc)}が手札に有)",
+                    g["ep"], 0)
+                return
+
+
+def det_dead_evolution_pick(g, sig):
+    """DeadEvolutionPick: サーチで進化ポケを取ったが、進化元が場にも手札にも無い=置けない
+    (先に土台のたねを取る/置くべき。人間レビュー6巡目③)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel = ob.get("select") or {}
+        if cur.get("yourIndex") != g["my"] or sel.get("type") == MAIN or not act:
+            continue
+        deck = sel.get("deck") or []
+        opts = sel.get("option") or []
+        if not deck and not (cur.get("looking") or []):
+            continue
+        names = set()
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if sp and C.get(sp.get("id")):
+                names.add(C[sp["id"]].name)
+        for cd in me.get("hand") or []:
+            if C.get(cd.get("id")):
+                names.add(C[cd["id"]].name)
+        looking = cur.get("looking") or []
+        def card_at(o):
+            idx = o.get("index")
+            src = deck if o.get("area") == 1 else (looking if o.get("area") == 12 else None)
+            if src is None or idx is None or idx >= len(src):
+                return None
+            return ((src[idx] or {}).get("id") or (src[idx] or {}).get("cardId"))
+        cand_ids = {card_at(o) for o in opts} - {None}
+        cand_names = {C[c].name for c in cand_ids if C.get(c)}
+        for i in act:
+            if i >= len(opts):
+                continue
+            cid = card_at(opts[i])
+            ci = C.get(cid)
+            # 発火は「同じ候補内にそのラインの土台が有ったのに進化側を取った」場合のみ
+            # (Cinderace等の直接置けるカードや、ポフィンで土台を後から置く正当ルートを除外)
+            if (ci and ci.is_pokemon and not ci.is_basic and ci.previous_stage
+                    and ci.previous_stage not in names
+                    and ci.previous_stage in cand_names):
+                sig(f"DeadEvolutionPick|土台{ci.previous_stage}を差し置き進化側{ci.name}を取得",
+                    g["ep"], cur.get("turn"))
+
+
+def det_lillie_over_live_heal(g, sig):
+    """LillieOverLiveHeal: 重傷(150+)×生存反転可のミツルが手札にあるのにリーリエで手札を流した
+    =今まさに条件成立中の状況札を捨てるリスク(人間レビュー6巡目④: 温存の順序)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        if not (ch.get("type") == PLAY and ch.get("index") is not None
+                and ch["index"] < len(h) and h[ch["index"]] == LILLIE_):
+            continue
+        if WALLY not in h:
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if (a and (a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
+                and (a.get("maxHp") or 0) > _incoming(a, oa)):
+            sig("LillieOverLiveHeal|重傷×反転可のミツルをリーリエで流すリスク", g["ep"], cur.get("turn"))
+
+
+def det_doomed_no_retreat(g, sig):
+    """DoomedNoRetreat: 前の攻撃役(サイド2+)が次ターン被KO確定圏×不利トレード(取れるサイド<
+    失うサイド)×RETREAT可×ベンチに攻撃可能な主力後続、なのに残って手番を閉じた(人間レビュー6巡目⑤)。"""
+    from cabt_bot.state_encoder import line_threat
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        opts = sel.get("option") or []
+        if not any(o.get("type") == RETREAT for o in opts):
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not a or _pv(a.get("id")) < 2:
+            continue
+        th = _incoming(a, oa)
+        if th <= 0 or (a.get("hp") or 999) > th:
+            continue                                    # 被KO圏でない
+        dmg = attack_dmg(a)
+        if oa and (oa.get("hp") or 999) <= dmg and _pv(oa.get("id")) >= _pv(a.get("id")):
+            continue                                    # 同等以上のトレード=残って殴るのは正当
+        h = hand_ids(me)
+        can_pay = (not cur.get("energyAttached")
+                   and any(C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or "") for x in h))
+        for b in (me.get("bench") or []):
+            if not b:
+                continue
+            bi = C.get(b.get("id"))
+            if (bi and not bi.is_basic and (line_threat(b.get("id")) or 0) >= 180
+                    and (b.get("hp") or 0) > _incoming(b, oa)
+                    and ((b.get("energyCards") or []) or can_pay)):
+                sig(f"DoomedNoRetreat|被KO確定×不利トレードで{nm(a.get('id'))}が残留",
+                    g["ep"], cur.get("turn"))
+                break
+
+
+def _spot_of(cur, side, o):
+    pl = cur["players"][o.get("playerIndex", side)]
+    spots = (pl.get("active") if o.get("area") == 4 else pl.get("bench")) or []
+    idx = o.get("index")
+    return spots[idx] if idx is not None and 0 <= idx < len(spots) else None
+
+
+def det_gust_target_skew(g, sig):
+    """GustTargetSkew: ボス等の引き出し(SWITCH×相手対象)で、KO可能×より高サイドの候補を差し置き
+    低価値対象を選んだ(人間レビュー7巡目②: Mega90(3枚KO可)でなくStaryu70)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"]:
+            continue
+        if (sel or {}).get("context") != 3:
+            continue
+        opts = sel.get("option") or []
+        if not opts or not all(o.get("playerIndex") == 1 - g["my"] for o in opts):
+            continue                                    # 相手対象(ボス)のみ。自分側(退避先)は対象外
+        a = (me.get("active") or [None])[0]
+        # 火力は手貼り込み(botのassume_hand_attachと同義): ボス直後に貼って殴るのが通常の並び
+        ci_a = C.get((a or {}).get("id"))
+        evolved_a = bool(ci_a) and not getattr(ci_a, "is_basic", True)
+        e_a = sum(3 if (ec.get("id") == IGN and evolved_a) else 1
+                  for ec in ((a or {}).get("energyCards") or []))
+        if not cur.get("energyAttached"):
+            h_ = hand_ids(me)
+            inc = 0
+            for x in h_:
+                if C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or ""):
+                    inc = max(inc, 3 if (x == IGN and evolved_a) else 1)
+            e_a += inc
+        dmg = _dmg_with_units((a or {}).get("id"), e_a)
+        pick = _spot_of(cur, g["my"], ch)
+        if not pick:
+            continue
+        pick_val = (_pv(pick.get("id")) if (pick.get("hp") or 999) <= dmg else 0)
+        best = max(((_pv(sp.get("id")) if (sp.get("hp") or 999) <= dmg else 0)
+                    for sp in (_spot_of(cur, g["my"], o) for o in opts) if sp), default=0)
+        if best > pick_val:
+            sig(f"GustTargetSkew|KO可×高サイド候補を差し置き{nm(pick.get('id'))}を引き出し",
+                g["ep"], cur.get("turn"))
+
+
+def det_promotion_skew(g, sig):
+    """PromotionSkew: 昇格/退避先(自分の新active)選択で、相手最大火力を耐える攻撃役が居るのに
+    1発で落ちる候補や壁を前に出した(人間レビュー7巡目①③: 1ターン耐えればマント/ミツルを引けた)。"""
+    from cabt_bot.state_encoder import line_threat
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"]:
+            continue
+        if (sel or {}).get("context") not in (3, 4):
+            continue
+        opts = sel.get("option") or []
+        if len(opts) < 2 or not all(o.get("playerIndex") == g["my"] for o in opts):
+            continue                                    # 自分側の複数候補のみ
+        oa = (opp.get("active") or [None])[0]
+        pick = _spot_of(cur, g["my"], ch)
+        if not pick:
+            continue
+        def survives(sp):
+            return (sp.get("hp") or 0) > _incoming(sp, oa)
+        def is_main(sp):
+            return (line_threat(sp.get("id")) or 0) >= 180
+        if survives(pick) and is_main(pick):
+            continue                                    # 耐える主力を選んだ=正当
+        better = any(sp and survives(sp) and is_main(sp)
+                     for sp in (_spot_of(cur, g["my"], o) for o in opts))
+        if better:
+            sig(f"PromotionSkew|耐える主力が居るのに{nm(pick.get('id'))}hp{pick.get('hp')}を前に",
+                g["ep"], cur.get("turn"))
+
+
+def _incoming_next(a, oa, opp_seen=None):
+    """次の相手ターンの現実的な最大被ダメ: 相手activeライン(進化1段含む)の技のうち
+    現エネ+1(手貼り)で払える最大(弱点込み)。進化候補は観測済み(opp_seen)に限定。"""
+    import re
+    if not a or not oa:
+        return 0
+    e = len(oa.get("energyCards") or []) + 1
+    oi = C.get(oa.get("id"))
+    moves = list(oi.moves) if oi else []
+    for did, di in C.items():
+        if (oi and di.previous_stage == oi.name and di.is_pokemon
+                and (opp_seen is None or did in opp_seen)):
+            moves += list(di.moves)
+    best = 0
+    for m in moves:
+        if not m.damage:
+            continue
+        need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+        mt = re.match(r"(\d+)", str(m.damage))
+        if mt and need <= e:
+            best = max(best, int(mt.group(1)))
+    cc = C.get(a.get("id"))
+    if cc and oi and cc.weakness and oi.type == cc.weakness:
+        best *= 2
+    return best
+
+
+def det_weak_advance(g, sig):
+    """WeakAdvance: 壁が相手の次打(現実的評価=現エネ+1で払える技)を耐えるのに、脆いたね
+    (エネ付き=将来の進化素材)を前進させた(人間レビュー7巡目①: 20点のためにエネ付きStaryuを晒す)。"""
+    opp_seen = set()                                    # 相手の場で観測されたカード(その時点まで)
+    prev_retreat = False
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp and sp.get("id") is not None:
+                opp_seen.add(sp["id"])
+        sel, ch = chosen(ob, act)
+        if not sel or cur.get("yourIndex") != g["my"]:
+            continue
+        if sel.get("type") == MAIN:
+            a = (me.get("active") or [None])[0]
+            oa = (opp.get("active") or [None])[0]
+            prev_retreat = (bool(ch) and ch.get("type") == RETREAT and a
+                            and (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen))  # 壁は耐えていた
+            continue
+        if not prev_retreat or sel.get("context") != 3:
+            continue
+        prev_retreat = False
+        opts = sel.get("option") or []
+        pick = _spot_of(cur, g["my"], ch) if ch else None
+        ci = C.get((pick or {}).get("id"))
+        if (pick and ci and ci.is_basic and (pick.get("energyCards") or [])
+                and _is_base_of_db_line(pick.get("id"))):
+            sig(f"WeakAdvance|耐える壁を退きエネ付きたね{nm(pick.get('id'))}を前進", g["ep"], cur.get("turn"))
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
-             det_dead_move, det_partner_unbenched, det_spread_skew]
+             det_dead_move, det_partner_unbenched, det_spread_skew,
+             det_missed_free_advance, det_doomed_no_switch,
+             det_boss_no_path_gain, det_volatile_over_permanent,
+             det_heal_missed, det_cape_skew, det_energy_stuck_no_lillie,
+             det_setup_skew, det_dead_evolution_pick, det_lillie_over_live_heal,
+             det_doomed_no_retreat,
+             det_gust_target_skew, det_promotion_skew, det_weak_advance]
 
 
 # ============ Layer 2: Aggregator ============

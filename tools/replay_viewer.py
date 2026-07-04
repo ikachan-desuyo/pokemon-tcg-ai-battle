@@ -444,7 +444,7 @@ def main():
     a = ap.parse_args()
     data = build(a.replay)
     stem = os.path.splitext(os.path.basename(a.replay))[0]
-    out = a.out or f"out/replay_{stem}.html"
+    out = a.out or f"out/replays/replay_{stem}.html"   # リプレイHTMLは専用ディレクトリに分離
     os.makedirs(os.path.dirname(out), exist_ok=True)
     html = HTML.format(title=stem, episode=data.get("episode"),
                        data=json.dumps(data, ensure_ascii=False))

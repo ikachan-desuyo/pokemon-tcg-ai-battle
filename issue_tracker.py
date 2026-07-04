@@ -73,8 +73,12 @@ def report(reg: dict) -> str:
         lines.append("  (現サイクルのKnown発火なし)")
     for c, prev, name, iss in sorted(live, key=lambda x: -x[0])[:3]:
         pc = f"前回{prev}件({'+' if c > prev else ''}{(c - prev) * 100 // prev}%)" if prev else "初回"
-        ev = iss.get("ev") or {}
-        evs = f" | コスト{ev.get('cost')}/期待改善{ev.get('gain')}" if ev else ""
+        # 優先度はEvidence(実測: frequency/confirmed/rejected)から導く。推測EVは持たない(憲章: 実測>推測)。
+        ev = iss.get("evidence") or {}
+        evs = ""
+        if ev:
+            parts = [f"{k}={v}" for k, v in ev.items() if k != "note" and v is not None]
+            evs = f" | Evidence: {', '.join(parts)}"
         lines.append(f"  {name}: {c}件 | {pc}{evs}")
     # 原因(Cause)ビュー: Issueをcauseで束ね、配下に1つでもRegressed/Openがあれば原因レベルで表示
     lines.append("--- 原因(Cause)ビュー ---")
