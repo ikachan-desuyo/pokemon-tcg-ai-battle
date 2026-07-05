@@ -2050,5 +2050,24 @@
    "rejected": 0,
    "note": "17巡目=ツール非依存の全決定精読(勝ち試合含む)1本目で発見。arch-0の同型局面(脅威30=生存圏)ではactive貼りが正当と対比確認"
   }
+ },
+ "SpreadLineBlind": {
+  "status": "Fix Applied",
+  "detector": "(人間式1処理精読で発見)",
+  "match": "-",
+  "fix": "_spread_keyに可変ダメ線判定(_line_has_variable_damage: 進化2段の効果文走査→threat=max(400))+エネ投資タイブレーク(e_inv)",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "撒き標的の脅威値が静的line_threat=damage欄空のPowerful Handライン(Abra線)がDunsparce線(90)より低評価。同時KO可能な2択でライン否定/エネ投資破壊の側を選べない",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 2,
+   "rejected": 0,
+   "note": "17巡目精読3本目(alakazam-0勝ち)。T5: Dunsparce10よりAbra50(e1)/T7: Abra-e0よりAbra-e1。修正後両局面でAbra(e1)選択を確認"
+  }
  }
 }

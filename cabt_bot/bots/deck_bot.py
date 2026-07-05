@@ -2407,6 +2407,30 @@ class DeckBot(Bot):
             return "late"
         return "mid"
 
+    def _line_has_variable_damage(self, cid) -> bool:
+        """この線(進化2段まで)に効果文可変ダメージ(手札枚数×等)の技があるか。
+        Powerful Hand等はdamage欄が空でline_threat(静的)に乗らない=Abra線が
+        Dunsparce線(90)より低脅威と誤評価される(人間レビュー17巡目 alakazam-0 T5/T7:
+        スプラッシュ同時KOの標的にAbraでなくDunsparce10/エネ無しAbraを選択)。"""
+        import re
+        if not hasattr(self, "_varline_cache"):
+            self._varline_cache = {}
+        if cid in self._varline_cache:
+            return self._varline_cache[cid]
+        cur_i = self._cardinfo.get(cid)
+        out = False
+        if cur_i:
+            stage1 = [di for di in self._cardinfo.values()
+                      if di.previous_stage == cur_i.name and di.is_pokemon]
+            stage2 = [dj for dj in self._cardinfo.values()
+                      for di in stage1 if dj.previous_stage == di.name and dj.is_pokemon]
+            for c in [cur_i] + stage1 + stage2:
+                for m in c.moves:
+                    if re.search(r"for each card in your hand", m.effect or ""):
+                        out = True
+        self._varline_cache[cid] = out
+        return out
+
     def _spread_key(self, sp, cid, hp, threat, spread, our_dmg):
         """ベンチ撒き(Jetting Blow等)の対象優先度テーブル＝ベース×相手デッキ(self._matchup)×局面。
         ダメージは進化で引き継ぐので『将来この火力枠が前に出た時、今の撒きでKO攻撃回数を減らせるか』を予測する。
@@ -2420,6 +2444,8 @@ class DeckBot(Bot):
         # のが reduce(将来KO回数削減)より優先(人間レビュー2巡目: リオル80を外しMakuhita/Hariyamaへ
         # 撒いた6局面の修正)。同点時は従来キーで決まる。
         ci = self._cardinfo.get(cid)
+        if self._line_has_variable_damage(cid):
+            threat = max(threat, 400)            # 可変ダメ線(Powerful Hand等)=実質最大脅威
         snipe = 1 if (ci and ci.is_basic and threat >= 180
                       and threat >= (self._opp_main_line or 0)
                       and 2 * spread >= hp and fhp > hp) else 0
@@ -2436,9 +2462,10 @@ class DeckBot(Bot):
         # 実測で reduce(将来KO削減)＋threat(最大脅威の線に蓄積) が全局面で支配的＝主軸に固定。局面で二次基準を切替。
         phase = self._game_phase()
         pv = self._prize_value(cid)
+        e_inv = len(sp.get("energyCards") or [])     # エネ投資破壊の価値(同点タイブレーク)
         if phase == "late":             # 後半=詰め: reduce同点なら『撒き後2回で倒せる』主力を優先
-            return (koable, snipe, reduce, threat, two_ko, pv, -hp)
-        return (koable, snipe, reduce, threat, pv, -hp)  # 序盤・中盤: スナイプ>軟化(将来KO削減+脅威線蓄積)
+            return (koable, snipe, reduce, threat, two_ko, pv, e_inv, -hp)
+        return (koable, snipe, reduce, threat, pv, e_inv, -hp)  # 序盤・中盤: スナイプ>軟化(将来KO削減+脅威線蓄積)
 
     def _take(self, sel, prefer_high: bool, take_max: bool) -> list[int]:
         n = len(sel.options)
