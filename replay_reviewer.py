@@ -749,12 +749,14 @@ def det_energy_stuck_no_lillie(g, sig):
             p_hit = 1 - miss
         if p_hit < 0.75:
             continue    # 明確に掘れる場合のみ発火(境界はbotのp_draw=0.55判断を信頼)
-        # 生きたミツル(重傷150+×生存反転可)を手札に持つ場合、リーリエは意図的に温存される
-        # (流すとミツルを失う=LillieOverLiveHealと表裏)。このケースはエネ掘り未使用でも正当。
+        # 生きたミツル(active/ベンチいずれかの攻撃役が重傷150+×生存反転可)在手なら、リーリエは
+        # 意図的に温存される(流すとミツルを失う=LillieOverLiveHealと表裏)。botの_attacker_damagedは
+        # ベンチも見るため検出器も揃える(dragapult-0:T11=ベンチ重傷での正当温存を偽陽性にしない)。
         if WALLY in h and a:
             oa0 = (opp.get("active") or [None])[0]
-            if ((a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
-                    and (a.get("maxHp") or 0) > _incoming(a, oa0)):
+            hurt = any(sp and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
+                       for sp in [a] + list(me.get("bench") or []))
+            if hurt and (a.get("maxHp") or 0) > _incoming(a, oa0):
                 continue
         ci = C.get((a or {}).get("id"))
         if not a or not ci or ci.is_basic or not any(m.damage for m in ci.moves):
@@ -1074,10 +1076,17 @@ def det_basic_unbenched(g, sig):
         if any(b for b in (me.get("bench") or []) if b):
             continue                                    # 単騎の時のみ
         h = hand_ids(me)
+        if (ch.get("type") == PLAY and ch.get("index") is not None and ch["index"] < len(h)
+                and C.get(h[ch["index"]]) and C[h[ch["index"]]].is_pokemon
+                and C[h[ch["index"]]].is_basic):
+            playable_turns.pop(cur.get("turn"), None)      # 実際に出した(後で特性等により離れても対象外)
+            played_this = playable_turns.setdefault("_played", set())
+            played_this.add(cur.get("turn"))
         for o in (sel.get("option") or []):
             if (o.get("type") == PLAY and o.get("index") is not None and o["index"] < len(h)
                     and C.get(h[o["index"]]) and C[h[o["index"]]].is_pokemon
-                    and C[h[o["index"]]].is_basic):
+                    and C[h[o["index"]]].is_basic
+                    and cur.get("turn") not in playable_turns.get("_played", set())):
                 playable_turns[cur.get("turn")] = nm(h[o["index"]])
                 break
     for t, ob, act in g["decisions"]:
@@ -1095,6 +1104,42 @@ def det_basic_unbenched(g, sig):
         sig(f"BasicUnbenched|単騎なのに出せた{playable_turns[turn]}を出さず手番終了", g["ep"], turn)
 
 
+def det_evolve_trigger_before_develop(g, sig):
+    """EvolveTriggerBeforeDevelop: 進化トリガー特性(『手札から進化した時』=Punk Up等)を持つ進化を、
+    同ターンに出せたスタジアム/たねより先に実行(配分先が少ないまま特性を発動=損。grimmsnarl-7:T4)。"""
+    import re as _re
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        # 選択=アメ(1079)のPLAY or EVOLVE
+        is_candy = (ch.get("type") == PLAY and ch.get("index") is not None
+                    and ch["index"] < len(h) and h[ch["index"]] == 1079)
+        is_evolve = OT.get(ch.get("type")) == "EVOLVE"
+        if not (is_candy or is_evolve):
+            continue
+        # 手札に進化トリガー特性持ちの進化カードがあるか(=これから出す可能性が高い)
+        trigger = any(
+            C.get(x) and any(_re.search(r"When you play this Pok\S+mon from your hand to evolve",
+                                        m.effect or "") for m in C[x].moves)
+            for x in h)
+        if not trigger:
+            continue
+        # 同じMAINの選択肢に「出せたスタジアム/たね」が残っていた
+        dev = False
+        for o in (sel.get("option") or []):
+            if o.get("type") != PLAY or o.get("index") is None or o["index"] >= len(h):
+                continue
+            ci = C.get(h[o["index"]])
+            if ci and (("Stadium" in (ci.stage or "")) or (ci.is_pokemon and ci.is_basic)):
+                dev = True
+                break
+        if dev:
+            sig("EvolveTriggerBeforeDevelop|展開(スタジアム/たね)前に進化トリガーを消費", g["ep"], cur.get("turn"))
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1105,7 +1150,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_setup_skew, det_dead_evolution_pick, det_lillie_over_live_heal,
              det_doomed_no_retreat,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
-             det_basic_unbenched]
+             det_basic_unbenched, det_evolve_trigger_before_develop]
 
 
 # ============ Layer 2: Aggregator ============

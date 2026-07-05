@@ -22,6 +22,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -52,6 +53,7 @@
    2,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -67,6 +69,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -111,6 +114,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -126,6 +130,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
    0,
    0,
    0,
@@ -168,6 +173,7 @@
    0,
    0,
    2,
+   0,
    0
   ],
   "regressions": 1,
@@ -193,7 +199,8 @@
    119,
    106,
    115,
-   122
+   122,
+   106
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -218,7 +225,8 @@
    23,
    28,
    14,
-   17
+   17,
+   31
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -247,7 +255,8 @@
    24,
    27,
    25,
-   23
+   23,
+   13
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -276,7 +285,8 @@
    17,
    12,
    25,
-   23
+   23,
+   18
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -304,6 +314,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -322,6 +333,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
    0,
    0,
    0,
@@ -358,6 +370,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -380,6 +393,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -408,12 +422,13 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
  },
  "EnergyStuckNoLillie": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "EnergyStuckNoLillie",
   "match": "EnergyStuckNoLillie",
   "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
@@ -430,9 +445,10 @@
    0,
    4,
    0,
-   0
+   0,
+   2
   ],
-  "regressions": 1,
+  "regressions": 2,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
  },
  "HealMissed": {
@@ -451,6 +467,7 @@
    2,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -465,6 +482,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -490,6 +508,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -509,6 +528,7 @@
    0,
    0,
    1,
+   0,
    0
   ],
   "regressions": 1
@@ -528,6 +548,7 @@
    2,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -542,6 +563,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -565,6 +587,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -579,6 +602,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -601,12 +625,13 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
  },
  "BasicUnbenched": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "BasicUnbenched",
   "match": "BasicUnbenched",
   "cause": "単騎リスク管理の欠如(ベンチ0でもたねの展開が優先されない)",
@@ -617,6 +642,21 @@
    1,
    0,
    0,
+   0,
+   1
+  ],
+  "regressions": 1
+ },
+ "EvolveTriggerBeforeDevelop": {
+  "status": "Graduated",
+  "detector": "EvolveTriggerBeforeDevelop",
+  "match": "EvolveTriggerBeforeDevelop",
+  "cause": "処理順の最適化欠如(進化トリガー特性の配分先を増やす前に消費: アメ86>たね80>スタジアム40)",
+  "fix": "優先度再設計: スタジアム75/非アタッカーたね65をアメ60より先に。Punk Up(悪エネ5枚配分)等は展開後に発動",
+  "first_seen": "2026-07-05",
+  "graduated": "2026-07-05",
+  "cycles": [
+   1,
    0
   ],
   "regressions": 0

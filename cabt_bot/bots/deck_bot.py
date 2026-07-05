@@ -30,7 +30,7 @@ POFFIN, HYPER_BALL, POKE_PAD, MEGA_SIGNAL = 1086, 1121, 1152, 1145
 RARE_CANDY, POKEGEAR, SWITCH, BOSS = 1079, 1122, 1123, 1182
 NIGHT_STRETCHER, LILLIE = 1097, 1227
 _GENERIC_PLAY = {
-    POFFIN: 100, RARE_CANDY: 86, MEGA_SIGNAL: 84, HYPER_BALL: 82, POKE_PAD: 78,
+    POFFIN: 100, RARE_CANDY: 60, MEGA_SIGNAL: 84, HYPER_BALL: 82, POKE_PAD: 78,
     SWITCH: 64, BOSS: 62, POKEGEAR: 55, NIGHT_STRETCHER: 50,
 }
 _GENERIC_TAKE = {
@@ -343,8 +343,12 @@ class DeckBot(Bot):
             return 58 if self._has_evolution_target() else None
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
+        if ci0 and not ci0.is_pokemon and "Stadium" in (ci0.stage or ""):
+            return 75    # スタジアムは展開初手級(アメ60/進化より先。Punk Up等の進化トリガーの下地)
         if cid in self.plan.attackers:   # 進化前/アタッカーをベンチに置くのは重要
             return 80
+        if ci0 and ci0.is_pokemon and ci0.is_basic:
+            return 65    # 非アタッカーのたね(特性要員等)もアメ(60)/進化トリガーより先に展開
         return _GENERIC_PLAY.get(cid, 40)
 
     def _pick_evolve(self, idxs, options, hand) -> int:
