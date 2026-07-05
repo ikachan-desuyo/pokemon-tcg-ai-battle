@@ -560,6 +560,9 @@ def det_doomed_no_switch(g, sig):
         oa = (opp.get("active") or [None])[0]
         if not a or not oa:
             continue
+        from cabt_bot.state_encoder import line_threat as _lt
+        if (_lt(a.get("id")) or 0) < 180 and _pv(a.get("id")) < 2:
+            continue    # 温存する価値があるのは主役のみ(壁の温存に主役を晒す提案は逆転。bot温存パスと同一意味論)
         # 現実的評価(相手の現エネ+1で払える技)。bot側温存パスと同一意味論
         # (ライン最大基準だとbotが退避しない局面を検出=不整合)
         dmg_in = _incoming_next(a, oa, None, opp.get("handCount"))
@@ -1060,7 +1063,7 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None):
     import re
     if not a or not oa:
         return 0
-    e = len(oa.get("energyCards") or []) + 1
+    e = len(oa.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
     oi = C.get(oa.get("id"))
     moves = list(oi.moves) if oi else []
     for did, di in C.items():
@@ -1100,6 +1103,10 @@ def det_weak_advance(g, sig):
     prev_retreat = False
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))  # トラッシュ観測はエネのみ(イグニ検出。ポケモンは盤面不在=進化脅威に数えない)
         for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
             if sp and sp.get("id") is not None:
                 opp_seen.add(sp["id"])
@@ -1342,9 +1349,15 @@ def det_doomed_game_loss(g, sig):
     opp_seen = set()
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))  # トラッシュ観測はエネのみ(イグニ検出。ポケモンは盤面不在=進化脅威に数えない)
         for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
             if sp:
                 opp_seen.add(sp.get("id"))
+                for ec in (sp.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
@@ -1513,14 +1526,39 @@ def det_base_line_sacrifice(g, sig):
     ありKOも取れない=確定ライン(次ターン進化)を微小ダメージと引き換えに破壊(人間レビュー12巡目
     grimmsnarl-0 T7: 前進Staryu死→線消滅→盤面全滅負け)。壁が耐えない場合でも壁死→強制昇格→
     進化の方が土台を1体分長く守る。"""
+    opp_seen = set()
     for gi in range(len(g["decisions"])):
         t, ob, act = g["decisions"][gi]
         cur, me, opp = my_view(ob, g["my"])
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+                for ec in (sp.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))  # トラッシュ観測はエネのみ(イグニ検出。ポケモンは盤面不在=進化脅威に数えない)
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
         if ch.get("type") != RETREAT:
             continue
+        # 退避が「死んだら負け」(act KO=相手残サイド充足)で、非土台の代替後続がベンチに
+        # 居なければ正当な犠牲(mirror-4/arch-8: 唯一の後続が土台=強制)。
+        a0 = (me.get("active") or [None])[0]
+        oa0 = (opp.get("active") or [None])[0]
+        _op0 = opp.get("prize")
+        opp_left0 = len(_op0) if _op0 is not None else 6
+        if (a0 and oa0 and _pv(a0.get("id")) >= opp_left0
+                and (a0.get("hp") or 0) <= _incoming_next(a0, oa0, opp_seen, opp.get("handCount"))):
+            def _is_base_alt(sp):
+                ci0 = C.get(sp.get("id"))
+                return bool(ci0) and getattr(ci0, "is_basic", False) and any(
+                    C.get(c.get("id")) and C[c.get("id")].previous_stage == ci0.name
+                    for c in (me.get("hand") or []))
+            if not any(sp and not _is_base_alt(sp) for sp in (me.get("bench") or [])):
+                continue
         # 同ターンの次の自分MAIN決定でactiveが誰になったか
         for t2, ob2, act2 in g["decisions"][gi + 1:]:
             cur2, me2, opp2 = my_view(ob2, g["my"])
@@ -1537,7 +1575,7 @@ def det_base_line_sacrifice(g, sig):
                 break
             evo_in_hand = any(C.get(c.get("id")) and C[c.get("id")].previous_stage == ci.name
                               for c in (me2.get("hand") or []))
-            dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, None, opp2.get("handCount"))
+            dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, opp_seen, opp2.get("handCount"))
             kos = attack_dmg(a2) >= (oa2.get("hp") or 9999)
             if evo_in_hand and dies and not kos:
                 sig(f"BaseLineSacrifice|進化土台{nm(a2.get('id'))}を確定死圏に前進(進化先在手)",

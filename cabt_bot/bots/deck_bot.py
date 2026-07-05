@@ -2439,6 +2439,19 @@ class DeckBot(Bot):
             for sp in (opp.get(area) or []):
                 if sp and sp.get("id") is not None:
                     self._opp_seen.add(sp["id"])
+                    for ec in (sp.get("energyCards") or []):
+                        if ec.get("id") is not None:
+                            self._opp_seen.add(ec["id"])
+        # トラッシュの「エネルギーのみ」観測(公開情報)。イグニ等の揮発エネは相手ターン内で
+        # 「貼る→番末に消える」ため盤面には一度も見えない=トラッシュを見ないと脅威(+3エネ)を
+        # 永遠に過小評価する(人間レビュー13巡目 mirror-9 T11: 相手イグニ使用済みなのに
+        # Nebula 210圏を120と評価し死んだら負けのMega210を放置)。
+        # ※ポケモンは対象外: トラッシュの進化ポケは盤面に居ない=進化脅威に数えると
+        #   過剰逃避の連鎖(60戦でWallRetreat等10件の退行を実測)。
+        for c in (opp.get("discard") or []):
+            cid = c.get("id")
+            if cid is not None and self._is_energy(cid):
+                self._opp_seen.add(cid)
         if self._opp_seen:
             self._opp_main_line = max(_line_threat(c) for c in self._opp_seen)
         # 相手手札エネ推論(人間レビュー5巡目④・Fact収集): 手貼りは1ターン1回なので、相手が
