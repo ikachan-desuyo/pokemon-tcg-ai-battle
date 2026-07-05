@@ -7,8 +7,14 @@
 body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
 header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 header b{font-size:15px} .dim{color:var(--dim)}
-#wrap{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 52px)}
+#wrap{display:grid;grid-template-columns:1fr 236px 320px;height:calc(100vh - 52px)}
 #board{padding:14px;overflow:auto} #side{border-left:1px solid var(--line);background:var(--panel);padding:12px;overflow:auto}
+#handcol{border-left:1px solid var(--line);background:#121a2a;padding:10px;overflow:auto}
+#handcol .hgrp{margin-bottom:14px;padding:8px;border-radius:10px}
+#handcol .hgrp.opp{background:linear-gradient(180deg,#2a1620,#121a2a)}
+#handcol .hgrp.me{background:linear-gradient(180deg,#16202a,#121a2a)}
+#handcol .hand{margin-top:6px}
+#handcol .hcard{width:62px} #handcol .hcard .hnm{max-width:62px}
 .side-half{padding:10px;border-radius:10px;margin-bottom:10px}
 .half-opp{background:linear-gradient(180deg,#2a1620,#1a2233)} .half-me{background:linear-gradient(180deg,#16202a,#1a2233)}
 .phead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -52,10 +58,15 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   header b{font-size:13px} header .dim{font-size:10px}
   #ctrl{order:3;flex-basis:100%;gap:6px}
   #prev,#next{display:none}             /* 前/次は下バーに集約 */
-  #wrap{grid-template-columns:1fr;height:calc(100vh - 84px - 46px)} /* header & 下バー分を除く */
+  #wrap{grid-template-columns:1fr;grid-template-rows:1fr auto;height:calc(100vh - 84px - 46px)} /* header & 下バー分を除く */
   #side{border-left:none;border-top:1px solid var(--line)}
-  #board.hidden,#side.hidden{display:none}
+  #board.hidden,#side.hidden,#handcol.hidden{display:none}
   #board,#side{height:100%;overflow:auto}
+  /* モバイル: 手札は盤面の下に横スクロールの帯として表示 */
+  #handcol{border-left:none;border-top:1px solid var(--line);max-height:150px;padding:6px}
+  #handcol .hgrp{margin-bottom:6px;padding:4px}
+  #handcol .hand{flex-wrap:nowrap;overflow-x:auto}
+  #handcol .hcard{width:44px;flex:0 0 auto} #handcol .hcard .hnm{max-width:44px;font-size:8px}
   #board{padding:8px}
   #tabbar{display:flex}
   /* コンパクト盤面: スクロールせず1画面に収める */
@@ -107,6 +118,10 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <div id="board"><div id="turnbar"></div>
     <div id="opp" class="side-half half-opp"></div>
     <div id="me" class="side-half half-me"></div></div>
+  <div id="handcol">
+    <div id="opphand" class="hgrp opp"></div>
+    <div id="myhand" class="hgrp me"></div>
+  </div>
   <div id="side"><div class="lab">このステップのイベント</div><div id="logs"></div></div>
 </div>
 <div id="tabbar">
@@ -221,13 +236,14 @@ function half(p,who,mine,activeTurn,flip){
   const act=p.active?`<div class="lab">バトル場</div><div class="row">${slot(p.active,true)}</div>`:'<div class="empty">バトル場 なし</div>';
   const bench=p.bench.length?`<div class="lab">ベンチ (${p.bench.length})</div><div class="row">${p.bench.map(b=>slot(b,false)).join('')}</div>`:'<div class="empty">ベンチ なし</div>';
   const st=p.status.length?`<span class="badge" style="color:#ff9c9c">${p.status.join(',')}</span>`:'';
-  let hand;
-  if(p.handCards&&p.handCards.length)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${p.handCards.map(c=>hchip(c)).join('')}</div>`;
-  else if(p.hand>0)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}</div>`;
-  else hand='';
   const head=`<div class="phead"><div class="nm">${mine?'▼ ':''}${who} ${activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}${st}</div>
     <div><span class="prizes">サイド ${p.prize}</span><span class="badge">手札 ${p.hand}</span><span class="badge">山 ${p.deck}</span><span class="badge">トラ ${p.discard}</span></div></div>`;
-  return flip?`${head}${hand}${bench}${act}`:`${head}${act}${bench}${hand}`;
+  return flip?`${head}${bench}${act}`:`${head}${act}${bench}`;
+}
+function handHtml(p){
+  if(p.handCards&&p.handCards.length)return `<div class="hand">${p.handCards.map(c=>hchip(c)).join('')}</div>`;
+  if(p.hand>0)return `<div class="hand">${Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}</div>`;
+  return '<div class="empty">なし</div>';
 }
 function render(){
   const step=DATA.steps[idx];const N=DATA.names;
@@ -237,12 +253,15 @@ function render(){
     $('#turnbar').innerHTML=`<span class="who">ターン ${v.turn}</span> — 手番: <b style="color:#ffcf5c">${N[ap]||('P'+ap)}</b>`
       +(v.stadium?` <span class="badge">スタジアム: ${v.stadium}</span>`:'');
     $('#opp').innerHTML=half(v.players[1],N[1]||'P1',false,ap===1,true);
-    $('#me').innerHTML=half(v.players[0],N[0]||'P0',true,ap===0,false);}
+    $('#me').innerHTML=half(v.players[0],N[0]||'P0',true,ap===0,false);
+    $('#opphand').innerHTML=`<div class="lab">相手の手札 (${v.players[1].hand})</div>${handHtml(v.players[1])}`;
+    $('#myhand').innerHTML=`<div class="lab">自分の手札 (${v.players[0].hand})</div>${handHtml(v.players[0])}`;}
   $('#logs').innerHTML=step.logs.length?step.logs.map(([k,t])=>`<div class="logitem l-${k}">${t}</div>`).join(''):'<div class="empty">（イベントなし）</div>';
 }
 function go(n){idx=Math.max(0,Math.min(DATA.steps.length-1,n));render();}
 function setTab(t){
   $('#board').classList.toggle('hidden',t!=='board');
+  $('#handcol').classList.toggle('hidden',t!=='board');   // モバイル: 手札は盤面タブに同居
   $('#side').classList.toggle('hidden',t!=='side');
   document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
 }
