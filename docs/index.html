@@ -16,7 +16,15 @@ header b{font-size:15px} .dim{color:var(--dim)}
 #handcol .hgrp.me{background:linear-gradient(180deg,#16202a,#121a2a)}
 #handcol .hand{margin-top:6px}
 #handcol .hcard{width:62px} #handcol .hcard .hnm{max-width:62px}
-.side-half{padding:10px;border-radius:10px;margin:0;overflow:auto;min-height:0}
+.side-half{padding:8px;border-radius:10px;margin:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.bmain{min-width:0;overflow:auto}
+.pinfo{display:flex;flex-direction:column;gap:4px;align-items:flex-end;font-size:11px;min-width:76px;text-align:right}
+.pinfo .badge{margin-left:0}
+.trbtn{cursor:pointer} .trbtn:hover{background:#1d3a6e}
+#trash{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:40}
+#trbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:640px;max-height:80vh;overflow:auto}
+#trgrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#trgrid .hcard{width:72px} #trgrid .hcard .hnm{max-width:72px}
 .half-opp{background:linear-gradient(180deg,#2a1620,#1a2233)} .half-me{background:linear-gradient(180deg,#16202a,#1a2233)}
 .phead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .phead .nm{font-weight:700} .badge{display:inline-block;background:#0c1322;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-left:6px}
@@ -90,6 +98,9 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   .slot .meta{font-size:9px} .hpbar{height:4px;margin:2px 0}
   .hand{gap:3px} .hand .chip{font-size:10px;padding:2px 5px}
   .phead{font-size:11px} .badge{padding:0 5px;margin-left:3px}
+  .pinfo{min-width:56px;font-size:9px;gap:2px}
+  .pinfo .nm{font-size:9px;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #trgrid .hcard{width:56px} #trbox{max-width:94vw}
   button{padding:8px 12px}
 }
 #drop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:var(--bg);z-index:10;text-align:center;padding:20px}
@@ -119,6 +130,7 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <span id="pos" class="dim"></span>
 </div>
 <div id="zoom" onclick="this.style.display='none'"><img alt=""></div>
+<div id="trash" onclick="if(event.target===this)this.style.display='none'"><div id="trbox"><div style="display:flex;justify-content:space-between;align-items:center"><b id="trtitle"></b><button onclick="$('#trash').style.display='none'">✕</button></div><div id="trgrid"></div></div></div>
 <div id="wrap" style="display:none">
   <div id="board"><div id="turnbar"></div>
     <div id="opp" class="side-half half-opp"></div>
@@ -160,6 +172,7 @@ function spot(s){if(!s)return null;const ec=s.energyCards||[];return{name:cname(
   energy:ec.map(e=>cname(cid(e))),etypes:(s.energies||[]).map(t=>ETYPE[t]||t),tools:(s.tools||[]).map(t=>cname(cid(t)))};}
 function player(p){const hand=p.hand||[];return{prize:(p.prize||[]).length,hand:(p.handCount!=null?p.handCount:hand.length),
   handCards:hand.map(c=>cname(cid(c))),deck:p.deckCount,discard:(p.discard||[]).length,
+  discardCards:(p.discard||[]).map(c=>cname(cid(c))),
   active:spot((p.active||[null])[0]),bench:(p.bench||[]).filter(b=>b).map(spot),
   status:['poisoned','burned','asleep','paralyzed','confused'].filter(k=>p[k])};}
 function stadiumName(s){if(!s)return null;if(Array.isArray(s))s=s.length?s[0]:null;if(s&&typeof s==='object')s=s.id;return s!=null?cname(s):null;}
@@ -254,9 +267,22 @@ function half(p,who,mine,activeTurn,flip){
   const act=p.active?`<div class="lab">バトル場</div><div class="row">${slot(p.active,true)}</div>`:'<div class="empty">バトル場 なし</div>';
   const bench=p.bench.length?`<div class="lab">ベンチ (${p.bench.length})</div><div class="row">${p.bench.map(b=>slot(b,false)).join('')}</div>`:'<div class="empty">ベンチ なし</div>';
   const st=p.status.length?`<span class="badge" style="color:#ff9c9c">${p.status.join(',')}</span>`:'';
-  const head=`<div class="phead"><div class="nm">${mine?'▼ ':''}${who} ${activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}${st}</div>
-    <div><span class="prizes">サイド ${p.prize}</span><span class="badge">手札 ${p.hand}</span><span class="badge">山 ${p.deck}</span><span class="badge">トラ ${p.discard}</span></div></div>`;
-  return flip?`${head}${bench}${act}`:`${head}${act}${bench}`;
+  const pi=mine?0:1;
+  const info=`<div class="pinfo"><div class="nm">${mine?'▼ ':''}${who}</div>
+    ${activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}${st}
+    <span class="prizes">サイド ${p.prize}</span>
+    <span class="badge">手札 ${p.hand}</span>
+    <span class="badge">山 ${p.deck}</span>
+    <span class="badge trbtn" onclick="showTrash(${pi})">トラ ${p.discard} 🔍</span></div>`;
+  const main=flip?`${bench}${act}`:`${act}${bench}`;
+  return `<div class="bmain">${main}</div>${info}`;
+}
+function showTrash(pi){
+  const v=DATA&&DATA.steps[idx].view;if(!v)return;
+  const pl=v.players[pi];const cards=pl.discardCards||[];
+  $('#trtitle').textContent=`${DATA.names[pi]||('P'+pi)} のトラッシュ (${cards.length}枚)`;
+  $('#trgrid').innerHTML=cards.length?cards.map(c=>hchip(c)).join(''):'<div class="empty">なし</div>';
+  $('#trash').style.display='flex';
 }
 function handHtml(p){
   if(p.handCards&&p.handCards.length)return `<div class="hand">${p.handCards.map(c=>hchip(c)).join('')}</div>`;
