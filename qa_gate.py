@@ -42,7 +42,8 @@ BLOCKING_PREFIXES = [
     "EvolveTriggerBeforeDevelop",
     "SpreadIntoImmune",
     "BenchHealMissed",
-    "EnergyTypeSkew",                             # 未充足コストを進めないエネ選択(10巡目: R+P二色でR重ね)                            # 展開前に進化トリガー消費(9巡目)                                        # 単騎でたね在手なのに未展開(8巡目)                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
+    "EnergyTypeSkew",
+    "DoomedGameLoss",                             # 死んだら負けのactive放置(退避可)(自己レビューarch-7)                             # 未充足コストを進めないエネ選択(10巡目: R+P二色でR重ね)                            # 展開前に進化トリガー消費(9巡目)                                        # 単騎でたね在手なのに未展開(8巡目)                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
 ]
 
 

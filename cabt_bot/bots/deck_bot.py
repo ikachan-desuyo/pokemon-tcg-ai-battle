@@ -1405,7 +1405,11 @@ class DeckBot(Bot):
                 if not sp:
                     continue
                 th = self._incoming_threat(sp)
-                key = (1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
+                pr = self.analyze_prize()
+                loses_game = (self._prize_value(sp.get("id")) >= (pr.get("opp_prizes") or 6)
+                              and (sp.get("hp") or 0) <= th)
+                key = (0 if loses_game else 1,                      # 次打KO=負け確定の昇格先を避ける
+                       1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
                        1 if sp.get("id") in self.plan.attackers else 0,
                        len(sp.get("energyCards") or []),
                        sp.get("hp") or 0)
@@ -1463,6 +1467,27 @@ class DeckBot(Bot):
         if not act:
             return False
         cur = self._cur or {}
+        # 敗北回避オーバーライド: このactiveのKO=相手の残りサイド充足(死んだら負け)なら、
+        # エネ投資もこのターンの攻撃テンポも無関係(負ければ全て無価値)。「今殴れば自分が
+        # 勝ち切れる」場合だけ殴る。壁(非攻撃役)にも適用。(自己レビュー: arch-7 T17
+        # Mega110=3枚を220の前に残して敗北。Switch→ケープCinderace260なら拒否できた)
+        pr = self.analyze_prize()
+        opp_left = pr.get("opp_prizes") or 6
+        if (self._prize_value(act.get("id")) >= opp_left
+                and self.analyze_threat().get("can_ko_me")):
+            dmg, ign = self._active_attack_potential(assume_hand_attach=True)
+            opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+            oa = (opp.get("active") or [None])[0]
+            wins_now = (oa and dmg > 0
+                        and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)
+                        and self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6))
+            if not wins_now:
+                for sp in me.get("bench") or []:
+                    if not sp:
+                        continue
+                    if (self._prize_value(sp.get("id")) < opp_left
+                            or (sp.get("hp") or 0) > self._incoming_next_turn(sp)):
+                        return True   # 死んでも負けない/次打(現実的評価)を耐える退避先がある
         if act.get("id") in self.plan.attackers:
             # 温存パス: 次の相手ターンにKO確定圏なら、満タンの後続に交代して前を守る
             th = self.analyze_threat()
@@ -1670,9 +1695,15 @@ class DeckBot(Bot):
             return False
         cur = self._cur or {}
         act = (me.get("active") or [None])[0]
-        if not act or act.get("id") not in self.plan.attackers:
+        if not act:
             return False
-        if self._prize_value(act.get("id")) < 2:
+        pv = self._prize_value(act.get("id"))
+        pr = self.analyze_prize()
+        opp_left = pr.get("opp_prizes") or 6
+        death_loses = pv >= opp_left           # このactiveのKO=相手の残りサイド充足=負け確定
+        if act.get("id") not in self.plan.attackers and not death_loses:
+            return False
+        if pv < 2 and not death_loses:
             return False
         th = self._incoming_threat(act)
         if th <= 0 or (act.get("hp") or 999) > th:
@@ -1681,9 +1712,23 @@ class DeckBot(Bot):
         dmg, ign = self._active_attack_potential(assume_hand_attach=True)
         opp = cur["players"][1 - cur["yourIndex"]]
         oa = (opp.get("active") or [None])[0]
-        if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)
-                and self._prize_value(oa.get("id")) >= self._prize_value(act.get("id"))):
-            return False                       # 有利(同等以上の)トレード=受け入れて殴る
+        if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)):
+            if death_loses:
+                # 死んだら負け: 残って良いのは「今殴れば自分が勝ち切れる」時だけ
+                if self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6):
+                    return False
+            elif self._prize_value(oa.get("id")) >= pv:
+                return False                   # 有利(同等以上の)トレード=受け入れて殴る
+        if death_loses:
+            # 敗北回避: 後続の攻撃可否は問わない(負ければ攻撃テンポも無価値)。
+            # 「死んでも負けない or 次打を耐える」後続が居れば退く。
+            for sp in me.get("bench") or []:
+                if not sp:
+                    continue
+                if (self._prize_value(sp.get("id")) < opp_left
+                        or (sp.get("hp") or 0) > self._incoming_next_turn(sp)):
+                    return True
+            return False
         # ベンチの主力後続が今ターン攻撃できるか(エネ有 or 手貼り権+手札エネ)
         not_attached = not cur.get("energyAttached")
         have_energy = any(self._is_energy(c.get("id")) for c in (hand or []))

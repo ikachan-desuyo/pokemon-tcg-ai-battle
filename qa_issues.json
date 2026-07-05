@@ -28,6 +28,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -56,6 +58,8 @@
    1,
    0,
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -100,6 +104,8 @@
    0,
    2,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -137,6 +143,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -152,6 +160,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -206,6 +216,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -237,7 +249,9 @@
    110,
    107,
    146,
-   125
+   125,
+   112,
+   116
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -268,7 +282,9 @@
    29,
    21,
    17,
-   30
+   30,
+   23,
+   20
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -303,7 +319,9 @@
    12,
    13,
    41,
-   24
+   24,
+   24,
+   28
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -338,7 +356,9 @@
    17,
    11,
    20,
-   24
+   24,
+   18,
+   26
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -372,6 +392,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -390,6 +412,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
    0,
    0,
    0,
@@ -438,6 +462,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -469,6 +495,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -484,6 +512,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
    0,
    0,
    0,
@@ -528,6 +558,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -555,6 +587,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -569,6 +603,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -606,6 +642,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -630,6 +668,8 @@
    2,
    0,
    3,
+   0,
+   0,
    0,
    0
   ],
@@ -656,6 +696,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -670,6 +712,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -705,6 +749,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -719,6 +765,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -753,6 +801,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -771,6 +821,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -794,6 +846,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -808,6 +862,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -829,6 +885,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -847,19 +905,23 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
   "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
  },
  "EnergyTypeSkew": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "EnergyTypeSkew",
   "match": "EnergyTypeSkew",
   "fix": "_completes_cost(未充足コスト前進判定)をattachキーに追加(rule有無→充足→rule順位)",
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -869,16 +931,19 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "人間レビュー10巡目 dragapult-3 s42(相手bot)。旧リプレイで検出器発火/修正後0件を確認"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "DeadFieldEnergies": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(直接検出器なし: MissedFreeAdvance経由で露出)",
   "match": "MissedFreeAdvance",
   "fix": "sp.get('energies')→energyCards基準の_move_payable(いずれかの攻撃が払えるか)に統一。非eager前進経路の休眠解除+universal planにreposition有効化",
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -888,6 +953,26 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "QA alakazam/lucario。bot+検出器を_move_payable同一意味論に統一しQA 30戦+60戦で0件"
+  },
+  "graduated": "2026-07-06"
+ },
+ "DoomedGameLoss": {
+  "status": "Fix Applied",
+  "detector": "DoomedGameLoss",
+  "match": "DoomedGameLoss",
+  "fix": "_should_switch/_should_retreat_doomedに敗北回避オーバーライド(active KO=相手残サイド充足なら、エネ投資/攻撃テンポ無関係に退避。今殴って勝ち切れる時のみ残る)+昇格ランキングに負け確定回避キー。後続生存は現実的評価(_incoming_next_turn)",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   7,
+   0
+  ],
+  "regressions": 0,
+  "cause": "サイド計算がKO単位でなくゲーム単位の敗北条件(相手残りサイド充足)を見ていない。Mega ex=3枚ルールで especially 致命的",
+  "evidence": {
+   "frequency": 7,
+   "confirmed": 2,
+   "rejected": 0,
+   "note": "自己レビュー: arch-7 T17(Switch在手でMega110=3枚を220の前に放置=敗着と実証)+lucario-1 T9(同型)。60戦コーパス7件(相手bot側5件含む)→修正後60戦0件"
   }
  }
 }

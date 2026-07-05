@@ -1302,6 +1302,75 @@ def det_energy_type_skew(g, sig):
                 return
 
 
+def det_doomed_game_loss(g, sig):
+    """DoomedGameLoss: activeのKO=相手の残りサイド充足(死んだら負け)×次の相手ターンに被KO圏×
+    退避手段が実在(入替札のPLAY/逃げ可能+負けない退避先)なのに、殴って勝ち切れないのに殴り/ENDで
+    手番を渡した(自己レビュー: arch-7 T17 Mega110=3枚を220の前に残しSwitch未使用で敗北)。"""
+    import re as _re
+
+    def _pv(cid):
+        # bot側 _prize_value と同一意味論: メガex=3, ex=2, それ以外=1
+        ci = C.get(cid)
+        low = ((ci.rule or "") if ci else "").lower()
+        if "mega" in low and "ex" in low:
+            return 3
+        return 2 if "ex" in low else 1
+
+    opp_seen = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") not in (ATTACK, END):
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not a or not oa:
+            continue
+        _op = opp.get("prize")
+        opp_left = len(_op) if _op is not None else 6
+        if _pv(a.get("id")) < opp_left:
+            continue                                    # 死んでも負けない
+        if (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen):
+            continue                                    # 被KO圏でない
+        # 殴って勝ち切れるなら残って殴るのが正(自分の残りサイド充足)
+        _mp = me.get("prize")
+        my_left = len(_mp) if _mp is not None else 6
+        if ch.get("type") == ATTACK and _pv(oa.get("id")) >= my_left:
+            adv = attack_dmg(a)                         # 既存: 現エネで払える最大打点
+            ai = C.get(a.get("id"))
+            oi = C.get(oa.get("id"))
+            if ai and oi and oi.weakness and ai.type == oi.weakness:
+                adv *= 2
+            if adv >= (oa.get("hp") or 9999):
+                continue
+        # 退避手段の実在: 入替効果札のPLAY か RETREAT。かつ「負けない/耐える」退避先がベンチに居る
+        opts = (sel or {}).get("option") or []
+        hand = me.get("hand") or []
+        esc = any(o.get("type") == RETREAT for o in opts)
+        if not esc:
+            for o in opts:
+                if o.get("type") != PLAY or o.get("index") is None or o["index"] >= len(hand):
+                    continue
+                ci = C.get(hand[o["index"]].get("id"))
+                if ci and "Switch" in (ci.name or ""):
+                    esc = True
+                    break
+        if not esc:
+            continue
+        ok_succ = any(sp and (_pv(sp.get("id")) < opp_left
+                              or (sp.get("hp") or 0) > _incoming_next(sp, oa, opp_seen))
+                      for sp in (me.get("bench") or []))
+        if not ok_succ:
+            continue
+        sig(f"DoomedGameLoss|死んだら負けのactive放置({nm(a.get('id'))}, 退避可)", g["ep"], cur.get("turn"))
+        return
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1313,7 +1382,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_doomed_no_retreat,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
              det_basic_unbenched, det_evolve_trigger_before_develop,
-             det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew]
+             det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
+             det_doomed_game_loss]
 
 
 # ============ Layer 2: Aggregator ============
