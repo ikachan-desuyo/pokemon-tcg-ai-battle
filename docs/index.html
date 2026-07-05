@@ -75,12 +75,13 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   header b{font-size:13px} header .dim{font-size:10px}
   #ctrl{order:3;flex-basis:100%;gap:6px}
   #prev,#next{display:none}             /* 前/次は下バーに集約 */
-  #wrap{grid-template-columns:minmax(0,1fr) 100px;grid-template-rows:minmax(0,1fr);height:calc(100vh - 46px - 40px)} /* 下バー+スライダーバー分を除く */
+  #wrap{grid-template-columns:minmax(0,1fr) 100px;grid-template-rows:minmax(0,1fr);height:calc(100dvh - 46px - 44px)} /* 下バー(46)+スライダーバー(44)分を除く */
   #side{border-left:none;border-top:1px solid var(--line)}
   #board.hidden,#side.hidden,#handcol.hidden{display:none}
   #side{height:100%;overflow:auto;grid-column:1/-1}
   #board{height:100%;min-height:0;overflow:hidden}
-  #mbar{position:fixed;top:auto;bottom:46px;left:0;right:0;width:auto;z-index:8;background:var(--panel);border-top:1px solid var(--line);border-left:none;border-bottom:none;margin:0;padding:5px 10px}
+  #mbar{position:fixed;top:auto;bottom:46px;left:0;right:0;width:auto;height:44px;z-index:8;background:var(--panel);border-top:1px solid var(--line);border-left:none;border-bottom:none;margin:0;padding:0 10px}
+  #mbar button{padding:4px 12px;font-size:13px}
   /* モバイル: 手札は盤面の下に横スクロールの帯として表示 */
   #handcol{border-left:1px solid var(--line);border-top:none;height:100%;min-height:0;padding:4px;grid-template-rows:1fr 1fr;gap:4px}
   #handcol .hgrp{margin:0;padding:4px}
