@@ -305,6 +305,24 @@ class DeckBot(Bot):
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
+            # ベンチのボス釣りベイト(KO=相手残サイド充足=負け)を回復で圏外へ。相手デッキの
+            # ボス残数推定>=1なら「ベンチ=安全」は成立しない(自己レビューgrimmsnarl-6 T11:
+            # 傷Mega90を放置しサポ権をSalvatoreへ→T12ボス+Shadow Bulletで敗北)。
+            me_b = self._me() or {}
+            pr_b = self.analyze_prize()
+            opp_left_b = pr_b.get("opp_prizes") or 6
+            if self._opp_boss_remaining() > 0:
+                for sp in me_b.get("bench") or []:
+                    if not sp:
+                        continue
+                    th_b = self._incoming_next_turn(sp)
+                    if (self._prize_value(sp.get("id")) >= opp_left_b
+                            and (sp.get("hp") or 0) <= th_b < (sp.get("maxHp") or 0)):
+                        # 今殴って自分が勝ち切れるなら攻撃優先
+                        oa_b = ((cur := self._cur or {}).get("players", [{}, {}])[1 - cur.get("yourIndex", 0)].get("active") or [None])[0]
+                        if not (oa_b and self._active_lethal_now()
+                                and self._prize_value(oa_b.get("id")) >= (pr_b.get("my_prizes") or 6)):
+                            return 90
             # ベンチの重傷攻撃役(エネ0=エネ戻し損失ゼロ)の回復は攻撃と両立する=lethalでも打つ
             # (AI自己レビュー: dragapult-3 T11 ベンチMega30を放置→翌ターン多面KO負けの修正)。
             me_h = self._me() or {}
@@ -1509,7 +1527,7 @@ class DeckBot(Bot):
         pr = self.analyze_prize()
         opp_left = pr.get("opp_prizes") or 6
         if (self._prize_value(act.get("id")) >= opp_left
-                and self.analyze_threat().get("can_ko_me")):
+                and (act.get("hp") or 0) <= self._incoming_next_turn(act)):
             dmg, ign = self._active_attack_potential(assume_hand_attach=True)
             opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
             oa = (opp.get("active") or [None])[0]
@@ -1524,9 +1542,10 @@ class DeckBot(Bot):
                             or (sp.get("hp") or 0) > self._incoming_next_turn(sp)):
                         return True   # 死んでも負けない/次打(現実的評価)を耐える退避先がある
         if act.get("id") in self.plan.attackers:
-            # 温存パス: 次の相手ターンにKO確定圏なら、満タンの後続に交代して前を守る
-            th = self.analyze_threat()
-            if not th.get("can_ko_me"):
+            # 温存パス: 次の相手ターンにKO確定圏(現実的評価=相手の現エネ+1で払える技)なら、
+            # 満タンの後続に交代して前を守る。ライン最大(潜在)基準だと過剰退避になり
+            # SwitchWaste(検出器=現実的評価)と不整合(QA lucario相手bot T12)。
+            if (act.get("hp") or 0) > self._incoming_next_turn(act):
                 return False
             if any(e.get("id") not in self.plan.volatile_energies
                    for e in (act.get("energyCards") or [])):
@@ -1546,10 +1565,10 @@ class DeckBot(Bot):
                         and (sp.get("hp") or 0) > (act.get("hp") or 0)):
                     return True
             return False
-        for sp in me.get("bench") or []:
-            if sp and sp.get("id") in self.plan.attackers:
-                return True
-        return False
+        # 前進パス: retreat版(_should_reposition)と同じ検証に委譲=先攻T1ガード+
+        # 「前進先が今ターン実際に殴れる」を要求(自己レビューarch-5 T1: 攻撃不可ターンに
+        # Switchを消費して進化土台を前進=退避資源の浪費+土台の露出)。
+        return self._should_reposition(me)
 
     def _take_rank(self, op: Option) -> int:
         """取得(サーチ/ポケギア等)時のカード評価。効果×盤面で「今/直近に最も活きるサポ」を選ぶ。
@@ -1647,12 +1666,20 @@ class DeckBot(Bot):
             # かつエネ規則がその攻撃役に付くこと(規則がベンチの主役を指すと、前進後の
             # attachがベンチへ流れて攻撃不発=退却権の浪費。自己レビューalakazam-2 T11/13)
             if not_attached:
+                act_sp = (me.get("active") or [None])[0]
+                others = [t for t in [act_sp] + list(me.get("bench") or []) if t and t is not sp]
                 for c in (hand or []):
                     cid = c.get("id")
-                    if (self._is_energy(cid) and self._move_payable(sp, cid)
-                            and (self._energy_rule_rank(cid, sp.get("id")) > 0
-                                 or not self.plan.energy_rules)):
-                        return True
+                    if not self._is_energy(cid) or not self._move_payable(sp, cid):
+                        continue
+                    # エネが実際にspへ流れるか: rule順位がより高く未充足の付け先が盤上に居れば
+                    # attachはそちらへ行く=前進しても殴れない(alakazam-2 T11の退却権浪費)。
+                    r = self._energy_rule_rank(cid, sp.get("id"))
+                    if any(self._energy_rule_rank(cid, t.get("id")) > r
+                           and self._completes_cost(cid, t.get("id"), t) > 0
+                           for t in others):
+                        continue
+                    return True
         return False
 
     def _active_attack_potential(self, assume_hand_attach: bool = False):
@@ -1890,6 +1917,23 @@ class DeckBot(Bot):
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2
         return t
+
+    def _opp_boss_remaining(self) -> int:
+        """相手のボス(引きずり出し)残数推定。見えたカードからアーキタイプを推定し、
+        既知構築のボス枚数(既定2)から相手トラッシュで見えた使用分を引く。
+        =「ベンチは安全地帯ではない」をデッキ推定から定量化(人間レビュー項目A③)。"""
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        est = 2
+        seen = " ".join((self._cardinfo.get(x).name or "") for x in self._opp_seen if x in self._cardinfo)
+        for key, n in (("Archaludon", 3), ("Dragapult", 3), ("Alakazam", 1)):
+            if key in seen:
+                est = n
+                break
+        used = sum(1 for c in (opp.get("discard") or [])
+                   if "Boss" in ((self._cardinfo.get(c.get("id")).name or "")
+                                 if c.get("id") in self._cardinfo else ""))
+        return max(0, est - used)
 
     def _prize_value(self, cid) -> int:
         """KOされた時に相手が取るサイド枚数。メガex=3, ex=2, それ以外=1。"""

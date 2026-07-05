@@ -560,10 +560,9 @@ def det_doomed_no_switch(g, sig):
         oa = (opp.get("active") or [None])[0]
         if not a or not oa:
             continue
-        dmg_in = line_threat(oa.get("id")) or 0
-        cc = C.get(a.get("id")); oc = C.get(oa.get("id"))
-        if cc and oc and cc.weakness and oc.type == cc.weakness:
-            dmg_in *= 2
+        # 現実的評価(相手の現エネ+1で払える技)。bot側温存パスと同一意味論
+        # (ライン最大基準だとbotが退避しない局面を検出=不整合)
+        dmg_in = _incoming_next(a, oa, None, opp.get("handCount"))
         if dmg_in <= 0 or (a.get("hp") or 999) > dmg_in:
             continue                                    # 被KO圏でない
         if any(e.get("id") != IGN for e in (a.get("energyCards") or [])):
@@ -739,7 +738,7 @@ def det_cape_skew(g, sig):
             continue    # activeが主力線(threat>=180)の進化アタッカーの時のみ
                         # (壁Cinderace=Stage2だが主力でない、へのケープ温存は正当)
         oa = (opp.get("active") or [None])[0]
-        th = _incoming(a, oa)
+        th = _incoming(a, oa, opp.get("handCount"))
         hp = a.get("hp") or 0
         if hp <= th < hp + 100:
             sig("CapeSkew|activeに貼れば被KO圏→生存圏だったのにベンチへ", g["ep"], cur.get("turn"))
@@ -791,7 +790,7 @@ def det_energy_stuck_no_lillie(g, sig):
             oa0 = (opp.get("active") or [None])[0]
             hurt = any(sp and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
                        for sp in [a] + list(me.get("bench") or []))
-            if hurt and (a.get("maxHp") or 0) > _incoming(a, oa0):
+            if hurt and (a.get("maxHp") or 0) > _incoming(a, oa0, opp.get("handCount")):
                 continue
         ci = C.get((a or {}).get("id"))
         if not a or not ci or ci.is_basic or not any(m.damage for m in ci.moves):
@@ -913,7 +912,7 @@ def det_lillie_over_live_heal(g, sig):
         a = (me.get("active") or [None])[0]
         oa = (opp.get("active") or [None])[0]
         if (a and (a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
-                and (a.get("maxHp") or 0) > _incoming(a, oa)):
+                and (a.get("maxHp") or 0) > _incoming(a, oa, opp.get("handCount"))):
             sig("LillieOverLiveHeal|重傷×反転可のミツルをリーリエで流すリスク", g["ep"], cur.get("turn"))
 
 
@@ -935,7 +934,7 @@ def det_doomed_no_retreat(g, sig):
         oa = (opp.get("active") or [None])[0]
         if not a or _pv(a.get("id")) < 2:
             continue
-        th = _incoming(a, oa)
+        th = _incoming(a, oa, opp.get("handCount"))
         if th <= 0 or (a.get("hp") or 999) > th:
             continue                                    # 被KO圏でない
         dmg = attack_dmg(a)
@@ -949,7 +948,7 @@ def det_doomed_no_retreat(g, sig):
                 continue
             bi = C.get(b.get("id"))
             if (bi and not bi.is_basic and (line_threat(b.get("id")) or 0) >= 180
-                    and (b.get("hp") or 0) > _incoming(b, oa)
+                    and (b.get("hp") or 0) > _incoming(b, oa, opp.get("handCount"))
                     and ((b.get("energyCards") or []) or can_pay)):
                 sig(f"DoomedNoRetreat|被KO確定×不利トレードで{nm(a.get('id'))}が残留",
                     g["ep"], cur.get("turn"))
@@ -1392,6 +1391,120 @@ def det_doomed_game_loss(g, sig):
         return
 
 
+def det_switch_waste(g, sig):
+    """SwitchWaste: 入替札(Switch)を使ったのに同ターン攻撃なし、かつ元のactiveは被KO圏でも
+    なかった(=退避の正当性なし)。攻撃不可ターンの前進や土台の露出=退避資源の浪費
+    (自己レビューarch-5 T1: 先攻T1にSwitchで進化土台Staryuを前進→終盤の退避手段喪失)。"""
+    turns = {}
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        tn = cur.get("turn")
+        rec = turns.setdefault(tn, {"switch": None, "attacked": False})
+        if ch.get("type") == ATTACK:
+            rec["attacked"] = True
+        if ch.get("type") == PLAY:
+            hand = me.get("hand") or []
+            idx = ch.get("index")
+            cid = hand[idx].get("id") if idx is not None and 0 <= idx < len(hand) else None
+            ci = C.get(cid)
+            if ci and (ci.name or "") == "Switch":
+                a = (me.get("active") or [None])[0]
+                oa = (opp.get("active") or [None])[0]
+                doomed = (a and oa
+                          and (a.get("hp") or 0) <= _incoming_next(a, oa, None, opp.get("handCount")))
+                if not doomed:
+                    rec["switch"] = tn
+    for tn, rec in turns.items():
+        if rec["switch"] is not None and not rec["attacked"]:
+            sig("SwitchWaste|入替札使用×攻撃なし×退避正当性なし", g["ep"], tn)
+            return
+
+
+def det_bench_bait_loss(g, sig):
+    """BenchBaitLoss: ベンチに「KO=相手残サイド充足(釣られたら負け)」の急所が居て、回復サポで
+    圏外にできるのに別のサポ/ENDを選んだ(相手デッキのボス残数推定>=1)。
+    (自己レビューgrimmsnarl-6 T11: 傷Mega90放置→T12ボス+Shadow Bulletで敗北)"""
+    import re as _re
+
+    def _pv(cid):
+        ci = C.get(cid)
+        low = ((ci.rule or "") if ci else "").lower()
+        if "mega" in low and "ex" in low:
+            return 3
+        return 2 if "ex" in low else 1
+
+    HEALS = ("Wally's Compassion",)
+    opp_seen = set()
+    boss_turns = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel_b, ch_b = chosen(ob, act)
+        if (ch_b and cur.get("yourIndex") == g["my"] and (sel_b or {}).get("type") == MAIN
+                and ch_b.get("type") == PLAY and ch_b.get("index") is not None):
+            hb = me.get("hand") or []
+            if ch_b["index"] < len(hb):
+                cb = C.get(hb[ch_b["index"]].get("id"))
+                if cb and "Boss" in (cb.name or ""):
+                    boss_turns.add(cur.get("turn"))
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") not in (ATTACK, END, PLAY):
+            continue
+        if cur.get("turn") in boss_turns:
+            continue  # 同ターンにボス使用=サポ権は勝ち筋(KO生成)へ。正当性はBossNoPathGainの管轄
+        hand = me.get("hand") or []
+        # 選んだ手が回復サポならOK。回復サポのPLAY選択肢が存在することが前提
+        opts = (sel or {}).get("option") or []
+        heal_ops, chosen_heal = [], False
+        for o in opts:
+            if o.get("type") != PLAY or o.get("index") is None or o["index"] >= len(hand):
+                continue
+            ci = C.get(hand[o["index"]].get("id"))
+            if ci and (ci.name or "") in HEALS:
+                heal_ops.append(o)
+                if o is ch:
+                    chosen_heal = True
+        if not heal_ops or chosen_heal:
+            continue
+        # 選んだのが別サポ(または攻撃/END)=サポ権を回復以外に使う分岐のみ対象
+        if ch.get("type") == PLAY:
+            ci = C.get(hand[ch["index"]].get("id")) if ch.get("index") is not None and ch["index"] < len(hand) else None
+            if not ci or ci.stage != "Supporter":
+                continue
+        _op = opp.get("prize")
+        opp_left = len(_op) if _op is not None else 6
+        # ボス残数推定(アーキタイプ既定2, Arch/Dragapult=3, Alakazam=1) - トラッシュ使用分
+        est = 2
+        seen = " ".join((C[x].name or "") for x in opp_seen if x in C)
+        for key, n in (("Archaludon", 3), ("Dragapult", 3), ("Alakazam", 1)):
+            if key in seen:
+                est = n
+                break
+        used = sum(1 for c in (opp.get("discard") or [])
+                   if c.get("id") in C and "Boss" in (C[c.get("id")].name or ""))
+        if est - used <= 0:
+            continue
+        oa = (opp.get("active") or [None])[0]
+        for sp in (me.get("bench") or []):
+            if not sp:
+                continue
+            th = _incoming_next(sp, oa, opp_seen, opp.get("handCount"))
+            if (_pv(sp.get("id")) >= opp_left
+                    and (sp.get("hp") or 0) <= th < (sp.get("maxHp") or 0)):
+                sig(f"BenchBaitLoss|ボス釣りベイト放置({nm(sp.get('id'))}hp{sp.get('hp')}, 回復サポ在手)",
+                    g["ep"], cur.get("turn"))
+                return
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1404,7 +1517,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
              det_basic_unbenched, det_evolve_trigger_before_develop,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
-             det_doomed_game_loss]
+             det_doomed_game_loss, det_switch_waste, det_bench_bait_loss]
 
 
 # ============ Layer 2: Aggregator ============

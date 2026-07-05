@@ -33,6 +33,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -73,6 +76,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0
   ],
@@ -115,6 +121,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -157,6 +166,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -172,6 +184,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -236,6 +251,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -272,7 +290,10 @@
    116,
    140,
    121,
-   102
+   102,
+   130,
+   115,
+   113
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -308,7 +329,10 @@
    20,
    17,
    15,
-   19
+   19,
+   18,
+   17,
+   22
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -348,7 +372,10 @@
    28,
    35,
    27,
-   24
+   24,
+   25,
+   38,
+   23
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -388,7 +415,10 @@
    26,
    22,
    23,
-   16
+   16,
+   19,
+   16,
+   22
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -427,6 +457,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -445,6 +478,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -503,6 +539,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -539,6 +578,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -554,6 +596,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -608,6 +653,9 @@
    0,
    2,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -620,7 +668,7 @@
   "cause": "Support Value(サポ権の価値比較)+相手最大火力の計算欠如",
   "fix": "_play_scoreミツル: 重傷150+かつ回復が生存反転になる場合のみ60(>セイジ58)。無条件60はarch対面77→68の回帰を生み生存反転条件で83に回復",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    0,
@@ -640,9 +688,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "CapeSkew": {
   "status": "Graduated",
@@ -654,6 +705,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -701,6 +755,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -731,6 +788,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -742,7 +802,7 @@
   "cause": "Support Value(状況札の温存順序: 条件成立中の札を引き直しで流さない)",
   "fix": "_should_use_lillie: 生きたミツル(重傷150+×生存反転)在手なら引き直さない",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    0,
@@ -761,9 +821,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "DoomedNoRetreat": {
   "status": "Graduated",
@@ -775,6 +838,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -820,6 +886,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -849,6 +918,9 @@
    0,
    0,
    4,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -878,6 +950,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -896,6 +971,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -929,6 +1007,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -943,6 +1024,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -974,6 +1058,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -997,6 +1084,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1010,6 +1100,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1040,6 +1133,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1063,6 +1159,9 @@
    0,
    1,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1076,13 +1175,16 @@
   "graduated": "2026-07-06"
  },
  "VariableThreatBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(DoomedGameLoss/PromotionSkew/WeakAdvance経由で顕在化)",
   "match": "DoomedGameLoss",
   "fix": "_effect_move_damage: 効果文の可変ダメージ(Powerful Hand=ダメカン2×手札枚数/エネ×50追加)を公開情報の実数(相手手札+1, 付きエネ数)で評価し、_incoming_next_turn/_incoming_threat/analyze_threat(can_ko_me)の3箇所+Reviewer(_incoming/_incoming_next)に配線",
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1092,16 +1194,20 @@
    "confirmed": 2,
    "rejected": 0,
    "note": "自己レビュー alakazam-9 T7(敗着)+alakazam-1 T7(can_ko_me=False for Switch gate)。修正後alakazam 6→9/10・対フィールド94%"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "EagerRetreatIncoherence": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "WallRetreat",
   "match": "WallRetreat",
   "fix": "eager退却②に「エネ規則がその攻撃役に付く」条件(付け先がベンチ主役に流れて攻撃不発=退却権浪費を防ぐ)。昇格の負けベイト回避キーに「今KOできるなら免除」",
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1111,6 +1217,45 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "alakazam-2 T11/T13: 退却権をStaryu差し替えに浪費し相手active30hpへのKO機会を逃した"
+  },
+  "graduated": "2026-07-06"
+ },
+ "BenchBaitLoss": {
+  "status": "Fix Applied",
+  "detector": "BenchBaitLoss",
+  "match": "BenchBaitLoss",
+  "fix": "heal handlerにベンチ・ボスベイト条項(pv>=相手残×被KO圏×回復で圏外化可→90)。_opp_boss_remaining=アーキタイプ推定(既定2/Arch・Drag3/Alakazam1)-トラッシュ使用分",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "「ベンチ=安全」の暗黙仮定。相手デッキのボス残数を推定せず、KO=残サイド充足の急所を放置(grimmsnarl-6 T9-11: 傷Mega+Wally在手でサポ権をSalvatoreへ→T12ボスで敗北)。初のアーキタイプ推定(未見カード推定)の実装",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 1,
+   "rejected": 1,
+   "note": "人間レビュー11巡目(チェックリストA③+G)。rejected1=mirror-4ボス勝ち切りターンの偽陽性→ボスターン例外で修正"
+  }
+ },
+ "SwitchWaste": {
+  "status": "Fix Applied",
+  "detector": "SwitchWaste",
+  "match": "SwitchWaste",
+  "fix": "_should_switch前進パスを_should_reposition(先攻T1ガード+殴れる前進のみ)に委譲",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   10,
+   0
+  ],
+  "regressions": 0,
+  "cause": "Switch経由の前進パスだけT1/攻撃可否ガードなし(retreat系には有り)=ゲート間不整合。退避資源の浪費が終盤のDoomedGameLoss退避を不能に(arch-5でT1浪費→T7以降退避不能→3枚献上の連鎖を実証)",
+  "evidence": {
+   "frequency": 10,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "人間レビュー11巡目(チェックリストA③/C/G)。60戦コーパスで10箇所=系統的"
   }
  }
 }
