@@ -568,6 +568,20 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
+    def _is_loss_bait(self, sp) -> bool:
+        """このスポットを前に出すと「KO=相手の残サイド充足(死んだら負け)×確殺圏」になるか。
+        今KOを取れる(脅威側が消える)なら免除。全前進経路(switch/reposition/eager/昇格/進化)の
+        共通判定(人間レビュー15巡目: ゲートごとの個別実装が相互作用の残差を生んだ)。"""
+        if not sp:
+            return False
+        pr = self.analyze_prize()
+        opp_left = pr.get("opp_prizes") or 6
+        if self._prize_value(sp.get("id")) < opp_left:
+            return False
+        if (sp.get("hp") or 0) > self._incoming_next_turn(sp):
+            return False
+        return not self._spot_kos_opp_active(sp)
+
     def _spot_kos_opp_active(self, sp) -> bool:
         """このスポットが(前に出れば)現在の付きエネで相手activeをKOできるか。"""
         import re
@@ -1621,9 +1635,14 @@ class DeckBot(Bot):
                 if not sp or sp.get("id") not in self.plan.attackers:
                     continue
                 info = self._cardinfo.get(sp.get("id"))
-                if (info and not info.is_basic and sp.get("hp") == sp.get("maxHp")
+                if not (info and not info.is_basic and sp.get("hp") == sp.get("maxHp")
                         and (sp.get("hp") or 0) > (act.get("hp") or 0)):
-                    return True
+                    continue
+                # 後続が負けベイト化するなら温存しない(1枚の犠牲を守るために3枚の敗着を
+                # 前に出す逆転を防ぐ。alakazam-3 T9: Powerful Hand 500の前へMega330)
+                if self._is_loss_bait(sp):
+                    continue
+                return True
             return False
         # 前進パス: retreat版(_should_reposition)と同じ検証に委譲=先攻T1ガード+
         # 「前進先が今ターン実際に殴れる」を要求(自己レビューarch-5 T1: 攻撃不可ターンに
@@ -1691,6 +1710,8 @@ class DeckBot(Bot):
                            and any(self._move_payable(sp, e) for e in hand_e)))
             if not payable:
                 continue
+            if self._is_loss_bait(sp):
+                continue                   # 前進先が負けベイト(死=相手残充足×確殺)なら出さない
             info = self._cardinfo.get(sp.get("id"))
             if info and info.is_basic:
                 # 脆いたね(将来の進化素材)は前に晒さない: 壁が相手の次打(現実的評価=現エネ+1で
@@ -1725,6 +1746,8 @@ class DeckBot(Bot):
             info = self._cardinfo.get(sp.get("id"))
             if info and info.is_basic:
                 continue
+            if self._is_loss_bait(sp):
+                continue                   # 前進先が負けベイトなら出さない(eager版)
             if self._move_payable(sp):
                 return True  # 既にいずれかの技が払える=前進すれば殴れる
             # ②は「そのエネを貼ればいずれかの技が立つ」場合のみ(イグニ=C3なら3エネ技成立。
@@ -2207,6 +2230,14 @@ class DeckBot(Bot):
                     if mt:
                         full = max(full, int(mt.group(1)))
                 if dmg_now < full and self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55:
+                    return True
+            # activeが攻撃役でなくても、場の攻撃役のどれかが1technique も払えない(エネ枯れ)なら掘る
+            # (人間レビュー15巡目 grimmsnarl相手bot: 手札9枚全部死に札×ベンチGrimmsnarl e1で
+            #  Shadow Bullet不能を放置=「手札の枚数より質」の原則がactive限定だった)。
+            for sp in [act0] + list(me.get("bench") or []):
+                if (sp and sp.get("id") in self.plan.attackers
+                        and not self._move_payable(sp)
+                        and self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55):
                     return True
         blocked = (self._has_key(hand) if self.plan.strict_lillie_guard
                    else self._has_deployable_key(hand))

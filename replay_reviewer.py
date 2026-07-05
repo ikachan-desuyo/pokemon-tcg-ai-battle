@@ -485,9 +485,27 @@ def det_spread_skew(g, sig):
 
 def det_missed_free_advance(g, sig):
     """MissedFreeAdvance: 逃げ0のエネなし壁でEND。退けばベンチの進化アタッカーが前に出て
-    今ターン攻撃可能(エネ有 or 手貼り権+手札エネ)だったのに手番を渡した(人間レビュー2巡目②)。"""
+    今ターン攻撃可能(エネ有 or 手貼り権+手札エネ)だったのに手番を渡した(人間レビュー2巡目②)。
+    前進先が負けベイト(KO=相手残サイド充足×確殺圏)なら前進しないのが正当=対象外。"""
+    def _pv_m(cid):
+        ci0 = C.get(cid)
+        low = ((ci0.rule or "") if ci0 else "").lower()
+        if "mega" in low and "ex" in low:
+            return 3
+        return 2 if "ex" in low else 1
+
+    opp_seen = set()
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+                for ec in (sp.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
@@ -537,6 +555,12 @@ def det_missed_free_advance(g, sig):
             bi = C.get(b.get("id"))
             if not bi or bi.is_basic or not any(m.damage for m in bi.moves):
                 continue
+            _op_m = opp.get("prize")
+            opp_left_m = len(_op_m) if _op_m is not None else 6
+            oa_m = (opp.get("active") or [None])[0]
+            if (_pv_m(b.get("id")) >= opp_left_m
+                    and (b.get("hp") or 0) <= _incoming_next(b, oa_m, opp_seen, opp.get("handCount"))):
+                continue                                # 負けベイト=前進しないのが正当
             # bot側ゲートと同一意味論: 前進した先が実際に攻撃を払える場合のみ「攻撃可」
             # (エネ1枚在中=攻撃可の緩い判定はWallRetreat検出と矛盾する偽陽性源)
             if _payable(b) or (can_attach and any(_payable(b, e) for e in hand_e)):
@@ -582,7 +606,11 @@ def det_doomed_no_switch(g, sig):
             if not b:
                 continue
             bi = C.get(b.get("id"))
-            if (bi and not bi.is_basic and any(m.damage for m in bi.moves)
+            _op_dns = opp.get("prize")
+            opp_left_dns = len(_op_dns) if _op_dns is not None else 6
+            bait = (_pv(b.get("id")) >= opp_left_dns
+                    and (b.get("hp") or 0) <= _incoming_next(b, oa, None, opp.get("handCount")))
+            if (bi and not bait and not bi.is_basic and any(m.damage for m in bi.moves)
                     and (line_threat(b.get("id")) or 0) >= 180
                     and b.get("hp") == b.get("maxHp") and (b.get("hp") or 0) > (a.get("hp") or 0)):
                 # 後続候補は主力線(threat>=180)のみ。壁(Cinderace等=Stage2だが主力でない)への
@@ -758,6 +786,9 @@ def det_energy_stuck_no_lillie(g, sig):
             continue
         if OT.get(ch.get("type")) not in ("ATTACK", "END"):
             continue
+        if cur.get("energyAttached"):
+            continue    # このターン手貼り済み=ターン開始時に手札エネがあった(「エネ不足×手札エネ0」の
+                        # 前提不成立。貼った後の残り手札で判定する順序アーティファクトの偽陽性)
         h = hand_ids(me)
         if any(C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or "") for x in h):
             continue                                    # 手札にエネあり=対象外
@@ -1101,6 +1132,7 @@ def det_weak_advance(g, sig):
     (エネ付き=将来の進化素材)を前進させた(人間レビュー7巡目①: 20点のためにエネ付きStaryuを晒す)。"""
     opp_seen = set()                                    # 相手の場で観測されたカード(その時点まで)
     prev_retreat = False
+    pending = []
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
         for c in (opp.get("discard") or []):
@@ -1127,7 +1159,20 @@ def det_weak_advance(g, sig):
         ci = C.get((pick or {}).get("id"))
         if (pick and ci and ci.is_basic and (pick.get("energyCards") or [])
                 and _is_base_of_db_line(pick.get("id"))):
-            sig(f"WeakAdvance|耐える壁を退きエネ付きたね{nm(pick.get('id'))}を前進", g["ep"], cur.get("turn"))
+            pending.append((cur.get("turn"), pick.get("id")))
+    # 同ターン内にactiveへの進化が続いた前進は「進化プラットフォーム」=正当
+    # (arch相手bot: 土台前進→Rare Candy進化→攻撃まで同ターン完走)
+    evolve_turns = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if (ch and cur.get("yourIndex") == g["my"] and (sel or {}).get("type") == MAIN
+                and ch.get("type") == int(OptionType.EVOLVE) and ch.get("inPlayArea") == 4):
+            evolve_turns.add(cur.get("turn"))
+    for tn, pid in pending:
+        if tn not in evolve_turns:
+            sig(f"WeakAdvance|耐える壁を退きエネ付きたね{nm(pid)}を前進", g["ep"], tn)
+            return
 
 
 def det_basic_unbenched(g, sig):
@@ -1412,8 +1457,18 @@ def det_switch_waste(g, sig):
     なかった(=退避の正当性なし)。攻撃不可ターンの前進や土台の露出=退避資源の浪費
     (自己レビューarch-5 T1: 先攻T1にSwitchで進化土台Staryuを前進→終盤の退避手段喪失)。"""
     turns = {}
+    opp_seen = set()
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+                for ec in (sp.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
@@ -1430,7 +1485,7 @@ def det_switch_waste(g, sig):
                 a = (me.get("active") or [None])[0]
                 oa = (opp.get("active") or [None])[0]
                 doomed = (a and oa
-                          and (a.get("hp") or 0) <= _incoming_next(a, oa, None, opp.get("handCount")))
+                          and (a.get("hp") or 0) <= _incoming_next(a, oa, opp_seen, opp.get("handCount")))
                 if not doomed:
                     rec["switch"] = tn
     for tn, rec in turns.items():
@@ -1557,8 +1612,13 @@ def det_base_line_sacrifice(g, sig):
                 return bool(ci0) and getattr(ci0, "is_basic", False) and any(
                     C.get(c.get("id")) and C[c.get("id")].previous_stage == ci0.name
                     for c in (me.get("hand") or []))
-            if not any(sp and not _is_base_alt(sp) for sp in (me.get("bench") or [])):
-                continue
+
+            def _is_bait_alt(sp):
+                return (_pv(sp.get("id")) >= opp_left0
+                        and (sp.get("hp") or 0) <= _incoming_next(sp, oa0, opp_seen, opp.get("handCount")))
+            if not any(sp and not _is_base_alt(sp) and not _is_bait_alt(sp)
+                       for sp in (me.get("bench") or [])):
+                continue    # 非土台かつ非ベイトの代替後続なし=土台の犠牲は強制(最善)
         # 同ターンの次の自分MAIN決定でactiveが誰になったか
         for t2, ob2, act2 in g["decisions"][gi + 1:]:
             cur2, me2, opp2 = my_view(ob2, g["my"])
@@ -1659,6 +1719,60 @@ def det_evolve_into_loss(g, sig):
         return
 
 
+def det_switch_into_loss(g, sig):
+    """SwitchIntoLoss: 入替札で「KO=相手残サイド充足(死んだら負け)×確殺圏」の後続を前に出した。
+    今のactiveは死んでも負けない(安い犠牲)のに、それを守るために負けベイトを差し出す逆転
+    (人間レビュー15巡目 alakazam-3 T9: Staryu70温存のためMega330をPowerful Hand 500の前へ)。"""
+    def _pv2(cid):
+        ci = C.get(cid)
+        low = ((ci.rule or "") if ci else "").lower()
+        if "mega" in low and "ex" in low:
+            return 3
+        return 2 if "ex" in low else 1
+
+    opp_seen = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp:
+                opp_seen.add(sp.get("id"))
+                for ec in (sp.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != PLAY or ch.get("index") is None:
+            continue
+        hand = me.get("hand") or []
+        if ch["index"] >= len(hand):
+            continue
+        ci = C.get(hand[ch["index"]].get("id"))
+        if not ci or (ci.name or "") != "Switch":
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not a or not oa:
+            continue
+        _op = opp.get("prize")
+        opp_left = len(_op) if _op is not None else 6
+        if _pv2(a.get("id")) >= opp_left:
+            continue                                    # 今のactiveが既に負け駒=退避は正当(DoomedGameLossの管轄)
+        cands = [sp for sp in (me.get("bench") or []) if sp]
+        if not cands:
+            continue
+        all_bait = all(_pv2(sp.get("id")) >= opp_left
+                       and (sp.get("hp") or 0) <= _incoming_next(sp, oa, opp_seen, opp.get("handCount"))
+                       for sp in cands)
+        if all_bait:
+            sig(f"SwitchIntoLoss|負けベイトを前に出す入替({nm(a.get('id'))}→全後続が確殺×残サイド充足)",
+                g["ep"], cur.get("turn"))
+            return
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1672,7 +1786,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_basic_unbenched, det_evolve_trigger_before_develop,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
-             det_base_line_sacrifice, det_evolve_into_loss]
+             det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss]
 
 
 # ============ Layer 2: Aggregator ============
