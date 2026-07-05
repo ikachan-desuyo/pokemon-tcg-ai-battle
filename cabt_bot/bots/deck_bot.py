@@ -1778,7 +1778,13 @@ class DeckBot(Bot):
             return False
         th = self.analyze_threat()
         if not th.get("can_ko_me"):
-            return False
+            # 可変ダメージ技(手札×20のPowerful Hand等)はline_threat=0に静落ちして
+            # can_ko_meが偽陰性になる→単騎では脅威扱い(alakazam-0 T5=ベンチアウト負けの真因)
+            opp0 = self._cur["players"][1 - self._cur["yourIndex"]]
+            oa0 = (opp0.get("active") or [None])[0]
+            oi0 = self._cardinfo.get((oa0 or {}).get("id"))
+            if not (oi0 and any("for each" in (m.effect or "") for m in oi0.moves)):
+                return False
         hand = me.get("hand") or []
         has_basic = any(
             (c.get("id") in self._cardinfo and self._cardinfo[c.get("id")].is_pokemon
@@ -1788,9 +1794,17 @@ class DeckBot(Bot):
             return False
         # 生きたミツル(回復で被KO圏→生存圏に反転)も生存手段=緊急でない。回復を優先し
         # リーリエで流さない(QA: 単騎重傷でミツルを差し置きリーリエ2件の修正)。
+        # ただし相手activeに可変ダメージ技(手札×20のPowerful Hand等)があると静的threatは
+        # 過小評価=「回復で安全」は幻想→リーリエ(たね掘り=構造解)を優先
+        # (AI自己レビュー: alakazam-0 T5 ボス2枚取り→T6単騎ベンチアウト負け)。
         if any(c.get("id") in self.plan.heal_return_cards for c in hand):
             act = (me.get("active") or [None])[0]
-            if act and (act.get("maxHp") or 0) > self._incoming_threat(act):
+            opp0 = self._cur["players"][1 - self._cur["yourIndex"]]
+            oa0 = (opp0.get("active") or [None])[0]
+            oi0 = self._cardinfo.get((oa0 or {}).get("id"))
+            variable = any("for each" in (m.effect or "") for m in (oi0.moves if oi0 else []))
+            if (not variable and act
+                    and (act.get("maxHp") or 0) > self._incoming_threat(act)):
                 return False
         return True
 

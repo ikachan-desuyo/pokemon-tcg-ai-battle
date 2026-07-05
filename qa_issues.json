@@ -25,6 +25,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -58,6 +59,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -73,6 +75,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -123,6 +126,7 @@
    0,
    0,
    3,
+   0,
    0
   ],
   "regressions": 1,
@@ -138,6 +142,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
    0,
    0,
    0,
@@ -186,6 +191,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -214,7 +220,8 @@
    122,
    106,
    117,
-   110
+   110,
+   107
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -242,7 +249,8 @@
    17,
    31,
    16,
-   29
+   29,
+   21
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -274,7 +282,8 @@
    23,
    13,
    25,
-   12
+   12,
+   13
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -306,7 +315,8 @@
    23,
    18,
    18,
-   17
+   17,
+   11
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -329,6 +339,7 @@
    0,
    0,
    2,
+   0,
    0,
    0,
    0,
@@ -369,18 +380,19 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
  },
  "FetchIgnition(1エネ圏)": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "FetchSkew(1エネ圏○×Ignition)",
   "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
   "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
   "fix": "_opt_valueにspread文脈(相手1エネ圏なら基本エネ92>イグニ90=Jetting+撒き50>Nebula単発)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-05",
   "cycles": [
    52,
    0,
@@ -397,7 +409,8 @@
    0,
    0,
    0,
-   1
+   1,
+   0
   ],
   "regressions": 2
  },
@@ -425,6 +438,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -440,6 +454,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
    0,
    0,
    0,
@@ -478,6 +493,7 @@
    0,
    2,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -502,6 +518,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -516,6 +533,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -547,12 +565,13 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
  },
  "DeadEvolutionPick": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "DeadEvolutionPick",
   "match": "DeadEvolutionPick",
   "cause": "サーチ選択が置けるか(進化元の有無)を見ない=静的card_values(Mega100>リオル56)",
@@ -569,9 +588,10 @@
    0,
    0,
    2,
-   0
+   0,
+   3
   ],
-  "regressions": 2
+  "regressions": 3
  },
  "LillieOverLiveHeal": {
   "status": "Graduated",
@@ -591,6 +611,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -605,6 +626,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -634,6 +656,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -648,6 +671,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -676,6 +700,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -695,6 +720,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -711,6 +737,7 @@
    1,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -725,6 +752,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
    0
   ],
   "regressions": 0,
@@ -740,6 +768,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -755,6 +784,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,

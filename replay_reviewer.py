@@ -844,11 +844,19 @@ def det_dead_evolution_pick(g, sig):
                 continue
             cid = card_at(opts[i])
             ci = C.get(cid)
-            # 発火は「同じ候補内にそのラインの土台が有ったのに進化側を取った」場合のみ
-            # (Cinderace等の直接置けるカードや、ポフィンで土台を後から置く正当ルートを除外)
+            # 発火は「同じ候補内に“それ自体が配置可能な”土台が有ったのに進化側を取った」場合のみ
+            # (土台候補も死に札(進化元不在の中間進化)なら消去法の取得=正当。dragapult-2:T2)
+            base_ok = False
+            if ci and ci.previous_stage and ci.previous_stage in cand_names:
+                for bc in cand_ids:
+                    bci = C.get(bc)
+                    if (bci and bci.name == ci.previous_stage
+                            and (bci.is_basic or (bci.previous_stage or "") in names)):
+                        base_ok = True
+                        break
             if (ci and ci.is_pokemon and not ci.is_basic and ci.previous_stage
                     and ci.previous_stage not in names
-                    and ci.previous_stage in cand_names):
+                    and base_ok):
                 sig(f"DeadEvolutionPick|土台{ci.previous_stage}を差し置き進化側{ci.name}を取得",
                     g["ep"], cur.get("turn"))
 
