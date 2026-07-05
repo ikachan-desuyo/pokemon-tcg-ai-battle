@@ -502,16 +502,44 @@ def det_missed_free_advance(g, sig):
         ci = C.get(a.get("id"))
         if ci and ci.retreat:                           # 逃げコストあり=無料でない
             continue
-        can_pay = (not cur.get("energyAttached")
-                   and any(C.get(c.get("id")) and not C[c.get("id")].is_pokemon
-                           and "Energy" in (C[c.get("id")].name or "") for c in (me.get("hand") or [])))
+        import re as _re
+
+        def _esyms(eid):
+            ei = C.get(eid)
+            if not ei:
+                return []
+            return (_re.findall(r"\{([A-Z])\}", ei.type or "")
+                    or _re.findall(r"\{([A-Z])\}", ei.name or "") or ["C"])
+
+        def _payable(b, extra=None):
+            bi2 = C.get(b.get("id"))
+            att = []
+            for ec in (b.get("energyCards") or []):
+                att += _esyms(ec.get("id"))
+            if extra is not None:
+                att += _esyms(extra)
+            for m in bi2.moves:
+                if not m.damage:
+                    continue
+                need = _re.findall(r"\{([A-Z])\}", m.cost or "")
+                pool = list(att)
+                ok = all((t in pool and (pool.remove(t) or True)) for t in need)
+                if ok and len(pool) >= (m.cost or "").count("●"):
+                    return True
+            return False
+        hand_e = [c.get("id") for c in (me.get("hand") or [])
+                  if C.get(c.get("id")) and not C[c.get("id")].is_pokemon
+                  and "Energy" in (C[c.get("id")].name or "")]
+        can_attach = not cur.get("energyAttached")
         for b in (me.get("bench") or []):
             if not b:
                 continue
             bi = C.get(b.get("id"))
             if not bi or bi.is_basic or not any(m.damage for m in bi.moves):
                 continue
-            if (b.get("energyCards") or []) or can_pay:
+            # bot側ゲートと同一意味論: 前進した先が実際に攻撃を払える場合のみ「攻撃可」
+            # (エネ1枚在中=攻撃可の緩い判定はWallRetreat検出と矛盾する偽陽性源)
+            if _payable(b) or (can_attach and any(_payable(b, e) for e in hand_e)):
                 sig(f"MissedFreeAdvance|逃げ0壁でEND({nm(b.get('id'))}前進で攻撃可)", g["ep"], cur.get("turn"))
                 break
 
@@ -1199,6 +1227,81 @@ def det_bench_heal_missed(g, sig):
         sig("BenchHealMissed|エネ0重傷ベンチ×ミツル在手なのに回復せず", g["ep"], cur.get("turn"))
 
 
+def det_energy_type_skew(g, sig):
+    """EnergyTypeSkew: 同一対象へのエネattachで、選んだエネは最大技の未充足コストを進めないのに、
+    手札の別エネなら進められた(例: Phantom Dive={R}{P}にR在中でRを重ね、Pが手札にあった)。
+    (人間レビュー10巡目: dragapult相手botのR+R重ねで技が撃てず)"""
+    import re as _re
+
+    def _esyms(eid):
+        ei = C.get(eid)
+        if not ei:
+            return []
+        return (_re.findall(r"\{([A-Z])\}", ei.type or "")
+                or _re.findall(r"\{([A-Z])\}", ei.name or "") or ["C"])
+
+    def _progresses(eid, spot):
+        bi = C.get(spot.get("id"))
+        if not bi:
+            return None
+        att = []
+        for ec in (spot.get("energyCards") or []):
+            att += _esyms(ec.get("id"))
+        best = None
+        for m in bi.moves:
+            mt = _re.match(r"(\d+)", str(m.damage or ""))
+            if mt and (best is None or int(mt.group(1)) > best[0]):
+                best = (int(mt.group(1)), m.cost or "")
+        if not best:
+            return None
+        need = _re.findall(r"\{([A-Z])\}", best[1])
+        pool = list(att)
+        remaining = [t for t in need if not (t in pool and (pool.remove(t) or True))]
+        any_left = max(0, best[1].count("●") - len(pool))
+        mine = _esyms(eid)
+        return any(t in remaining for t in mine) or (any_left > 0 and bool(mine))
+
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != ATTACH:
+            continue
+        hand = me.get("hand") or []
+
+        def _hand_id(idx):
+            return hand[idx].get("id") if idx is not None and 0 <= idx < len(hand) else None
+
+        def _spot(o):
+            spots = (me.get("active") if o.get("inPlayArea") == 4 else me.get("bench")) or []
+            i = o.get("inPlayIndex")
+            return spots[i] if i is not None and 0 <= i < len(spots) else None
+
+        eid = _hand_id(ch.get("index"))
+        spot = _spot(ch)
+        if eid is None or spot is None:
+            continue
+        def _is_energy_card(cid):
+            ci = C.get(cid)
+            return bool(ci) and "Energy" in (ci.name or "")
+        if not _is_energy_card(eid):
+            continue  # 道具(ケープ等)のattachは対象外
+        prog = _progresses(eid, spot)
+        if prog is not False:
+            continue  # 進めている/最大技情報なし=対象外
+        for o in (sel.get("option") or []):
+            if o.get("type") != ATTACH or o is ch:
+                continue
+            if o.get("inPlayArea") != ch.get("inPlayArea") or o.get("inPlayIndex") != ch.get("inPlayIndex"):
+                continue
+            alt = _hand_id(o.get("index"))
+            if alt is not None and alt != eid and _is_energy_card(alt) and _progresses(alt, spot):
+                sig(f"EnergyTypeSkew|未充足を進めないエネ選択({nm(eid)}→{nm(spot.get('id'))}, {nm(alt)}なら前進)",
+                    g["ep"], cur.get("turn"))
+                return
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1210,7 +1313,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_doomed_no_retreat,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
              det_basic_unbenched, det_evolve_trigger_before_develop,
-             det_spread_into_immune, det_bench_heal_missed]
+             det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew]
 
 
 # ============ Layer 2: Aggregator ============

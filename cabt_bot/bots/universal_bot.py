@@ -248,6 +248,8 @@ def infer_plan(decklist) -> DeckPlan:
         lethal=True,                       # KOできる技を優先(デッキ非依存の普遍原則)
         hp_boost_tools=hp_tools,           # ケープ等: 被KO圏→生存圏の反転を最優先
         avoid_overstack=True,              # 飽和対象への追加エネを後回し=後継を並行育成(Attach監査49%=過積みの修正)
+        reposition=True,                   # 壁→攻撃役の前進(未設定=壁でENDしMissedFreeAdvance。QA alakazam T4)
+        eager_reposition=True,             # エネ付け前判定版(ゲートは「殴れる」検証済のみ通す)
         setup_energy=setup or 0,
         card_values=card_values,
         play_priority=play_priority,

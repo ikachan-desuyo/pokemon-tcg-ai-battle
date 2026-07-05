@@ -412,7 +412,17 @@ class DeckBot(Bot):
                 # 水2枚+手札水でイグニを貼った局面の修正)。
                 if self._basic_attach_suffices(me, op, hand):
                     continue
-            key = (rule,
+            spots_k = (me.get("active") if op.in_play_area == AreaType.ACTIVE else me.get("bench")) or []
+            sp_k = (spots_k[op.in_play_index]
+                    if op.in_play_index is not None and 0 <= op.in_play_index < len(spots_k) else None)
+            comp = self._completes_cost(energy, target, sp_k)
+            # 規則(plan)適合を最上位に、その中でコスト充足を優先。compを全体最優先にすると
+            # 脇役の1エネ技「完成」(comp=2)が計画の主役育成(水→メガ, rule>0)を上書きして
+            # WallRetreat再発(QA 2件)。逆にruleを最上位にすると同一対象のR+R重ね(rule大)が
+            # P充足(rule小)に勝つ(人間レビュー10巡目)。→「rule有無」→「充足」→「rule順位」。
+            key = (1 if rule > 0 else 0,
+                   comp,
+                   rule,
                    1 if target in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
             if self.plan.avoid_overstack:
@@ -424,6 +434,95 @@ class DeckBot(Bot):
             if key > best_key:
                 best_key, best = key, i
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
+
+    def _energy_provides_syms(self, eid):
+        """エネカードが供給する型記号(基本エネ={X}1個, volatile(イグニ)=C3, その他type欄から)。"""
+        import re
+        ci = self._cardinfo.get(eid)
+        if not ci:
+            return []
+        syms = re.findall(r"\{([A-Z])\}", ci.type or "") or re.findall(r"\{([A-Z])\}", ci.name or "")
+        if syms:
+            return syms
+        return ["C", "C", "C"] if eid in self.plan.volatile_energies else ["C"]
+
+    def _completes_cost(self, energy_id, target_id, sp) -> int:
+        """このエネが対象の最大ダメージ技の未充足コストを進めるか(1/0)。
+        2色コスト(Phantom Dive={R}{P}等)で同型の重ね貼り(R+R)を防ぐ
+        (人間レビュー10巡目: dragapult相手botがP在手でRを重ねて技が撃てず)。"""
+        import re
+        info = self._cardinfo.get(target_id)
+        if not info or not sp:
+            return 0
+        att = []
+        for ec in (sp.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        best = None
+        for m in info.moves:
+            if not m.damage:
+                continue
+            mt = re.match(r"(\d+)", str(m.damage))
+            if mt and (best is None or int(mt.group(1)) > best[0]):
+                best = (int(mt.group(1)), m.cost or "")
+        if not best:
+            return 0
+        need_spec = re.findall(r"\{([A-Z])\}", best[1])
+        n_any = best[1].count("●")
+        pool = list(att)
+        remaining = []
+        for t in need_spec:
+            if t in pool:
+                pool.remove(t)
+            else:
+                remaining.append(t)
+        any_left = max(0, n_any - len(pool))
+        # energy_id=None は「追加なしで既に最大技が払えるか」の問い(前進ゲート①)
+        mine = self._energy_provides_syms(energy_id) if energy_id is not None else []
+        if energy_id is not None:
+            progresses = any(t in remaining for t in mine) or (any_left > 0 and bool(mine))
+            if not progresses:
+                return 0
+        # この1枚で最大技が完成する(=今すぐ/次の攻撃が立つ)なら最上位
+        m2 = list(mine)
+        rem2 = []
+        for t in remaining:
+            if t in m2:
+                m2.remove(t)
+            else:
+                rem2.append(t)
+        left2 = max(0, any_left - len(m2))
+        if not rem2 and left2 == 0:
+            return 2
+        return 1 if energy_id is not None else 0
+
+    def _move_payable(self, sp, extra_energy_id=None) -> bool:
+        """このスポットが(任意でextraを1枚貼れば)いずれかの攻撃を払えるか。
+        前進ゲート用: 「最大技の完成」でなく「殴れるか」(安い技でも前進の価値はある)。"""
+        import re
+        info = self._cardinfo.get(sp.get("id")) if sp else None
+        if not info:
+            return False
+        att = []
+        for ec in (sp.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        if extra_energy_id is not None:
+            att += self._energy_provides_syms(extra_energy_id)
+        for m in info.moves:
+            if not m.damage:
+                continue
+            need = re.findall(r"\{([A-Z])\}", m.cost or "")
+            n_any = (m.cost or "").count("●")
+            pool = list(att)
+            ok = True
+            for t in need:
+                if t in pool:
+                    pool.remove(t)
+                else:
+                    ok = False
+                    break
+            if ok and len(pool) >= n_any:
+                return True
+        return False
 
     def _basic_attach_suffices(self, me, op, hand) -> bool:
         """volatile(イグニ等)でなく手札の基本エネ1枚で、attach対象の最大コスト技が今ターン払えるか。
@@ -1348,7 +1447,7 @@ class DeckBot(Bot):
             return True
         act = (me.get("active") or [None])[0]
         if (act and act.get("id") in self.plan.attackers
-                and not (act.get("energies") or [])):
+                and not (act.get("energyCards") or [])):
             if any((d.get("id") or 99) < 10 for d in discard):  # 基本エネ(小ID)
                 return True
         return False
@@ -1443,7 +1542,15 @@ class DeckBot(Bot):
         if act[0].get("id") in self.plan.attackers:
             return False  # 既に攻撃役が前
         for sp in me.get("bench") or []:
-            if not sp or sp.get("id") not in self.plan.attackers or not (sp.get("energies") or []):
+            if not sp or sp.get("id") not in self.plan.attackers:
+                continue
+            # 「エネ有」の旧判定は存在しないフィールド("energies")で常に偽=経路全体が休眠していた。
+            # 正しくは「前進すれば殴れる」(既に払える or 手貼りで完成)。
+            hand_e = [c.get("id") for c in (me.get("hand") or []) if self._is_energy(c.get("id"))]
+            payable = (self._move_payable(sp)
+                       or (not (self._cur or {}).get("energyAttached")
+                           and any(self._move_payable(sp, e) for e in hand_e)))
+            if not payable:
                 continue
             info = self._cardinfo.get(sp.get("id"))
             if info and info.is_basic:
@@ -1473,8 +1580,15 @@ class DeckBot(Bot):
             info = self._cardinfo.get(sp.get("id"))
             if info and info.is_basic:
                 continue
-            if sp.get("energies") or (not_attached and have_energy):
-                return True
+            if self._move_payable(sp):
+                return True  # 既にいずれかの技が払える=前進すれば殴れる
+            # ②は「そのエネを貼ればいずれかの技が立つ」場合のみ(イグニ=C3なら3エネ技成立。
+            # 基本1枚で3エネ技は立たない=前進しても殴れずWallRetreat。QA再発2件の修正)
+            if not_attached:
+                for c in (hand or []):
+                    cid = c.get("id")
+                    if self._is_energy(cid) and self._move_payable(sp, cid):
+                        return True
         return False
 
     def _active_attack_potential(self, assume_hand_attach: bool = False):

@@ -26,6 +26,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -60,6 +62,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -72,7 +76,7 @@
   "match": "WallRetreat",
   "fix": "後段_should_repositionに先攻T1ガード",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-03",
+  "graduated": "2026-07-06",
   "cycles": [
    2,
    0,
@@ -93,10 +97,14 @@
    0,
    0,
    0,
+   0,
+   2,
+   0,
    0
   ],
-  "regressions": 0,
-  "cause": "Playability Gate欠如(前提条件の未確認)"
+  "regressions": 1,
+  "cause": "Playability Gate欠如(前提条件の未確認)",
+  "note": "2026-07-06 未コミット修正(completes全体最優先キー)の副作用で一時再発2件→キー再設計(rule有無→充足)で0件。コミット前捕捉"
  },
  "MissedLethal(Boss順序)": {
   "status": "Graduated",
@@ -127,6 +135,8 @@
    0,
    3,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -142,6 +152,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -192,6 +204,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -221,7 +235,9 @@
    106,
    117,
    110,
-   107
+   107,
+   146,
+   125
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -250,7 +266,9 @@
    31,
    16,
    29,
-   21
+   21,
+   17,
+   30
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -283,7 +301,9 @@
    13,
    25,
    12,
-   13
+   13,
+   41,
+   24
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -316,7 +336,9 @@
    18,
    18,
    17,
-   11
+   11,
+   20,
+   24
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -348,6 +370,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -366,6 +390,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
    0,
    0,
    0,
@@ -410,6 +436,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -439,6 +467,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -454,6 +484,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
    0,
    0,
    0,
@@ -494,6 +526,8 @@
    2,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -519,6 +553,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -533,6 +569,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -566,18 +604,20 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "DeadEvolutionPick": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "DeadEvolutionPick",
   "match": "DeadEvolutionPick",
   "cause": "サーチ選択が置けるか(進化元の有無)を見ない=静的card_values(Mega100>リオル56)",
   "fix": "_opt_value: 進化元が場にも手札にも無い進化ポケは30に減価(土台を先に取る)。検出器は「候補内に土台が居たのに進化側を取った」場合のみ",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-05",
+  "graduated": "2026-07-06",
   "cycles": [
    2,
    0,
@@ -589,7 +629,9 @@
    0,
    2,
    0,
-   3
+   3,
+   0,
+   0
   ],
   "regressions": 3
  },
@@ -612,6 +654,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -626,6 +670,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -657,6 +703,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -671,6 +719,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -701,6 +751,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -721,6 +773,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -735,6 +789,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -753,6 +809,8 @@
   "cycles": [
    2,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -768,6 +826,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0
   ],
@@ -785,9 +845,49 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
   "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
+ },
+ "EnergyTypeSkew": {
+  "status": "Fix Applied",
+  "detector": "EnergyTypeSkew",
+  "match": "EnergyTypeSkew",
+  "fix": "_completes_cost(未充足コスト前進判定)をattachキーに追加(rule有無→充足→rule順位)",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "エネ選択がrule(型)のみで技コストの充足状態を見ない(二色コストでR+R重ね)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "人間レビュー10巡目 dragapult-3 s42(相手bot)。旧リプレイで検出器発火/修正後0件を確認"
+  }
+ },
+ "DeadFieldEnergies": {
+  "status": "Fix Applied",
+  "detector": "(直接検出器なし: MissedFreeAdvance経由で露出)",
+  "match": "MissedFreeAdvance",
+  "fix": "sp.get('energies')→energyCards基準の_move_payable(いずれかの攻撃が払えるか)に統一。非eager前進経路の休眠解除+universal planにreposition有効化",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "存在しないフィールド名('energies')参照=条件が常に偽の休眠バグ(3箇所)。検出器側も「エネ1枚=攻撃可」の緩い意味論で不一致",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "QA alakazam/lucario。bot+検出器を_move_payable同一意味論に統一しQA 30戦+60戦で0件"
+  }
  }
 }
