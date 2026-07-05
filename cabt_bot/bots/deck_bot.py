@@ -493,10 +493,21 @@ class DeckBot(Bot):
             # 脇役の1エネ技「完成」(comp=2)が計画の主役育成(水→メガ, rule>0)を上書きして
             # WallRetreat再発(QA 2件)。逆にruleを最上位にすると同一対象のR+R重ね(rule大)が
             # P充足(rule小)に勝つ(人間レビュー10巡目)。→「rule有無」→「充足」→「rule順位」。
+            # 先攻T1(攻撃不可)×activeが次ターン確殺圏なら、activeへの貼りは失われる
+            # =ベンチの同候補を優先(人間レビュー17巡目 lucario-2 T1: Cosmic Beam 70が
+            # Staryu 70にちょうど致死なのにactiveへ貼りT2に喪失→回収に夜のタンカ1枚を費消)
+            act_doomed_t1 = 0
+            if op.in_play_area == AreaType.ACTIVE:
+                cur_k = self._cur or {}
+                if (cur_k.get("turn") == 1 and cur_k.get("yourIndex") == cur_k.get("firstPlayer")):
+                    act_k = (me.get("active") or [None])[0]
+                    if act_k and (act_k.get("hp") or 0) <= self._incoming_next_turn(act_k):
+                        act_doomed_t1 = 1
             key = (1 if rule > 0 else 0,
                    comp,
                    rule,
                    1 if target in self.plan.attackers else 0,
+                   0 if act_doomed_t1 else 1,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
             if self.plan.avoid_overstack:
                 # 将来価値の低い投資先を後回し(汎用原則: エネは死ぬ前に価値を生む場所へ)。

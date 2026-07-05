@@ -2031,5 +2031,24 @@
    "rejected": 0,
    "note": "人間レビュー16巡目 lucario相手bot T8/T10"
   }
+ },
+ "T1DoomedActiveAttach": {
+  "status": "Fix Applied",
+  "detector": "(人間式1処理精読で発見。検出器なし=低頻度・低実害)",
+  "match": "-",
+  "fix": "_pick_attachキーに「先攻T1(攻撃不可)×activeが次ターン確殺圏→ベンチ同候補を優先」",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "attachのactive優先キーが「このターン攻撃できない×activeが確実に死ぬ」場面を見ない。エネ喪失→回収アイテム1枚の費消(lucario-2 T1: Cosmic Beam 70=Staryu 70ちょうど)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "17巡目=ツール非依存の全決定精読(勝ち試合含む)1本目で発見。arch-0の同型局面(脅威30=生存圏)ではactive貼りが正当と対比確認"
+  }
  }
 }
