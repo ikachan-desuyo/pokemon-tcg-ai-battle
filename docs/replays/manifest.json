@@ -1,24 +1,24 @@
 {
  "replays": [
   {
-   "file": "arch-13.json",
-   "label": "arch-13 長期戦負け18T"
+   "file": "mirror-18 長期戦負け20T.json",
+   "label": "mirror-18 長期戦負け20T"
   },
   {
-   "file": "mirror-0.json",
-   "label": "mirror-0 逆転負け6T(5-3)"
-  },
-  {
-   "file": "mirror-3.json",
-   "label": "mirror-3 接戦負け14T"
-  },
-  {
-   "file": "arch-18.json",
+   "file": "arch-18 難しい勝ち21T.json",
    "label": "arch-18 難しい勝ち21T"
   },
   {
-   "file": "mirror-18.json",
-   "label": "mirror-18 長期戦負け20T"
+   "file": "mirror-3 接戦負け14T.json",
+   "label": "mirror-3 接戦負け14T"
+  },
+  {
+   "file": "mirror-0 逆転負け6T(5-3).json",
+   "label": "mirror-0 逆転負け6T(5-3)"
+  },
+  {
+   "file": "arch-13 長期戦負け18T.json",
+   "label": "arch-13 長期戦負け18T"
   }
  ]
 }
