@@ -495,6 +495,36 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
+    def _spot_kos_opp_active(self, sp) -> bool:
+        """このスポットが(前に出れば)現在の付きエネで相手activeをKOできるか。"""
+        import re
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        info = self._cardinfo.get(sp.get("id")) if sp else None
+        if not oa or not info:
+            return False
+        att = []
+        for ec in (sp.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        best = 0
+        for m in info.moves:
+            need = re.findall(r"\{([A-Z])\}", m.cost or "")
+            pool = list(att)
+            ok = True
+            for t in need:
+                if t in pool:
+                    pool.remove(t)
+                else:
+                    ok = False
+                    break
+            if not ok or len(pool) < (m.cost or "").count("●"):
+                continue
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            if mt:
+                best = max(best, self._eff_dmg(int(mt.group(1)), False, oa.get("id")))
+        return best >= (oa.get("hp") or 9999)
+
     def _move_payable(self, sp, extra_energy_id=None) -> bool:
         """このスポットが(任意でextraを1枚貼れば)いずれかの攻撃を払えるか。
         前進ゲート用: 「最大技の完成」でなく「殴れるか」(安い技でも前進の価値はある)。"""
@@ -854,6 +884,9 @@ class DeckBot(Bot):
             return out
         dmg = _line_threat(opp_a.get("id"))              # 相手の進化含む最大火力
         mc = self._cardinfo.get(my_a.get("id")); oc = self._cardinfo.get(opp_a.get("id"))
+        # 効果文の可変ダメージ(Powerful Hand=手札枚数×等)はline_threat(静的)に乗らない=実数で補完
+        for m in (oc.moves if oc else []):
+            dmg = max(dmg, self._effect_move_damage(m, my_a))
         if mc and oc and mc.weakness and oc.type == mc.weakness:
             dmg *= 2                                      # 自分の弱点で2倍
         hp = my_a.get("hp", 0)
@@ -1408,6 +1441,8 @@ class DeckBot(Bot):
                 pr = self.analyze_prize()
                 loses_game = (self._prize_value(sp.get("id")) >= (pr.get("opp_prizes") or 6)
                               and (sp.get("hp") or 0) <= th)
+                if loses_game and self._spot_kos_opp_active(sp):
+                    loses_game = False   # 前に出て今KOできるなら脅威側が消える(ベイト扱いしない)
                 key = (0 if loses_game else 1,                      # 次打KO=負け確定の昇格先を避ける
                        1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
                        1 if sp.get("id") in self.plan.attackers else 0,
@@ -1608,11 +1643,15 @@ class DeckBot(Bot):
             if self._move_payable(sp):
                 return True  # 既にいずれかの技が払える=前進すれば殴れる
             # ②は「そのエネを貼ればいずれかの技が立つ」場合のみ(イグニ=C3なら3エネ技成立。
-            # 基本1枚で3エネ技は立たない=前進しても殴れずWallRetreat。QA再発2件の修正)
+            # 基本1枚で3エネ技は立たない=前進しても殴れずWallRetreat。QA再発2件の修正)。
+            # かつエネ規則がその攻撃役に付くこと(規則がベンチの主役を指すと、前進後の
+            # attachがベンチへ流れて攻撃不発=退却権の浪費。自己レビューalakazam-2 T11/13)
             if not_attached:
                 for c in (hand or []):
                     cid = c.get("id")
-                    if self._is_energy(cid) and self._move_payable(sp, cid):
+                    if (self._is_energy(cid) and self._move_payable(sp, cid)
+                            and (self._energy_rule_rank(cid, sp.get("id")) > 0
+                                 or not self.plan.energy_rules)):
                         return True
         return False
 
@@ -1763,6 +1802,36 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _effect_move_damage(self, m, my_spot) -> int:
+        """damage欄が空/固定の技でも、効果文の可変ダメージを「見えている実数」で評価する。
+        Powerful Hand(ダメカン2×相手手札枚数=公開情報)で330のMegaが一撃圏なのに
+        20点扱い→3枚献上ベイトを前に出して敗北(自己レビュー alakazam-9 T7)。
+        次の相手ターン想定なので手札は+1(ドロー分)。"""
+        import re
+        eff = (m.effect or "")
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        hc = opp.get("handCount")
+        if hc is None:
+            h = opp.get("hand")
+            hc = len(h) if isinstance(h, list) else 0
+        hc += 1
+        base = 0
+        mt = re.match(r"(\d+)", str(m.damage or ""))
+        if mt:
+            base = int(mt.group(1))
+        dmg = 0
+        mt = re.search(r"lace (\d+) damage counters? on your opponent[’']s Active Pokémon for each card in your hand", eff)
+        if mt:
+            dmg = max(dmg, 10 * int(mt.group(1)) * hc)
+        mt = re.search(r"does (\d+) (?:more )?damage for each card in your hand", eff)
+        if mt:
+            dmg = max(dmg, base + int(mt.group(1)) * hc)
+        mt = re.search(r"does (\d+) more damage for each Energy attached to your opponent[’']s Active", eff)
+        if mt and my_spot is not None:
+            dmg = max(dmg, base + int(mt.group(1)) * len(my_spot.get("energyCards") or []))
+        return dmg
+
     def _incoming_next_turn(self, my_spot) -> int:
         """次の相手ターンの現実的な最大被ダメ(弱点込み): 相手activeライン(進化1段含む)の技のうち
         「現エネ+手貼り1枚(イグニ観測済みなら+3)」で払える最大。ライン最大(line_threat)より現実的
@@ -1787,12 +1856,13 @@ class DeckBot(Bot):
                 moves += list(di.moves)
         best = 0
         for m in moves:
-            if not m.damage:
-                continue
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
-            mt = re.match(r"(\d+)", str(m.damage))
-            if mt and need <= e:
-                best = max(best, int(mt.group(1)))
+            if need > e:
+                continue
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            dm = int(mt.group(1)) if mt else 0
+            dm = max(dm, self._effect_move_damage(m, my_spot))
+            best = max(best, dm)
         cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oi and cc.weakness and oi.type == cc.weakness:
             best *= 2
@@ -1808,8 +1878,15 @@ class DeckBot(Bot):
         if not oa:
             return 0
         t = _line_threat(oa.get("id")) or 0
-        cc = self._cardinfo.get(my_spot.get("id"))
         oc = self._cardinfo.get(oa.get("id"))
+        # 効果文の可変ダメージ(手札枚数×等)はline_threat(静的)に乗らない=実数で補完
+        moves = list(oc.moves) if oc else []
+        for did, di in self._cardinfo.items():
+            if oc and di.previous_stage == oc.name and di.is_pokemon and did in self._opp_seen:
+                moves += list(di.moves)
+        for m in moves:
+            t = max(t, self._effect_move_damage(m, my_spot))
+        cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2
         return t

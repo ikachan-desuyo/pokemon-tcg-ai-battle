@@ -30,6 +30,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -41,7 +44,7 @@
   "match": "LastStand|単騎×被KO×非致死|リーリエ打てたのに未使用",
   "fix": "Lillie緊急Gate(単騎×被KO圏×手札にたね/ポフィン無し)",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    11,
    0,
@@ -68,9 +71,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 2,
+  "regressions": 3,
   "cause": "緊急時Gate欠如",
   "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
@@ -106,9 +112,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   2,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "Playability Gate欠如(前提条件の未確認)",
   "note": "2026-07-06 未コミット修正(completes全体最優先キー)の副作用で一時再発2件→キー再設計(rule有無→充足)で0件。コミット前捕捉"
  },
@@ -145,6 +154,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -160,6 +172,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -218,6 +233,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -251,7 +269,10 @@
    146,
    125,
    112,
-   116
+   116,
+   140,
+   121,
+   102
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -284,7 +305,10 @@
    17,
    30,
    23,
-   20
+   20,
+   17,
+   15,
+   19
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -321,7 +345,10 @@
    41,
    24,
    24,
-   28
+   28,
+   35,
+   27,
+   24
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -358,7 +385,10 @@
    20,
    24,
    18,
-   26
+   26,
+   22,
+   23,
+   16
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -394,6 +424,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -412,6 +445,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -464,6 +500,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -486,6 +525,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -530,6 +572,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -541,7 +586,7 @@
   "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
   "fix": "_should_use_lillieにエネ掘り(最大技不達×手札エネ0×p_draw>=0.55)を枚数/キー温存ゲートより前に。検出器は実カードの最大技コスト基準(3固定はMega Brave 2エネを誤検出)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-05",
+  "graduated": "2026-07-06",
   "cycles": [
    5,
    3,
@@ -560,9 +605,12 @@
    0,
    0,
    0,
+   0,
+   2,
+   0,
    0
   ],
-  "regressions": 2,
+  "regressions": 3,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
  },
  "HealMissed": {
@@ -589,6 +637,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -603,6 +654,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -644,6 +698,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -668,6 +725,9 @@
    2,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -698,6 +758,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -712,6 +775,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -751,6 +817,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -762,7 +831,7 @@
   "cause": "昇格/退避先の生存評価欠如+死進化減価が盤面ポケモンを汚染し全候補30点(先頭選び)",
   "fix": "_opt_value減価を取得ゾーン限定+TO_ACTIVE/SWITCH自側に生存優先キー(耐える>攻撃役>エネ>HP)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    2,
    0,
@@ -777,9 +846,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   4,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "WeakAdvance": {
   "status": "Graduated",
@@ -788,7 +860,7 @@
   "cause": "脅威モデルが悲観的すぎ(ライン最大210固定)=エネ0の相手にも壁を退いて素材を晒す",
   "fix": "_incoming_next_turn(現エネ+1で払える技×観測済み進化のみ)で壁の生存を現実評価。耐えるならたね前進せず",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    0,
@@ -803,9 +875,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "BasicUnbenched": {
   "status": "Graduated",
@@ -821,6 +896,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -848,6 +926,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -862,6 +943,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -887,6 +971,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -907,6 +994,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -920,6 +1010,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0
@@ -944,6 +1037,9 @@
    2,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -957,13 +1053,16 @@
   "graduated": "2026-07-06"
  },
  "DoomedGameLoss": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "DoomedGameLoss",
   "match": "DoomedGameLoss",
   "fix": "_should_switch/_should_retreat_doomedに敗北回避オーバーライド(active KO=相手残サイド充足なら、エネ投資/攻撃テンポ無関係に退避。今殴って勝ち切れる時のみ残る)+昇格ランキングに負け確定回避キー。後続生存は現実的評価(_incoming_next_turn)",
   "first_seen": "2026-07-06",
   "cycles": [
    7,
+   0,
+   1,
+   0,
    0
   ],
   "regressions": 0,
@@ -973,6 +1072,45 @@
    "confirmed": 2,
    "rejected": 0,
    "note": "自己レビュー: arch-7 T17(Switch在手でMega110=3枚を220の前に放置=敗着と実証)+lucario-1 T9(同型)。60戦コーパス7件(相手bot側5件含む)→修正後60戦0件"
+  },
+  "graduated": "2026-07-06"
+ },
+ "VariableThreatBlind": {
+  "status": "Fix Applied",
+  "detector": "(DoomedGameLoss/PromotionSkew/WeakAdvance経由で顕在化)",
+  "match": "DoomedGameLoss",
+  "fix": "_effect_move_damage: 効果文の可変ダメージ(Powerful Hand=ダメカン2×手札枚数/エネ×50追加)を公開情報の実数(相手手札+1, 付きエネ数)で評価し、_incoming_next_turn/_incoming_threat/analyze_threat(can_ko_me)の3箇所+Reviewer(_incoming/_incoming_next)に配線",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "脅威評価がdamage欄のみ参照=効果文の可変ダメージ(手札枚数×)が0/20点扱い。相手手札18枚=360点(公開情報)で330のMega ex=3枚ベイトを一撃圏に置いた",
+  "evidence": {
+   "frequency": 3,
+   "confirmed": 2,
+   "rejected": 0,
+   "note": "自己レビュー alakazam-9 T7(敗着)+alakazam-1 T7(can_ko_me=False for Switch gate)。修正後alakazam 6→9/10・対フィールド94%"
+  }
+ },
+ "EagerRetreatIncoherence": {
+  "status": "Fix Applied",
+  "detector": "WallRetreat",
+  "match": "WallRetreat",
+  "fix": "eager退却②に「エネ規則がその攻撃役に付く」条件(付け先がベンチ主役に流れて攻撃不発=退却権浪費を防ぐ)。昇格の負けベイト回避キーに「今KOできるなら免除」",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "ゲート間不整合: eager退却は「前進後に貼って殴る」前提だが、attachのルールキーがベンチの主役を選ぶ=前提が満たされない",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "alakazam-2 T11/T13: 退却権をStaryu差し替えに浪費し相手active30hpへのKO機会を逃した"
   }
  }
 }
