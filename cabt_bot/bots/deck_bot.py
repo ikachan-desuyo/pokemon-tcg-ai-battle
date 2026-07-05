@@ -305,6 +305,14 @@ class DeckBot(Bot):
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
+            # ベンチの重傷攻撃役(エネ0=エネ戻し損失ゼロ)の回復は攻撃と両立する=lethalでも打つ
+            # (AI自己レビュー: dragapult-3 T11 ベンチMega30を放置→翌ターン多面KO負けの修正)。
+            me_h = self._me() or {}
+            for sp in me_h.get("bench") or []:
+                if (sp and sp.get("id") in self.plan.attackers
+                        and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
+                        and not (sp.get("energyCards") or [])):
+                    return 60
             if self._active_lethal_now():
                 return None
             # 重傷(150+)なら進化加速サポ(セイジ58)より優先(人間レビュー5巡目①: HP120のactiveを
@@ -328,9 +336,11 @@ class DeckBot(Bot):
         # エネ補給サポ(トウコ等): 進化アタッカーが居て攻撃できない(エネ切れ)なら優先＝攻撃を早める
         if cid in self.plan.energy_supporters and self._attacker_needs_energy():
             return 83
-        # 引きずり出し系(ボス等): KO(サイド獲得)を生む時のみ
+        # 引きずり出し系(ボス等): KO(サイド獲得)を生む時のみ。勝ち切れる(取れるサイド>=残り)なら最優先
         if cid in self.plan.boss_cards:
-            return 62 if self._should_play_boss() else None
+            if not self._should_play_boss():
+                return None
+            return 95 if self._boss_wins_game() else 62
         # 回収系(夜のタンカ等): トラッシュに回収価値がある時のみ（無駄打ち防止）
         if cid in self.plan.recover_cards:
             return 50 if self._has_recover_target() else None
@@ -1480,8 +1490,10 @@ class DeckBot(Bot):
             return 0, False
         me = cur["players"][cur["yourIndex"]]
         act = (me.get("active") or [None])[0]
-        if not act or act.get("id") not in self.plan.attackers:
+        if not act:
             return 0, False
+        # プランのattackers限定にしない=実カードの技で評価(AI自己レビュー: Cinderaceの
+        # Turbo Flare 50を火力0扱いし、残1でボス→ベンチKO=勝ちの局面を見逃して敗北)
         info = self._cardinfo.get(act.get("id"))
         if not info:
             return 0, False
@@ -1581,6 +1593,14 @@ class DeckBot(Bot):
         for did in (self.deck_counts or {}):
             d = self._cardinfo.get(did)
             if d and d.previous_stage and d.previous_stage == info.name:
+                return True
+        return False
+
+    def _bench_damage_immune(self, cid) -> bool:
+        """ベンチに居る限りワザのダメージを防ぐ特性(Dragapult exのTera等)を持つか。"""
+        info = self._cardinfo.get(cid)
+        for m in (info.moves if info else []):
+            if "on your Bench, prevent all damage" in (m.effect or ""):
                 return True
         return False
 
@@ -1719,6 +1739,19 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _deck_likely_has(self, cid) -> bool:
+        """カードcidが山に残っている見込み(デッキ構成枚数 - 可視枚数 > 0)。"""
+        total = (self.deck_counts or {}).get(cid, 0)
+        if total <= 0:
+            return False
+        me = self._me() or {}
+        vis = sum(1 for c in (me.get("hand") or []) if c.get("id") == cid)
+        vis += sum(1 for c in (me.get("discard") or []) if c.get("id") == cid)
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if sp and sp.get("id") == cid:
+                vis += 1
+        return total - vis > 0
+
     def _has_evolution_target(self) -> bool:
         """場に『山札から進化できるポケモン』が居るか(セイジ等 進化加速サポの前提条件)。
         ＝場のポケモン名を進化前(previous_stage)に持つカードがデッキに存在する。"""
@@ -1730,7 +1763,10 @@ class DeckBot(Bot):
         in_play_names.discard(None)
         for cid, n in self.deck_counts.items():
             info = self._cardinfo.get(cid)
-            if info and info.previous_stage in in_play_names:
+            if (info and info.previous_stage in in_play_names
+                    and self._deck_likely_has(cid)):
+                # 山に実際に残っている見込みのみ(手札に全部あると空振り=サポ権浪費。
+                # AI自己レビュー: alakazam-3 T11でMega4枚全部手札なのにセイジ使用)
                 return True
         return False
 
@@ -1829,6 +1865,23 @@ class DeckBot(Bot):
                 return True  # アタッカー不在→高確率に引ける
         return False
 
+    def _boss_wins_game(self) -> bool:
+        """ボスで引き出せるベンチKOのサイドが残り必要数以上=このボスで勝ち切れるか。"""
+        cur = self._cur
+        if not cur:
+            return False
+        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
+        if dmg <= 0:
+            return False
+        me = cur["players"][cur["yourIndex"]]
+        opp = cur["players"][1 - cur["yourIndex"]]
+        need = len(me.get("prize") or []) or 6
+        best = 0
+        for sp in opp.get("bench") or []:
+            if sp and self._eff_dmg(dmg, ign, sp.get("id")) >= (sp.get("hp") or 9999):
+                best = max(best, self._prize_value(sp.get("id")))
+        return best >= need
+
     def _should_play_boss(self) -> bool:
         """ボスは『前を倒せない×ベンチにKO可能あり』または『より大きなサイドを取れる』時のみ。"""
         cur = self._cur
@@ -1907,6 +1960,10 @@ class DeckBot(Bot):
             if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
                 sp = spots[op.index]
                 cid = sp.get("id")
+                # ベンチ被ダメ無効(Dragapult exのTera等)は撒き対象から除外=ダメージが入らない
+                # (AI自己レビュー: dragapult-3 T9/T11で撒き50を2回無駄にした)
+                if spread and op.area != AreaType.ACTIVE and self._bench_damage_immune(cid):
+                    continue
                 hp = sp.get("hp", 9999)
                 threat = _line_threat(cid)   # 進化ライン脅威度(例:リオル=メガルカリオ線)
                 if spread:

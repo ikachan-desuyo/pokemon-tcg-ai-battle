@@ -23,6 +23,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -51,6 +53,8 @@
    1,
    0,
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -84,6 +88,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -95,7 +101,7 @@
   "match": "MissedLethal",
   "fix": "assume_hand_attach(ボスゲート/ガスト選択を手貼り後火力で評価)+検出器のイグニ3エネ換算修正",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-03",
+  "graduated": "2026-07-05",
   "cycles": [
    1,
    1,
@@ -115,9 +121,11 @@
    0,
    0,
    0,
+   0,
+   3,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "評価タイミング(順序: 手貼り前に判断)",
   "note": "2026-07-04のRegressed判定は検出器偽陽性(lucario-1:T11=勝ち筋のエネがトウコ由来で1サポ制約と両立不能=H2)。検出器を選択肢実在+ターン単位+手貼り込み評価に修正(教訓4回目)。botの再発ではない"
  },
@@ -130,6 +138,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -174,6 +184,8 @@
    0,
    2,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -200,7 +212,9 @@
    106,
    115,
    122,
-   106
+   106,
+   117,
+   110
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -226,7 +240,9 @@
    28,
    14,
    17,
-   31
+   31,
+   16,
+   29
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -256,7 +272,9 @@
    27,
    25,
    23,
-   13
+   13,
+   25,
+   12
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -286,7 +304,9 @@
    12,
    25,
    23,
-   18
+   18,
+   18,
+   17
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -309,6 +329,8 @@
    0,
    0,
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -345,12 +367,14 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "FetchIgnition(1エネ圏)": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "FetchSkew(1エネ圏○×Ignition)",
   "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
   "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
@@ -371,9 +395,11 @@
    0,
    0,
    0,
-   0
+   0,
+   0,
+   1
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "BossNoPathGain": {
   "status": "Graduated",
@@ -393,6 +419,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -423,12 +451,14 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "EnergyStuckNoLillie": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "EnergyStuckNoLillie",
   "match": "EnergyStuckNoLillie",
   "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
@@ -446,7 +476,9 @@
    4,
    0,
    0,
-   2
+   2,
+   0,
+   0
   ],
   "regressions": 2,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
@@ -468,6 +500,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -482,6 +516,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -509,6 +545,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -529,9 +567,11 @@
    0,
    1,
    0,
+   0,
+   2,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "LillieOverLiveHeal": {
   "status": "Graduated",
@@ -549,6 +589,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -563,6 +605,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -588,6 +632,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -602,6 +648,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -626,24 +674,28 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "BasicUnbenched": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "BasicUnbenched",
   "match": "BasicUnbenched",
   "cause": "単騎リスク管理の欠如(ベンチ0でもたねの展開が優先されない)",
   "fix": "_play_score: ベンチ空なら手札のたねを最優先96(任意のたね)。相手archbotがRelicanth在手のままJudgeで流した事例",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-05",
   "cycles": [
    1,
    0,
    0,
    0,
-   1
+   1,
+   0,
+   0
   ],
   "regressions": 1
  },
@@ -657,8 +709,55 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0
+ },
+ "SpreadIntoImmune": {
+  "status": "Graduated",
+  "detector": "SpreadIntoImmune",
+  "match": "SpreadIntoImmune",
+  "cause": "対象選択がダメージ無効特性を読まない(Dragapult exのTera=ベンチ被ダメ無効へ撒き50を2回浪費)",
+  "fix": "_ko_gust_pickの撒き候補からベンチ被ダメ無効持ちを除外(効果文パース)",
+  "first_seen": "2026-07-05",
+  "graduated": "2026-07-05",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
+ },
+ "BenchHealMissed": {
+  "status": "Graduated",
+  "detector": "BenchHealMissed",
+  "match": "BenchHealMissed",
+  "cause": "ミツルのlethal_nowゲートが過剰(エネ0ベンチ回復は攻撃と両立するのに封印→多面KO負け)",
+  "fix": "エネ0×重傷150+のベンチ攻撃役が居ればlethalでも回復60。検出器はサポ権未使用ケース限定",
+  "first_seen": "2026-07-05",
+  "graduated": "2026-07-05",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
+ },
+ "AttackPotentialPlanBlind": {
+  "status": "Graduated",
+  "detector": "MissedLethal(既存が捕捉)",
+  "match": "__manual__",
+  "cause": "火力評価がプランattackers限定=Cinderace(Turbo Flare 1エネ50+エネ3枚配分)を火力0扱い→残1のボス勝ち筋を見逃し敗北(alakazam-3)",
+  "fix": "_active_attack_potentialのattackers制約を除去=実カードの技で評価+勝ち切りボス95点(Switch64より優先)+セイジの山残确認",
+  "first_seen": "2026-07-05",
+  "graduated": "2026-07-05",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
  }
 }

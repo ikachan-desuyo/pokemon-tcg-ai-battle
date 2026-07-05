@@ -39,7 +39,9 @@ BLOCKING_PREFIXES = [
     "PromotionSkew",                                         # 昇格が耐える主力を選ばない(人間レビュー7巡目)
     "WeakAdvance",
     "BasicUnbenched",
-    "EvolveTriggerBeforeDevelop",                            # 展開前に進化トリガー消費(9巡目)                                        # 単騎でたね在手なのに未展開(8巡目)                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
+    "EvolveTriggerBeforeDevelop",
+    "SpreadIntoImmune",
+    "BenchHealMissed",                            # 展開前に進化トリガー消費(9巡目)                                        # 単騎でたね在手なのに未展開(8巡目)                                           # 耐える壁を退き脆いたねを前進(人間レビュー7巡目)
 ]
 
 

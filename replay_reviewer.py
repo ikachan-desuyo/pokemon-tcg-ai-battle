@@ -1140,6 +1140,57 @@ def det_evolve_trigger_before_develop(g, sig):
             sig("EvolveTriggerBeforeDevelop|展開(スタジアム/たね)前に進化トリガーを消費", g["ep"], cur.get("turn"))
 
 
+def det_spread_into_immune(g, sig):
+    """SpreadIntoImmune: 撒き(攻撃効果のベンチ選択)の対象に、ベンチ被ダメ無効特性
+    (Dragapult exのTera等)持ちを選択=ダメージが完全に無駄(AI自己レビュー: dragapult-3 T9/T11)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"]:
+            continue
+        if (sel or {}).get("context") != 15:
+            continue
+        opts = sel.get("option") or []
+        if not opts or not all(o.get("playerIndex") == 1 - g["my"] for o in opts):
+            continue
+        pick = _spot_of(cur, g["my"], ch)
+        if not pick or ch.get("area") == 4:
+            continue                                    # active対象は無効特性の範囲外
+        ci = C.get(pick.get("id"))
+        if ci and any("on your Bench, prevent all damage" in (m.effect or "") for m in ci.moves):
+            # 他に有効な候補があった場合のみ(全候補が無効なら仕方ない)
+            others = [sp for sp in (_spot_of(cur, g["my"], o) for o in opts)
+                      if sp and sp is not pick
+                      and not (C.get(sp.get("id")) and any("on your Bench, prevent all damage" in (m.effect or "")
+                                                           for m in C[sp.get("id")].moves))]
+            if others:
+                sig(f"SpreadIntoImmune|被ダメ無効の{nm(pick.get('id'))}へ撒き(有効候補あり)", g["ep"], cur.get("turn"))
+
+
+def det_bench_heal_missed(g, sig):
+    """BenchHealMissed: エネ0×重傷150+のベンチ攻撃役(回復の機会損失ゼロ×攻撃と両立)が居て
+    ミツルがPLAY可能なのに、別サポを使った/サポ権未使用で手番を閉じた(AI自己レビュー: dragapult-3 T11)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if OT.get(ch.get("type")) not in ("ATTACK", "END"):
+            continue
+        if cur.get("supporterPlayed"):
+            continue    # サポ権を別用途(ボス=サイド/トウコ=攻撃成立等)に使ったのはH1=対象外
+        h = hand_ids(me)
+        if WALLY not in h:
+            continue
+        target = any(sp and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
+                     and not (sp.get("energyCards") or [])
+                     and (C.get(sp.get("id")) and not C[sp.get("id")].is_basic)
+                     for sp in (me.get("bench") or []))
+        if not target:
+            continue
+        sig("BenchHealMissed|エネ0重傷ベンチ×ミツル在手なのに回復せず", g["ep"], cur.get("turn"))
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1150,7 +1201,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_setup_skew, det_dead_evolution_pick, det_lillie_over_live_heal,
              det_doomed_no_retreat,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
-             det_basic_unbenched, det_evolve_trigger_before_develop]
+             det_basic_unbenched, det_evolve_trigger_before_develop,
+             det_spread_into_immune, det_bench_heal_missed]
 
 
 # ============ Layer 2: Aggregator ============
