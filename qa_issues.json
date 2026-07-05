@@ -20,6 +20,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -48,6 +50,8 @@
    1,
    0,
    2,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -63,6 +67,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -103,6 +109,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -130,6 +138,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -141,7 +151,7 @@
   "match": "SpreadSkew",
   "fix": "_spread_keyにsnipe項(主力線たね×撒き2発圏をreduceより優先)",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-03",
+  "graduated": "2026-07-05",
   "cycles": [
    19,
    0,
@@ -156,9 +166,11 @@
    0,
    0,
    0,
+   0,
+   2,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "優先度序列の設計(将来脅威の評価)"
  },
  "FetchSkew": {
@@ -179,7 +191,9 @@
    117,
    111,
    119,
-   106
+   106,
+   115,
+   122
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -202,7 +216,9 @@
    22,
    11,
    23,
-   28
+   28,
+   14,
+   17
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -229,7 +245,9 @@
    15,
    4,
    24,
-   27
+   27,
+   25,
+   23
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -256,7 +274,9 @@
    24,
    11,
    17,
-   12
+   12,
+   25,
+   23
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -282,6 +302,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -300,6 +322,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
    0,
    0,
    0,
@@ -332,6 +356,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -354,6 +380,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0
   ],
@@ -378,18 +406,20 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "EnergyStuckNoLillie": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "EnergyStuckNoLillie",
   "match": "EnergyStuckNoLillie",
   "cause": "Support Value(手札の質>枚数: エネ掘りリーリエ)",
   "fix": "_should_use_lillieにエネ掘り(最大技不達×手札エネ0×p_draw>=0.55)を枚数/キー温存ゲートより前に。検出器は実カードの最大技コスト基準(3固定はMega Brave 2エネを誤検出)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-05",
   "cycles": [
    5,
    3,
@@ -398,7 +428,9 @@
    3,
    0,
    0,
-   4
+   4,
+   0,
+   0
   ],
   "regressions": 1,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
@@ -417,6 +449,8 @@
    0,
    0,
    2,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -431,6 +465,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -452,6 +488,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -463,15 +501,17 @@
   "cause": "サーチ選択が置けるか(進化元の有無)を見ない=静的card_values(Mega100>リオル56)",
   "fix": "_opt_value: 進化元が場にも手札にも無い進化ポケは30に減価(土台を先に取る)。検出器は「候補内に土台が居たのに進化側を取った」場合のみ",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-05",
   "cycles": [
    2,
    0,
    0,
    0,
+   0,
+   1,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "LillieOverLiveHeal": {
   "status": "Graduated",
@@ -486,6 +526,8 @@
    0,
    0,
    2,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -503,23 +545,27 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
  },
  "GustTargetSkew": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "GustTargetSkew",
   "match": "GustTargetSkew",
   "cause": "選択ロジックの誤用(ボス引き出しに撒きキー=snipe項が漏出)",
   "fix": "_ko_gust_pick: _spread_keyはDAMAGE(攻撃効果)のみ。SWITCH(ボス)はKO×サイド価値",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-05",
   "cycles": [
    1,
    0,
    0,
-   1
+   1,
+   0,
+   0
   ],
   "regressions": 1
  },
@@ -533,6 +579,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0
@@ -551,6 +599,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -565,6 +615,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0

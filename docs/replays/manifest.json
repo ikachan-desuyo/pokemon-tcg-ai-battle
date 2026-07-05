@@ -1,6 +1,26 @@
 {
  "replays": [
   {
+   "file": "mirror-5 接戦負け16T.json",
+   "label": "mirror-5 接戦負け16T"
+  },
+  {
+   "file": "arch-0 長期接戦負け20T.json",
+   "label": "arch-0 長期接戦負け20T"
+  },
+  {
+   "file": "alakazam-0 逆転負け6T.json",
+   "label": "alakazam-0 逆転負け6T"
+  },
+  {
+   "file": "grimmsnarl-7 接戦負け12T(5-6).json",
+   "label": "grimmsnarl-7 接戦負け12T(5-6)"
+  },
+  {
+   "file": "dragapult-3 接戦負け12T(5-6).json",
+   "label": "dragapult-3 接戦負け12T(5-6)"
+  },
+  {
    "file": "mirror-18 長期戦負け20T.json",
    "label": "mirror-18 長期戦負け20T"
   },
