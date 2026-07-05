@@ -68,9 +68,12 @@ def play_recorded(mk_me, mk_opp, deck_me, deck_opp, label):
 
 def main():
     dl = [int(x) for x in open("decks/deck.csv").read().split() if x.strip()]
-    matchups = [("mirror", "deck", "deck", 20),
-                ("lucario", "ladder_lucario", "ladder_lucario", 20),
-                ("arch", "ladder_archaludon", "ladder_archaludon", 20)]
+    matchups = [("mirror", "deck", "deck", 10),
+                ("lucario", "ladder_lucario", "ladder_lucario", 10),
+                ("arch", "ladder_archaludon", "ladder_archaludon", 10),
+                ("dragapult", "dragapult", "dragapult", 10),
+                ("alakazam", "alakazam", "alakazam", 10),
+                ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl", 10)]
     counts = Counter(); reps = defaultdict(list); all_stats = []
     fam_side = {"self": Counter(), "opp": Counter()}   # 検出ファミリ別×側(自bot/相手bot)
 

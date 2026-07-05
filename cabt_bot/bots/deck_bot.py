@@ -1883,6 +1883,18 @@ class DeckBot(Bot):
         # 引いた謎行動=撒きロジックの誤用)。
         spread = (self.plan.spread_damage
                   if getattr(sel, "context", None) == SelectContext.DAMAGE else 0)
+        if getattr(sel, "context", None) == SelectContext.DAMAGE and not spread:
+            # plan未設定(UniversalBot)は攻撃者の効果文から撒き量を導出。導出できないと
+            # 本体火力でKO判定してしまい30点撒きでMega(倒せない)を選ぶ(QA: grimmsnarl相手bot)。
+            import re as _re
+            me_ = cur["players"][cur["yourIndex"]]
+            a_ = (me_.get("active") or [None])[0]
+            info_ = self._cardinfo.get((a_ or {}).get("id"))
+            for m in (info_.moves if info_ else []):
+                mt = _re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
+                if mt:
+                    spread = int(mt.group(1))
+                    break
         cand = []
         for i, op in enumerate(sel.options):
             if op.player_index != opp_idx:
@@ -2158,7 +2170,8 @@ class DeckBot(Bot):
         #   全候補が30に潰れて先頭選びに退化する(人間レビュー7巡目で発覚したバグ)。
         c = self._cardinfo.get(cid)
         if (c and c.is_pokemon and not c.is_basic and c.previous_stage
-                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)):
+                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)
+                and not any(cd.get("id") == RARE_CANDY for cd in (self._me() or {}).get("hand") or [])):
             me = self._me() or {}
             names = set()
             for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):

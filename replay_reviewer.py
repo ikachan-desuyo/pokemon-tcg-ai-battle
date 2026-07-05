@@ -826,6 +826,8 @@ def det_dead_evolution_pick(g, sig):
         for cd in me.get("hand") or []:
             if C.get(cd.get("id")):
                 names.add(C[cd["id"]].name)
+        if 1079 in hand_ids(me):
+            continue    # ふしぎなアメ在手=進化カードの先取りは計画として正当(H1)
         looking = cur.get("looking") or []
         def card_at(o):
             idx = o.get("index")

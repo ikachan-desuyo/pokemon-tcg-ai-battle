@@ -120,4 +120,7 @@ DECK_BOTS: dict[str, type] = {
     # ローカル旧ベンチ(megaruka 87%/archaludon 70%勝ち)が実ラダー(同アーキ30%)を再現できない問題への回答。
     "ladder_lucario": universal_for("ladder_lucario"),       # 実メタ最多(33戦)のMega Lucario ex
     "ladder_archaludon": universal_for("ladder_archaludon"), # 実ラダーのArchaludon(Judge/Carmine型)
+    # 人間レビュー用ローテ拡充(2026-07-05): 実メタの主要アーキタイプを追加
+    "dragapult": universal_for("dragapult"),                 # ドラパルトex(ダメカン撒き)
+    "grimmsnarl": universal_for("meta_grimmsnarl"),          # マリィのオーロンゲex(悪コントロール)
 }

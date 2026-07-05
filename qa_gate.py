@@ -63,12 +63,15 @@ def play_and_record(mk_me, mk_opp, deck_me, deck_opp, label):
             {"ep": f"{label}(相手bot)", "my": 1, "decisions": decisions[1]}]
 
 
-def qa(games_per_matchup=10):
+def qa(games_per_matchup=5):
     dl = [int(x) for x in open("decks/deck.csv").read().split() if x.strip()]
     matchups = [
         ("mirror", "deck", "deck"),
         ("lucario", "ladder_lucario", "ladder_lucario"),
         ("arch", "ladder_archaludon", "ladder_archaludon"),
+        ("dragapult", "dragapult", "dragapult"),
+        ("alakazam", "alakazam", "alakazam"),
+        ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
     ]
     counts = Counter(); reps = defaultdict(list)
 
