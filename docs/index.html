@@ -363,7 +363,7 @@ function zoomImg(u){const z=$('#zoom');z.querySelector('img').src=u;z.style.disp
 // file://での閲覧やmanifest不在時は静かに無効(従来のファイル選択のみ)。
 async function loadRegistered(f){
   try{
-    const r=await fetch('replays/'+f,{cache:'no-store'});
+    const r=await fetch('replays/'+encodeURIComponent(f),{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     load(await r.json());
     history.replaceState(null,'','?replay='+encodeURIComponent(f));
