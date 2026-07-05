@@ -8,14 +8,15 @@ body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.5 -apple-system,
 header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 header b{font-size:15px} .dim{color:var(--dim)}
 #wrap{display:grid;grid-template-columns:1fr 236px 320px;height:100vh}
-#board{padding:14px;overflow:auto} #side{border-left:1px solid var(--line);background:var(--panel);padding:52px 12px 12px;overflow:auto}
+#board{padding:10px 14px;overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);gap:8px;min-height:0}
+#side{border-left:1px solid var(--line);background:var(--panel);padding:52px 12px 12px;overflow:auto}
 #handcol{border-left:1px solid var(--line);background:#121a2a;padding:10px;display:grid;grid-template-rows:1fr 1fr;gap:8px;min-height:0}
 #handcol .hgrp{margin:0;padding:8px;border-radius:10px;overflow:auto;min-height:0}
 #handcol .hgrp.opp{background:linear-gradient(180deg,#2a1620,#121a2a)}
 #handcol .hgrp.me{background:linear-gradient(180deg,#16202a,#121a2a)}
 #handcol .hand{margin-top:6px}
 #handcol .hcard{width:62px} #handcol .hcard .hnm{max-width:62px}
-.side-half{padding:10px;border-radius:10px;margin-bottom:10px}
+.side-half{padding:10px;border-radius:10px;margin:0;overflow:auto;min-height:0}
 .half-opp{background:linear-gradient(180deg,#2a1620,#1a2233)} .half-me{background:linear-gradient(180deg,#16202a,#1a2233)}
 .phead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .phead .nm{font-weight:700} .badge{display:inline-block;background:#0c1322;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-left:6px}
@@ -44,7 +45,7 @@ header b{font-size:15px} .dim{color:var(--dim)}
 .hcard .hnm{font-size:9px;color:var(--dim);max-width:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zoom{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}
 #zoom img{max-height:88vh;max-width:92vw;border-radius:12px}
-#turnbar{margin:6px 0 12px;padding:8px 12px;border-radius:8px;background:#0c1322;border:1px solid var(--line)}
+#turnbar{margin:0;padding:6px 12px;border-radius:8px;background:#0c1322;border:1px solid var(--line)}
 #turnbar .who{font-weight:700}
 .logitem{padding:2px 6px;border-left:3px solid var(--line);margin:2px 0;border-radius:0 4px 4px 0;white-space:pre-wrap}
 .l-attack{border-color:#ff7a59;color:#ffd2c4} .l-dmg{border-color:#ff5f5f;color:#ff9c9c} .l-evolve{border-color:#9fe860}
@@ -63,22 +64,23 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   header b{font-size:13px} header .dim{font-size:10px}
   #ctrl{order:3;flex-basis:100%;gap:6px}
   #prev,#next{display:none}             /* 前/次は下バーに集約 */
-  #wrap{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;height:calc(100vh - 46px - 40px)} /* 下バー+スライダーバー分を除く */
+  #wrap{grid-template-columns:minmax(0,1fr) 100px;grid-template-rows:minmax(0,1fr);height:calc(100vh - 46px - 40px)} /* 下バー+スライダーバー分を除く */
   #side{border-left:none;border-top:1px solid var(--line)}
   #board.hidden,#side.hidden,#handcol.hidden{display:none}
-  #board,#side{height:100%;overflow:auto}
-  #board{height:auto;min-height:0}
+  #side{height:100%;overflow:auto;grid-column:1/-1}
+  #board{height:100%;min-height:0;overflow:hidden}
   #mbar{position:fixed;top:auto;bottom:46px;left:0;right:0;width:auto;z-index:8;background:var(--panel);border-top:1px solid var(--line);border-left:none;border-bottom:none;margin:0;padding:5px 10px}
   /* モバイル: 手札は盤面の下に横スクロールの帯として表示 */
-  #handcol{border-left:none;border-top:1px solid var(--line);height:150px;padding:6px;grid-template-rows:1fr 1fr;gap:4px}
+  #handcol{border-left:1px solid var(--line);border-top:none;height:100%;min-height:0;padding:4px;grid-template-rows:1fr 1fr;gap:4px}
   #handcol .hgrp{margin:0;padding:4px}
-  #handcol .hand{flex-wrap:nowrap;overflow-x:auto}
-  #handcol .hcard{width:44px;flex:0 0 auto} #handcol .hcard .hnm{max-width:44px;font-size:8px}
-  #board{padding:8px}
+  #handcol .hand{flex-wrap:wrap;overflow:visible}
+  #handcol .hcard{width:40px} #handcol .hcard .hnm{max-width:40px;font-size:8px}
+  #handcol .hgrp .lab{font-size:8px;margin:0 0 2px}
+  #board{display:grid;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);gap:5px;padding:6px}
   #tabbar{display:flex}
   /* コンパクト盤面: スクロールせず1画面に収める */
-  .side-half{padding:6px;margin-bottom:6px}
-  #turnbar{margin:2px 0 6px;padding:5px 9px;font-size:12px}
+  .side-half{padding:6px;margin:0}
+  #turnbar{margin:0;padding:4px 9px;font-size:11px}
   .lab{margin:3px 0 3px;font-size:9px}
   .row{gap:5px}
   .slot{width:76px;padding:4px}
