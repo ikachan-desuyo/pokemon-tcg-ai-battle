@@ -240,6 +240,10 @@ function build(d){
 }
 
 let DATA=null, idx=0;
+const _htmlCache={};
+function setHtml(sel,html){if(_htmlCache[sel]===html)return;_htmlCache[sel]=html;document.querySelector(sel).innerHTML=html;}
+const _warm={};   // 一度使った画像をメモリ保持(再生成時のデコード待ちを防ぐ)
+function warmImg(u){if(!_warm[u]){const i=new Image();i.src=u;_warm[u]=i;}}
 const $=s=>document.querySelector(s);
 function slot(s,isAct){if(!s)return'';const pct=s.maxHp?Math.max(0,Math.round(100*s.hp/s.maxHp)):0;const low=pct<=33?'low':'';
   const ene=s.energy.length?`<div class="meta ene">⚡${s.energy.length} <span class="dim">${s.etypes.join('·')}</span></div>`:'';
@@ -266,10 +270,10 @@ function render(){
   if(v){const ap=v.active_player;
     $('#turnbar').innerHTML=`<span class="who">ターン ${v.turn}</span> — 手番: <b style="color:#ffcf5c">${N[ap]||('P'+ap)}</b>`
       +(v.stadium?` <span class="badge">スタジアム: ${v.stadium}</span>`:'');
-    $('#opp').innerHTML=half(v.players[1],N[1]||'P1',false,ap===1,true);
-    $('#me').innerHTML=half(v.players[0],N[0]||'P0',true,ap===0,false);
-    $('#opphand').innerHTML=`<div class="lab">相手の手札 (${v.players[1].hand})</div>${handHtml(v.players[1])}`;
-    $('#myhand').innerHTML=`<div class="lab">自分の手札 (${v.players[0].hand})</div>${handHtml(v.players[0])}`;}
+    setHtml('#opp',half(v.players[1],N[1]||'P1',false,ap===1,true));
+    setHtml('#me',half(v.players[0],N[0]||'P0',true,ap===0,false));
+    setHtml('#opphand',`<div class="lab">相手の手札 (${v.players[1].hand})</div>${handHtml(v.players[1])}`);
+    setHtml('#myhand',`<div class="lab">自分の手札 (${v.players[0].hand})</div>${handHtml(v.players[0])}`);}
   $('#logs').innerHTML=step.logs.length?step.logs.map(([k,t])=>`<div class="logitem l-${k}">${t}</div>`).join(''):'<div class="empty">（イベントなし）</div>';
 }
 function go(n){idx=Math.max(0,Math.min(DATA.steps.length-1,n));render();}
@@ -314,10 +318,10 @@ fetch('card-images.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).then(m
   if(DATA)render();
 }).catch(()=>{});
 function imgOf(name){return IMGMAP[(name||'').replace(/\s*×\d+$/,'')]||null;}
-function cimg(name){const u=imgOf(name);return u?`<img class="cimg" loading="lazy" src="${u}" alt="${name}" onclick="zoomImg('${u}')" onerror="this.remove()">`:'';}
-function hchip(c){const u=imgOf(c);
+function cimg(name){const u=imgOf(name);if(u)warmImg(u);return u?`<img class="cimg" decoding="sync" src="${u}" alt="${name}" onclick="zoomImg('${u}')" onerror="this.remove()">`:'';}
+function hchip(c){const u=imgOf(c);if(u)warmImg(u);
   if(!u)return `<span class="chip">${c}</span>`;
-  return `<span class="hcard"><img loading="lazy" src="${u}" alt="${c}" onclick="zoomImg('${u}')" onerror="this.parentNode.outerHTML='<span class=chip>${c}</span>'"><span class="hnm">${c}</span></span>`;}
+  return `<span class="hcard"><img decoding="sync" src="${u}" alt="${c}" onclick="zoomImg('${u}')" onerror="this.parentNode.outerHTML='<span class=chip>${c}</span>'"><span class="hnm">${c}</span></span>`;}
 function zoomImg(u){const z=$('#zoom');z.querySelector('img').src=u;z.style.display='flex';}
 // 登録済みリプレイ(docs/replays/manifest.json)の一覧・直リンク(?replay=<file>)対応。
 // file://での閲覧やmanifest不在時は静かに無効(従来のファイル選択のみ)。
