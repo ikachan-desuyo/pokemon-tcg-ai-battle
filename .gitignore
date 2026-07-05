@@ -21,7 +21,8 @@ htmlcov/
 replays/
 !docs/replays/
 !docs/replays/**
-out/replays/*.json
+!out/replays/
+!out/replays/**
 *.replay
 
 # 大容量の参照データ（GitHub の 100MB 制限超のため追跡しない）
