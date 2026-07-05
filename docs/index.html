@@ -27,6 +27,12 @@ header b{font-size:15px} .dim{color:var(--dim)}
 .hand{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
 .chip{background:#10203a;border:1px solid #2c3a55;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap}
 .chip.back{background:#241622;border-color:#4a2a38;color:#a07585}
+.cimg{width:100%;border-radius:6px;display:block;margin-bottom:3px;cursor:zoom-in;background:#0c1322}
+.hcard{width:56px;display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.hcard img{width:100%;border-radius:4px;cursor:zoom-in;background:#0c1322}
+.hcard .hnm{font-size:9px;color:var(--dim);max-width:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zoom{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}
+#zoom img{max-height:88vh;max-width:92vw;border-radius:12px}
 #turnbar{margin:6px 0 12px;padding:8px 12px;border-radius:8px;background:#0c1322;border:1px solid var(--line)}
 #turnbar .who{font-weight:700}
 .logitem{padding:2px 6px;border-left:3px solid var(--line);margin:2px 0;border-radius:0 4px 4px 0;white-space:pre-wrap}
@@ -96,6 +102,7 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <select id="regsel" style="display:none;background:#0c1322;color:#dde6f5;border:1px solid #2c3a55;border-radius:8px;padding:5px 8px;font-size:12px"></select>
   <label class="filebtn" style="padding:5px 12px;font-size:12px;margin:0">別のログ<input id="file2" type="file" accept=".json" hidden></label>
 </header>
+<div id="zoom" onclick="this.style.display='none'"><img alt=""></div>
 <div id="wrap" style="display:none">
   <div id="board"><div id="turnbar"></div>
     <div id="opp" class="side-half half-opp"></div>
@@ -208,14 +215,14 @@ const $=s=>document.querySelector(s);
 function slot(s,isAct){if(!s)return'';const pct=s.maxHp?Math.max(0,Math.round(100*s.hp/s.maxHp)):0;const low=pct<=33?'low':'';
   const ene=s.energy.length?`<div class="meta ene">⚡${s.energy.length} <span class="dim">${s.etypes.join('·')}</span></div>`:'';
   const tool=s.tools.length?`<div class="meta tool">🛠 ${s.tools.join(', ')}</div>`:'';
-  return `<div class="slot ${isAct?'active':''}"><div class="cn" title="${s.name}">${s.name}</div>
+  return `<div class="slot ${isAct?'active':''}">${cimg(s.name)}<div class="cn" title="${s.name}">${s.name}</div>
     <div class="meta">HP ${s.hp}/${s.maxHp}</div><div class="hpbar ${low}"><i style="width:${pct}%"></i></div>${ene}${tool}</div>`;}
 function half(p,who,mine,activeTurn,flip){
   const act=p.active?`<div class="lab">バトル場</div><div class="row">${slot(p.active,true)}</div>`:'<div class="empty">バトル場 なし</div>';
   const bench=p.bench.length?`<div class="lab">ベンチ (${p.bench.length})</div><div class="row">${p.bench.map(b=>slot(b,false)).join('')}</div>`:'<div class="empty">ベンチ なし</div>';
   const st=p.status.length?`<span class="badge" style="color:#ff9c9c">${p.status.join(',')}</span>`:'';
   let hand;
-  if(p.handCards&&p.handCards.length)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${p.handCards.map(c=>`<span class="chip">${c}</span>`).join('')}</div>`;
+  if(p.handCards&&p.handCards.length)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${p.handCards.map(c=>hchip(c)).join('')}</div>`;
   else if(p.hand>0)hand=`<div class="lab">手札 (${p.hand})</div><div class="hand">${Array(p.hand).fill('<span class="chip back">🂠</span>').join('')}</div>`;
   else hand='';
   const head=`<div class="phead"><div class="nm">${mine?'▼ ':''}${who} ${activeTurn?'<span class="badge" style="color:#ffcf5c">手番</span>':''}${st}</div>
@@ -266,6 +273,19 @@ $('#board').addEventListener('touchend',e=>{if(tsx==null)return;const dx=e.chang
 const dz=$('#drop');
 dz.ondragover=e=>{e.preventDefault();};
 dz.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);};
+// カード画像(docs/card-images.json: 一度だけ生成済みのローカルWebP=ランタイム完全オフライン)。
+// 名前→画像パスの索引を作り、盤面スロット/手札に表示。無い名前はテキスト表示に自動フォールバック。
+let IMGMAP={};
+fetch('card-images.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).then(m=>{
+  for(const k in m){if(m[k].name&&m[k].image)IMGMAP[m[k].name]=m[k].image;}
+  if(DATA)render();
+}).catch(()=>{});
+function imgOf(name){return IMGMAP[(name||'').replace(/\s*×\d+$/,'')]||null;}
+function cimg(name){const u=imgOf(name);return u?`<img class="cimg" loading="lazy" src="${u}" alt="${name}" onclick="zoomImg('${u}')" onerror="this.remove()">`:'';}
+function hchip(c){const u=imgOf(c);
+  if(!u)return `<span class="chip">${c}</span>`;
+  return `<span class="hcard"><img loading="lazy" src="${u}" alt="${c}" onclick="zoomImg('${u}')" onerror="this.parentNode.outerHTML='<span class=chip>${c}</span>'"><span class="hnm">${c}</span></span>`;}
+function zoomImg(u){const z=$('#zoom');z.querySelector('img').src=u;z.style.display='flex';}
 // 登録済みリプレイ(docs/replays/manifest.json)の一覧・直リンク(?replay=<file>)対応。
 // file://での閲覧やmanifest不在時は静かに無効(従来のファイル選択のみ)。
 async function loadRegistered(f){
