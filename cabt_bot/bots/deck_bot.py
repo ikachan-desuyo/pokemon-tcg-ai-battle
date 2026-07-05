@@ -568,6 +568,13 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
+    def _opp_bench_charged(self) -> bool:
+        """相手ベンチに現在の付きエネで攻撃を払える後続が居るか。居なければ相手activeの
+        KOで脅威は一旦消える(=死んだら負けでも残ってKOする価値がある)。"""
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        return any(sp and self._move_payable(sp) for sp in opp.get("bench") or [])
+
     def _is_loss_bait(self, sp) -> bool:
         """このスポットを前に出すと「KO=相手の残サイド充足(死んだら負け)×確殺圏」になるか。
         今KOを取れる(脅威側が消える)なら免除。全前進経路(switch/reposition/eager/昇格/進化)の
@@ -1605,9 +1612,11 @@ class DeckBot(Bot):
             dmg, ign = self._active_attack_potential(assume_hand_attach=True)
             opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
             oa = (opp.get("active") or [None])[0]
-            wins_now = (oa and dmg > 0
-                        and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)
-                        and self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6))
+            ko_now = (oa and dmg > 0
+                      and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999))
+            wins_now = ko_now and self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6)
+            if ko_now and not self._opp_bench_charged():
+                wins_now = True    # KOで脅威源が消える(相手ベンチに即戦力なし)=残って殴る
             if not wins_now:
                 for sp in me.get("bench") or []:
                     if not sp:
@@ -1615,8 +1624,10 @@ class DeckBot(Bot):
                     if (self._prize_value(sp.get("id")) < opp_left
                             or (sp.get("hp") or 0) > self._incoming_next_turn(sp)):
                         return True   # 死んでも負けない/次打(現実的評価)を耐える退避先がある
-        if act.get("id") in self.plan.attackers:
+        if act.get("id") in self.plan.attackers or (_line_threat(act.get("id")) or 0) >= 180:
             # 温存パス: 次の相手ターンにKO確定圏(現実的評価=相手の現エネ+1で払える技)なら、
+            # 対象はplan.attackersまたはライン180+の主役級(planに列挙されない主役=Hariyama等を
+            # 取りこぼさない。検出器と同一意味論)。
             # 満タンの後続に交代して前を守る。ライン最大(潜在)基準だと過剰退避になり
             # SwitchWaste(検出器=現実的評価)と不整合(QA lucario相手bot T12)。
             if (act.get("hp") or 0) > self._incoming_next_turn(act):
@@ -1869,8 +1880,12 @@ class DeckBot(Bot):
         oa = (opp.get("active") or [None])[0]
         if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)):
             if death_loses:
-                # 死んだら負け: 残って良いのは「今殴れば自分が勝ち切れる」時だけ
+                # 死んだら負け: 「今殴れば勝ち切れる」or「KOで脅威源が消える(相手ベンチに
+                # 即戦力なし)」なら残って殴る(人間レビュー16巡目 alakazam-3 T9: ign貼付で
+                # Nebula=PH使いのKOが立ったのに退却し両エネを浪費)
                 if self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6):
+                    return False
+                if not self._opp_bench_charged():
                     return False
             elif self._prize_value(oa.get("id")) >= pv:
                 return False                   # 有利(同等以上の)トレード=受け入れて殴る

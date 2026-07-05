@@ -664,6 +664,12 @@ def det_boss_no_path_gain(g, sig):
         koable = [x for x in (opp.get("bench") or []) if x and (x.get("hp") or 999) <= dmg]
         if not koable:
             continue
+        # ライン否定の例外: KO可能な引っ張り先に「進化線の土台」が居れば、1枚取りでも
+        # 相手の主力供給を断つ価値(サイド算術の外)がある=正当(人間レビュー16巡目
+        # mirror相手bot T8: Staryu狩り=3体目のMegaを未然に止める)
+        if any(C.get(x.get("id")) and getattr(C[x.get("id")], "is_basic", False)
+               and _is_base_of_db_line(x.get("id")) for x in koable):
+            continue
         best = max(_pv(x.get("id")) for x in koable)
         need = len(me.get("prize") or []) or 6
         # ボス経路のKO回数(引っ張りKO自体を+1) > 直行経路のみ発火。同数なら「今確実にKOできる」
@@ -745,6 +751,9 @@ def det_heal_missed(g, sig):
         oa = (opp.get("active") or [None])[0]
         if oa and (oa.get("hp") or 999) <= attack_dmg(a):
             continue                                    # 今KOできるなら攻撃優先=回復不要
+        if (a.get("maxHp") or 0) <= _incoming(a, oa, opp.get("handCount")):
+            continue    # 満タンでもワンパン圏=回復は生存反転しない(bot heal句と同一意味論。
+                        # alakazam-2 T7: 330 vs Powerful Hand 340で回復無意味=Salvatoreが正)
         sig(f"HealMissed|重傷activeでミツルでなく{ci.name}を使用", g["ep"], cur.get("turn"))
 
 
@@ -1421,14 +1430,35 @@ def det_doomed_game_loss(g, sig):
         # 殴って勝ち切れるなら残って殴るのが正(自分の残りサイド充足)
         _mp = me.get("prize")
         my_left = len(_mp) if _mp is not None else 6
-        if ch.get("type") == ATTACK and _pv(oa.get("id")) >= my_left:
+        if ch.get("type") == ATTACK:
             adv = attack_dmg(a)                         # 既存: 現エネで払える最大打点
             ai = C.get(a.get("id"))
             oi = C.get(oa.get("id"))
             if ai and oi and oi.weakness and ai.type == oi.weakness:
                 adv *= 2
             if adv >= (oa.get("hp") or 9999):
-                continue
+                if _pv(oa.get("id")) >= my_left:
+                    continue                            # 勝ち切り
+                # KOで脅威源が消える(相手ベンチに現エネで攻撃可能な後続なし)なら残って殴るのが正
+                def _charged(sp):
+                    import re as _re2
+                    bi2 = C.get(sp.get("id"))
+                    att2 = []
+                    for ec in (sp.get("energyCards") or []):
+                        ei2 = C.get(ec.get("id"))
+                        att2 += (_re2.findall(r"\{([A-Z])\}", (ei2.type or "") if ei2 else "")
+                                 or _re2.findall(r"\{([A-Z])\}", (ei2.name or "") if ei2 else "") or ["C"])
+                    for m in (bi2.moves if bi2 else []):
+                        if not m.damage:
+                            continue
+                        need2 = _re2.findall(r"\{([A-Z])\}", m.cost or "")
+                        pool2 = list(att2)
+                        ok2 = all((x in pool2 and (pool2.remove(x) or True)) for x in need2)
+                        if ok2 and len(pool2) >= (m.cost or "").count("●"):
+                            return True
+                    return False
+                if not any(sp and _charged(sp) for sp in (opp.get("bench") or [])):
+                    continue
         # 退避手段の実在: 入替効果札のPLAY か RETREAT。かつ「負けない/耐える」退避先がベンチに居る
         opts = (sel or {}).get("option") or []
         hand = me.get("hand") or []

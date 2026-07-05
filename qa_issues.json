@@ -49,6 +49,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -102,6 +105,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -163,6 +169,9 @@
    3,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -221,6 +230,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -236,6 +248,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -332,6 +347,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -384,7 +402,10 @@
    113,
    107,
    108,
-   117
+   117,
+   129,
+   135,
+   120
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -436,7 +457,10 @@
    26,
    21,
    27,
-   23
+   23,
+   24,
+   24,
+   19
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -492,7 +516,10 @@
    22,
    18,
    33,
-   28
+   28,
+   28,
+   29,
+   25
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -548,7 +575,10 @@
    17,
    24,
    22,
-   20
+   20,
+   26,
+   21,
+   23
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -603,9 +633,12 @@
    3,
    0,
    0,
+   0,
+   0,
+   2,
    0
   ],
-  "regressions": 3,
+  "regressions": 4,
   "graduated": "2026-07-06",
   "cause": "緊急時Gate欠如(温存: 被KO圏の攻撃役を退けて守る)",
   "fix": "_should_switch温存パス(被KO圏×満タン後続×常設エネ投資なし×攻撃を失わない)。過剰条件(手札エネ必須)を「前が攻撃可能な場合のみ」に緩和",
@@ -659,6 +692,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -711,6 +747,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4
@@ -722,7 +761,7 @@
   "cause": "サイド算術の欠如(1枚取りが必要KO回数を増やすかを見ない)",
   "fix": "_should_play_boss: ボス経路KO回数(1+ceil((残-取)/主力))>直行ceil(残/主力)の時のみ温存。同数は打つ(今確実にKOできる価値)。検出器も手貼り込み火力で同式",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    19,
    1,
@@ -763,9 +802,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "note": "cycles[1]の1件(arch-17)は検出器偽陽性(手貼り火力を見ず)と判定済み"
  },
  "VolatileOverPermanent": {
@@ -778,6 +820,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -864,6 +909,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -912,9 +960,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2
+  "regressions": 3
  },
  "CapeSkew": {
   "status": "Graduated",
@@ -926,6 +977,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1005,6 +1059,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1029,6 +1086,9 @@
    2,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1097,6 +1157,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1143,6 +1206,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1160,6 +1226,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1233,6 +1302,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1278,6 +1350,9 @@
    0,
    1,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1296,6 +1371,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1361,6 +1439,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1375,6 +1456,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1438,6 +1522,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1477,6 +1564,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1490,6 +1580,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1552,6 +1645,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1584,6 +1680,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1627,6 +1726,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1663,6 +1765,9 @@
    3,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1683,6 +1788,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1729,6 +1837,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1760,6 +1871,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -1780,6 +1894,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1816,6 +1933,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1829,13 +1949,16 @@
   "graduated": "2026-07-06"
  },
  "SwitchIntoLoss": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "SwitchIntoLoss",
   "match": "SwitchIntoLoss",
   "fix": "_is_loss_bait統一ヘルパ(死=相手残充足×確殺圏×今KO不能)を新設し、全前進経路(温存/前進switch/reposition/eager)に配線。検出器も新設+BLOCKING",
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1845,16 +1968,20 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "人間レビュー15巡目"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "EnergyDigActiveOnly": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "EnergyStuckNoLillie",
   "match": "EnergyStuckNoLillie",
   "fix": "リーリエのエネ掘り条件を「場の攻撃役のどれかが1技も払えない」に一般化(active限定だった)。検出器側は手貼り済みターンの順序アーティファクト偽陽性を修正",
   "first_seen": "2026-07-06",
   "cycles": [
    3,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1864,6 +1991,45 @@
    "confirmed": 1,
    "rejected": 1,
    "note": "人間レビュー15巡目。rejected=arch-0 T17(W貼りJetting済み=スタックでない)"
+  },
+  "graduated": "2026-07-06"
+ },
+ "KoRemovesThreatBlind": {
+  "status": "Fix Applied",
+  "detector": "DoomedGameLoss(退避側の過剰発火として顕在化)",
+  "match": "DoomedGameLoss",
+  "fix": "死んだら負けゲート(retreat_doomed/switch)に「KOで脅威源が消える(相手ベンチに現エネで攻撃可能な後続なし=_opp_bench_charged偽)なら残って殴る」例外。検出器にも同一意味論",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "退避判定の脅威評価が静的(相手activeが生存し続ける前提)。ign貼付でNebula=PH使いのKOが立った直後に退却し、W+ignを退却コストで浪費(alakazam-3 T9)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "人間レビュー16巡目"
+  }
+ },
+ "PreserveGatePlanOnly": {
+  "status": "Fix Applied",
+  "detector": "DoomedNoSwitch",
+  "match": "DoomedNoSwitch",
+  "fix": "温存パスの対象を「plan.attackers またはライン180+」に一般化(planに列挙されない主役級=Hariyama等)",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "温存対象がplan列挙に依存=ベンチマークbot(lucario)の非列挙主役を温存しない",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "人間レビュー16巡目 lucario相手bot T8/T10"
   }
  }
 }
