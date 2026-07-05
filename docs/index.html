@@ -38,6 +38,7 @@ header b{font-size:15px} .dim{color:var(--dim)}
 #mbar{display:none;gap:8px;align-items:center;position:fixed;top:0;right:0;width:320px;z-index:9;background:var(--panel);padding:8px 12px;border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
 #mbar #slider{flex:1;min-width:60px}
 #mbar button{padding:4px 10px}
+#mturn{display:none;font-size:11px;color:#ffcf5c;white-space:nowrap}
 .slot.active{border-color:#ffcf5c;box-shadow:0 0 0 1px #ffcf5c55}
 .slot .cn{font-weight:700;font-size:12px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hpbar{height:6px;background:#33202a;border-radius:4px;overflow:hidden;margin:3px 0}
@@ -92,12 +93,15 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   .side-half{padding:6px;margin:0}
   .bmain{display:flex;flex-direction:column;gap:4px}
   .bmain.flip .bact{order:2} .bmain.flip .bbench{order:1}
-  #turnbar{margin:0;padding:4px 9px;font-size:11px}
+  #turnbar{display:none}
+  #mturn{display:inline}
+  #board{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
   .lab{margin:3px 0 3px;font-size:9px}
   .row{gap:5px}
   .slot{width:76px;padding:4px}
-  .slot.bench{width:54px}
-  .slot.bench .meta{display:none}
+  .slot.bench{width:56px}
+  .slot.bench .meta{font-size:8px}
+  .slot.bench .meta.ene,.slot.bench .meta.tool{display:none}
   .slot .cn{font-size:10px;margin-bottom:1px}
   .slot .meta{font-size:9px} .hpbar{height:4px;margin:2px 0}
   .hand{gap:3px} .hand .chip{font-size:10px;padding:2px 5px}
@@ -128,6 +132,7 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
 </div></div>
 
 <div id="mbar" style="display:none">
+  <span id="mturn"></span>
   <button id="prev">◀</button>
   <input id="slider" type="range" min="0" value="0">
   <button id="next">▶</button>
@@ -299,6 +304,7 @@ function render(){
   if(v){const ap=v.active_player;
     $('#turnbar').innerHTML=`<span class="who">ターン ${v.turn}</span> — 手番: <b style="color:#ffcf5c">${N[ap]||('P'+ap)}</b>`
       +(v.stadium?` <span class="badge">スタジアム: ${v.stadium}</span>`:'');
+    $('#mturn').textContent=`T${v.turn} ${(N[ap]||('P'+ap)).slice(0,9)}`;
     setHtml('#opp',half(v.players[1],N[1]||'P1',false,ap===1,true));
     setHtml('#me',half(v.players[0],N[0]||'P0',true,ap===0,false));
     setHtml('#opphand',`<div class="lab">相手の手札 (${v.players[1].hand})</div>${handHtml(v.players[1])}`);
