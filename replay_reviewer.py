@@ -938,8 +938,11 @@ def det_doomed_no_retreat(g, sig):
         if th <= 0 or (a.get("hp") or 999) > th:
             continue                                    # 被KO圏でない
         dmg = attack_dmg(a)
-        if oa and (oa.get("hp") or 999) <= dmg and _pv(oa.get("id")) >= _pv(a.get("id")):
-            continue                                    # 同等以上のトレード=残って殴るのは正当
+        _mp = me.get("prize")
+        my_left = len(_mp) if _mp is not None else 6
+        if oa and (oa.get("hp") or 999) <= dmg and (_pv(oa.get("id")) >= _pv(a.get("id"))
+                                                    or _pv(oa.get("id")) >= my_left):
+            continue                                    # 同等以上のトレード or 勝ち切り=残って殴るのは正当
         h = hand_ids(me)
         can_pay = (not cur.get("energyAttached")
                    and any(C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or "") for x in h))
@@ -1505,6 +1508,44 @@ def det_bench_bait_loss(g, sig):
                 return
 
 
+def det_base_line_sacrifice(g, sig):
+    """BaseLineSacrifice: 退却で進化土台(基本ポケ)を前進させ確定死圏に晒した。進化先が手札に
+    ありKOも取れない=確定ライン(次ターン進化)を微小ダメージと引き換えに破壊(人間レビュー12巡目
+    grimmsnarl-0 T7: 前進Staryu死→線消滅→盤面全滅負け)。壁が耐えない場合でも壁死→強制昇格→
+    進化の方が土台を1体分長く守る。"""
+    for gi in range(len(g["decisions"])):
+        t, ob, act = g["decisions"][gi]
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != RETREAT:
+            continue
+        # 同ターンの次の自分MAIN決定でactiveが誰になったか
+        for t2, ob2, act2 in g["decisions"][gi + 1:]:
+            cur2, me2, opp2 = my_view(ob2, g["my"])
+            if cur2.get("yourIndex") != g["my"] or cur2.get("turn") != cur.get("turn"):
+                break
+            if ((ob2.get("select") or {}).get("type")) != MAIN:
+                continue
+            a2 = (me2.get("active") or [None])[0]
+            oa2 = (opp2.get("active") or [None])[0]
+            if not a2 or not oa2:
+                break
+            ci = C.get(a2.get("id"))
+            if not ci or not getattr(ci, "is_basic", False):
+                break
+            evo_in_hand = any(C.get(c.get("id")) and C[c.get("id")].previous_stage == ci.name
+                              for c in (me2.get("hand") or []))
+            dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, None, opp2.get("handCount"))
+            kos = attack_dmg(a2) >= (oa2.get("hp") or 9999)
+            if evo_in_hand and dies and not kos:
+                sig(f"BaseLineSacrifice|進化土台{nm(a2.get('id'))}を確定死圏に前進(進化先在手)",
+                    g["ep"], cur.get("turn"))
+                return
+            break
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1517,7 +1558,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_gust_target_skew, det_promotion_skew, det_weak_advance,
              det_basic_unbenched, det_evolve_trigger_before_develop,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
-             det_doomed_game_loss, det_switch_waste, det_bench_bait_loss]
+             det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
+             det_base_line_sacrifice]
 
 
 # ============ Layer 2: Aggregator ============

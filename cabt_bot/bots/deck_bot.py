@@ -1461,8 +1461,13 @@ class DeckBot(Bot):
                               and (sp.get("hp") or 0) <= th)
                 if loses_game and self._spot_kos_opp_active(sp):
                     loses_game = False   # 前に出て今KOできるなら脅威側が消える(ベイト扱いしない)
+                info_p = self._cardinfo.get(sp.get("id"))
+                base_sac = (info_p is not None and info_p.is_basic
+                            and self._is_evolving_base(sp.get("id"))
+                            and (sp.get("hp") or 0) <= th)
                 key = (0 if loses_game else 1,                      # 次打KO=負け確定の昇格先を避ける
                        1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
+                       0 if base_sac else 1,                        # 確定死圏の進化土台を避ける(線の保護)
                        1 if sp.get("id") in self.plan.attackers else 0,
                        len(sp.get("energyCards") or []),
                        sp.get("hp") or 0)
@@ -1636,6 +1641,12 @@ class DeckBot(Bot):
                 # 脆いたね(将来の進化素材)は前に晒さない: 壁が相手の次打(現実的評価=現エネ+1で
                 # 払える技)を耐えるなら壁のまま(人間レビュー7巡目①: 20点のためエネ付きStaryu喪失)。
                 if (act[0].get("hp") or 0) > self._incoming_next_turn(act[0]):
+                    continue
+                # 進化土台は壁が死ぬ場合でも前に出さない: 壁死→強制昇格→次ターン進化の方が
+                # 土台を1体分長く守る(壁の体が攻撃1回分を吸収する)。前進は20点と引き換えに
+                # 確定ライン(進化先在手)を破壊し盤面全滅へ(人間レビュー12巡目 grimmsnarl-0 T7:
+                # Salvatore+Mega在手×Staryu W付きで前進→T8死→T9線なし→全滅負け)。
+                if self._is_evolving_base(sp.get("id")):
                     continue
             return True  # 攻撃役がベンチに居る(進化済 or 壁が持たない場合のみたね)
         return False

@@ -36,6 +36,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -76,6 +78,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -124,6 +128,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -169,6 +175,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -184,6 +192,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -254,6 +264,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -293,7 +305,9 @@
    102,
    130,
    115,
-   113
+   113,
+   104,
+   114
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -332,7 +346,9 @@
    19,
    18,
    17,
-   22
+   22,
+   24,
+   30
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -375,7 +391,9 @@
    24,
    25,
    38,
-   23
+   23,
+   21,
+   22
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -418,7 +436,9 @@
    16,
    19,
    16,
-   22
+   22,
+   22,
+   13
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -460,6 +480,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -478,6 +500,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    4,
+   0,
+   0,
    0,
    0,
    0,
@@ -542,6 +566,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -581,6 +607,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -596,6 +624,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
    0,
    0,
    0,
@@ -656,6 +686,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -691,6 +723,8 @@
    0,
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -705,6 +739,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -758,6 +794,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -782,6 +820,8 @@
    2,
    0,
    3,
+   0,
+   0,
    0,
    0,
    0,
@@ -824,6 +864,8 @@
    0,
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -835,7 +877,7 @@
   "cause": "サイド算術(残って殴って取れるサイド<失うサイドの不利トレード)+退却コストの誤認(死亡確定なら付きエネは実質無料)",
   "fix": "_should_retreat_doomed: 被KO確定×サイド2+×不利トレード×後続攻撃可なら手貼り前に退く(repositionフラグ非依存=Universal含む)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    2,
    0,
@@ -857,9 +899,11 @@
    0,
    0,
    0,
+   0,
+   1,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "GustTargetSkew": {
   "status": "Graduated",
@@ -874,6 +918,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -921,6 +967,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -953,6 +1001,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -971,6 +1021,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1010,6 +1062,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1024,6 +1078,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -1061,6 +1117,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1087,6 +1145,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1100,6 +1160,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1136,6 +1198,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1158,6 +1222,8 @@
    7,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1185,6 +1251,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1208,6 +1276,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1221,13 +1291,15 @@
   "graduated": "2026-07-06"
  },
  "BenchBaitLoss": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "BenchBaitLoss",
   "match": "BenchBaitLoss",
   "fix": "heal handlerにベンチ・ボスベイト条項(pv>=相手残×被KO圏×回復で圏外化可→90)。_opp_boss_remaining=アーキタイプ推定(既定2/Arch・Drag3/Alakazam1)-トラッシュ使用分",
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1237,16 +1309,19 @@
    "confirmed": 1,
    "rejected": 1,
    "note": "人間レビュー11巡目(チェックリストA③+G)。rejected1=mirror-4ボス勝ち切りターンの偽陽性→ボスターン例外で修正"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "SwitchWaste": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "SwitchWaste",
   "match": "SwitchWaste",
   "fix": "_should_switch前進パスを_should_reposition(先攻T1ガード+殴れる前進のみ)に委譲",
   "first_seen": "2026-07-06",
   "cycles": [
    10,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1256,6 +1331,26 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "人間レビュー11巡目(チェックリストA③/C/G)。60戦コーパスで10箇所=系統的"
+  },
+  "graduated": "2026-07-06"
+ },
+ "BaseLineSacrifice": {
+  "status": "Fix Applied",
+  "detector": "BaseLineSacrifice",
+  "match": "BaseLineSacrifice",
+  "fix": "_should_repositionの基本ポケ分岐に「進化土台は壁が死ぬ場合でも前進させない」+昇格キーに「確定死圏の進化土台を避ける」。壁死→強制昇格→次ターン進化の方が土台を1体分長く守る",
+  "first_seen": "2026-07-06",
+  "cycles": [
+   3,
+   0
+  ],
+  "regressions": 0,
+  "cause": "「壁が耐えないなら土台前進OK」の例外がG予測(次ターンの自分の場)を見ない。前進で確定ライン(進化先在手)を20点と引き換えに破壊→盤面全滅(grimmsnarl-0: Salvatore+Mega+W×2在手で敗着と実証)",
+  "evidence": {
+   "frequency": 3,
+   "confirmed": 1,
+   "rejected": 0,
+   "note": "人間レビュー12巡目(チェックリストG+逆向き帰責)。コーパス3件(自bot2+相手bot1)"
   }
  }
 }
