@@ -7,10 +7,10 @@
 body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
 header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 header b{font-size:15px} .dim{color:var(--dim)}
-#wrap{display:grid;grid-template-columns:1fr 236px 320px;height:calc(100vh - 52px)}
-#board{padding:14px;overflow:auto} #side{border-left:1px solid var(--line);background:var(--panel);padding:12px;overflow:auto}
-#handcol{border-left:1px solid var(--line);background:#121a2a;padding:10px;overflow:auto}
-#handcol .hgrp{margin-bottom:14px;padding:8px;border-radius:10px}
+#wrap{display:grid;grid-template-columns:1fr 236px 320px;height:100vh}
+#board{padding:14px;overflow:auto} #side{border-left:1px solid var(--line);background:var(--panel);padding:52px 12px 12px;overflow:auto}
+#handcol{border-left:1px solid var(--line);background:#121a2a;padding:10px;display:grid;grid-template-rows:1fr 1fr;gap:8px;min-height:0}
+#handcol .hgrp{margin:0;padding:8px;border-radius:10px;overflow:auto;min-height:0}
 #handcol .hgrp.opp{background:linear-gradient(180deg,#2a1620,#121a2a)}
 #handcol .hgrp.me{background:linear-gradient(180deg,#16202a,#121a2a)}
 #handcol .hand{margin-top:6px}
@@ -22,6 +22,11 @@ header b{font-size:15px} .dim{color:var(--dim)}
 .prizes{color:#ffcf5c}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
 .slot{width:128px;background:#0e1626;border:1px solid var(--line);border-radius:9px;padding:7px}
+.slot.bench{width:92px}
+.slot.bench .cn{font-size:10px}
+#mbar{display:none;gap:8px;align-items:center;position:fixed;top:0;right:0;width:320px;z-index:9;background:var(--panel);padding:8px 12px;border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
+#mbar #slider{flex:1;min-width:60px}
+#mbar button{padding:4px 10px}
 .slot.active{border-color:#ffcf5c;box-shadow:0 0 0 1px #ffcf5c55}
 .slot .cn{font-weight:700;font-size:12px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hpbar{height:6px;background:#33202a;border-radius:4px;overflow:hidden;margin:3px 0}
@@ -58,13 +63,15 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   header b{font-size:13px} header .dim{font-size:10px}
   #ctrl{order:3;flex-basis:100%;gap:6px}
   #prev,#next{display:none}             /* 前/次は下バーに集約 */
-  #wrap{grid-template-columns:1fr;grid-template-rows:1fr auto;height:calc(100vh - 84px - 46px)} /* header & 下バー分を除く */
+  #wrap{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;height:calc(100vh - 46px - 40px)} /* 下バー+スライダーバー分を除く */
   #side{border-left:none;border-top:1px solid var(--line)}
   #board.hidden,#side.hidden,#handcol.hidden{display:none}
   #board,#side{height:100%;overflow:auto}
+  #board{height:auto;min-height:0}
+  #mbar{position:fixed;bottom:46px;left:0;right:0;z-index:8;background:var(--panel);border-top:1px solid var(--line);border-bottom:none;margin:0;padding:5px 10px}
   /* モバイル: 手札は盤面の下に横スクロールの帯として表示 */
-  #handcol{border-left:none;border-top:1px solid var(--line);max-height:150px;padding:6px}
-  #handcol .hgrp{margin-bottom:6px;padding:4px}
+  #handcol{border-left:none;border-top:1px solid var(--line);height:150px;padding:6px;grid-template-rows:1fr 1fr;gap:4px}
+  #handcol .hgrp{margin:0;padding:4px}
   #handcol .hand{flex-wrap:nowrap;overflow-x:auto}
   #handcol .hcard{width:44px;flex:0 0 auto} #handcol .hcard .hnm{max-width:44px;font-size:8px}
   #board{padding:8px}
@@ -75,6 +82,8 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   .lab{margin:3px 0 3px;font-size:9px}
   .row{gap:5px}
   .slot{width:76px;padding:4px}
+  .slot.bench{width:54px}
+  .slot.bench .meta{display:none}
   .slot .cn{font-size:10px;margin-bottom:1px}
   .slot .meta{font-size:9px} .hpbar{height:4px;margin:2px 0}
   .hand{gap:3px} .hand .chip{font-size:10px;padding:2px 5px}
@@ -101,18 +110,12 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
   <div id="err"></div>
 </div></div>
 
-<header style="display:none" id="hdr">
-  <b>cabt リプレイ</b><span class="dim" id="epi"></span><span id="outcome"></span>
-  <div id="ctrl">
-    <button id="prev">◀ 前</button>
-    <input id="slider" type="range" min="0" value="0">
-    <button id="next">次 ▶</button>
-    <span id="pos" class="dim"></span>
-  </div>
-  <span class="dim">← → で移動</span>
-  <select id="regsel" style="display:none;background:#0c1322;color:#dde6f5;border:1px solid #2c3a55;border-radius:8px;padding:5px 8px;font-size:12px"></select>
-  <label class="filebtn" style="padding:5px 12px;font-size:12px;margin:0">別のログ<input id="file2" type="file" accept=".json" hidden></label>
-</header>
+<div id="mbar" style="display:none">
+  <button id="prev">◀</button>
+  <input id="slider" type="range" min="0" value="0">
+  <button id="next">▶</button>
+  <span id="pos" class="dim"></span>
+</div>
 <div id="zoom" onclick="this.style.display='none'"><img alt=""></div>
 <div id="wrap" style="display:none">
   <div id="board"><div id="turnbar"></div>
@@ -122,7 +125,16 @@ button:hover{background:#2e3c5a} kbd{background:#0c1322;border:1px solid var(--l
     <div id="opphand" class="hgrp opp"></div>
     <div id="myhand" class="hgrp me"></div>
   </div>
-  <div id="side"><div class="lab">このステップのイベント</div><div id="logs"></div></div>
+  <div id="side">
+    <div id="ctrl2">
+      <div id="outcome"></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
+        <select id="regsel" style="display:none;background:#0c1322;color:#dde6f5;border:1px solid #2c3a55;border-radius:8px;padding:4px 8px;font-size:12px;max-width:150px"></select>
+        <label class="filebtn" style="padding:4px 10px;font-size:11px;margin:0">別のログ<input id="file2" type="file" accept=".json" hidden></label>
+        <span class="dim" id="epi" style="font-size:10px"></span>
+      </div>
+    </div>
+    <div class="lab">このステップのイベント</div><div id="logs"></div></div>
 </div>
 <div id="tabbar">
   <button id="bprev">◀</button>
@@ -230,7 +242,7 @@ const $=s=>document.querySelector(s);
 function slot(s,isAct){if(!s)return'';const pct=s.maxHp?Math.max(0,Math.round(100*s.hp/s.maxHp)):0;const low=pct<=33?'low':'';
   const ene=s.energy.length?`<div class="meta ene">⚡${s.energy.length} <span class="dim">${s.etypes.join('·')}</span></div>`:'';
   const tool=s.tools.length?`<div class="meta tool">🛠 ${s.tools.join(', ')}</div>`:'';
-  return `<div class="slot ${isAct?'active':''}">${cimg(s.name)}<div class="cn" title="${s.name}">${s.name}</div>
+  return `<div class="slot ${isAct?'active':'bench'}">${cimg(s.name)}<div class="cn" title="${s.name}">${s.name}</div>
     <div class="meta">HP ${s.hp}/${s.maxHp}</div><div class="hpbar ${low}"><i style="width:${pct}%"></i></div>${ene}${tool}</div>`;}
 function half(p,who,mine,activeTurn,flip){
   const act=p.active?`<div class="lab">バトル場</div><div class="row">${slot(p.active,true)}</div>`:'<div class="empty">バトル場 なし</div>';
@@ -268,7 +280,7 @@ function setTab(t){
 function load(d){
   try{DATA=build(d);}catch(e){$('#err').textContent='読み込みエラー: '+e.message;return;}
   idx=0;
-  $('#drop').classList.add('hide');$('#hdr').style.display='flex';$('#wrap').style.display='grid';
+  $('#drop').classList.add('hide');$('#mbar').style.display='flex';$('#wrap').style.display='grid';
   setTab('board');
   $('#epi').textContent='ep '+(DATA.episode||'');
   $('#slider').max=DATA.steps.length-1;
