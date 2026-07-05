@@ -179,7 +179,9 @@ class DeckBot(Bot):
             # wide_bench: 進化アタッカーが1体立ったら以降は進化させず、たねをベンチに残す
             # （メガシンフォニア等の“盤面エネ×N”火力の母数を増やす）。
             if not (self.plan.wide_bench and self._evolved_attacker_in_play()):
-                return [self._pick_evolve(g[OptionType.EVOLVE], options, hand)]
+                ev = self._pick_evolve(g[OptionType.EVOLVE], options, hand)
+                if ev is not None:
+                    return [ev]
         # （任意）エネ付けの前に壁を退いて攻撃役を前に出すと今ターン殴れるなら退く。
         # イグニはベンチに付けられないため、前進後に手札のイグニ→ネビュラを成立させる。
         if (self.plan.reposition and self.plan.eager_reposition
@@ -380,15 +382,68 @@ class DeckBot(Bot):
         return _GENERIC_PLAY.get(cid, 40)
 
     def _pick_evolve(self, idxs, options, hand) -> int:
-        best, best_key = idxs[0], (-1, -1)
+        best, best_key = None, None
         for i in idxs:
             op = options[i]
             evo = self._hand_id(hand, op.index)
-            key = (1 if evo in self.plan.attackers else 0,
+            key = (0 if self._evolve_creates_loss_bait(evo, op) else 1,  # 負けベイト化する進化を避ける
+                   1 if evo in self.plan.attackers else 0,
                    1 if op.in_play_area == AreaType.ACTIVE else 0)
-            if key > best_key:
+            if best_key is None or key > best_key:
                 best_key, best = key, i
+        if best_key is not None and best_key[0] == 0:
+            return None                        # 全候補が負けベイト=進化しない方が良い
         return best
+
+    def _evolve_creates_loss_bait(self, evo_id, op) -> bool:
+        """この進化が「KO=相手の残サイド充足(死んだら負け)」のactiveベイトを作るか。
+        進化後が現実的脅威(可変ダメ込)で確実にKOされ、かつ進化後の攻撃でも相手activeを
+        取れない(脅威を消せない)なら、activeへの進化は負けを1ターン早めるだけ
+        (人間レビュー13巡目 alakazam-0 T7: Staryu70(死1枚)をMega330(死3枚)へ進化し
+        Powerful Hand 440の前に差し出して即負け。進化しなければ継続していた)。"""
+        if op.in_play_area != AreaType.ACTIVE:
+            return False
+        info = self._cardinfo.get(evo_id)
+        if not info:
+            return False
+        cur = self._cur or {}
+        me = self._me() or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        act = (me.get("active") or [None])[0]
+        if not oa or not act:
+            return False
+        pr = self.analyze_prize()
+        opp_left = pr.get("opp_prizes") or 6
+        if self._prize_value(evo_id) < opp_left:
+            return False                       # 死んでも負けない
+        if self._prize_value(act.get("id")) >= opp_left:
+            return False                       # 進化前から既にベイト=進化で悪化しない
+        # 進化後の被KO(現実的評価): 進化後スポット想定でmaxHp vs 脅威
+        evo_spot = dict(act)
+        evo_spot["id"] = evo_id
+        evo_spot["hp"] = evo_spot["maxHp"] = info.hp or (act.get("maxHp") or 0)
+        if (evo_spot["hp"] or 0) > self._incoming_next_turn(evo_spot):
+            return False                       # 耐える=ベイトでない
+        # 進化後の攻撃(手貼り込み)で相手activeを取れるなら脅威側が消える=正当
+        import re
+        att = []
+        for ec in (act.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        hand_e = [c.get("id") for c in (me.get("hand") or []) if self._is_energy(c.get("id"))]
+        best_dmg = 0
+        for extra in [None] + (hand_e if not cur.get("energyAttached") else []):
+            pool0 = att + (self._energy_provides_syms(extra) if extra is not None else [])
+            for m in info.moves:
+                need = re.findall(r"\{([A-Z])\}", m.cost or "")
+                pool = list(pool0)
+                ok = all((t in pool and (pool.remove(t) or True)) for t in need)
+                if not ok or len(pool) < (m.cost or "").count("●"):
+                    continue
+                mt = re.match(r"(\d+)", str(m.damage or ""))
+                if mt:
+                    best_dmg = max(best_dmg, self._eff_dmg(int(mt.group(1)), False, oa.get("id")))
+        return best_dmg < (oa.get("hp") or 9999)
 
     def _pick_attach(self, idxs, options, hand, me):
         # HPブーストツール(ケープ等): activeを「被KO圏→生存圏」に反転できるなら最優先で前に貼る。

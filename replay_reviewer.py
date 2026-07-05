@@ -1546,6 +1546,81 @@ def det_base_line_sacrifice(g, sig):
             break
 
 
+def det_evolve_into_loss(g, sig):
+    """EvolveIntoLoss: activeへの進化で「KO=相手残サイド充足(死んだら負け)」のベイトを作った。
+    進化後は現実的脅威(可変ダメ込)で確実にKOされ、進化後の攻撃でも相手activeを取れない=
+    負けを1ターン早めるだけ(人間レビュー13巡目 alakazam-0 T7: Staryu70をMega330へ進化し
+    Powerful Hand 460の前に差し出して即負け)。"""
+    import re as _re
+
+    def _pv(cid):
+        ci = C.get(cid)
+        low = ((ci.rule or "") if ci else "").lower()
+        if "mega" in low and "ex" in low:
+            return 3
+        return 2 if "ex" in low else 1
+
+    EVOLVE_T = int(OptionType.EVOLVE)
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != EVOLVE_T or ch.get("inPlayArea") != 4:
+            continue
+        hand = me.get("hand") or []
+        idx = ch.get("index")
+        evo = hand[idx].get("id") if idx is not None and 0 <= idx < len(hand) else None
+        ei = C.get(evo)
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not ei or not a or not oa:
+            continue
+        _op = opp.get("prize")
+        opp_left = len(_op) if _op is not None else 6
+        if _pv(evo) < opp_left or _pv(a.get("id")) >= opp_left:
+            continue
+        evo_spot = dict(a)
+        evo_spot["id"] = evo
+        evo_spot["hp"] = evo_spot["maxHp"] = ei.hp or 0
+        if (evo_spot["hp"] or 0) > _incoming_next(evo_spot, oa, None, opp.get("handCount")):
+            continue                                    # 耐える=ベイトでない
+        # 進化後の攻撃(手貼り込み)で相手activeを取れるなら正当
+        def _esyms(eid):
+            ci2 = C.get(eid)
+            if not ci2:
+                return []
+            return (_re.findall(r"\{([A-Z])\}", ci2.type or "")
+                    or _re.findall(r"\{([A-Z])\}", ci2.name or "") or ["C"])
+        att = []
+        for ec in (a.get("energyCards") or []):
+            att += _esyms(ec.get("id"))
+        hand_e = [c.get("id") for c in hand
+                  if C.get(c.get("id")) and "Energy" in (C[c.get("id")].name or "")]
+        extras = [None] + (hand_e if not cur.get("energyAttached") else [])
+        best = 0
+        for extra in extras:
+            pool0 = att + (_esyms(extra) if extra is not None else [])
+            for m in ei.moves:
+                need = _re.findall(r"\{([A-Z])\}", m.cost or "")
+                pool = list(pool0)
+                ok = all((x in pool and (pool.remove(x) or True)) for x in need)
+                if not ok or len(pool) < (m.cost or "").count("●"):
+                    continue
+                mt = _re.match(r"(\d+)", str(m.damage or ""))
+                if mt:
+                    dm = int(mt.group(1))
+                    ci_o = C.get(oa.get("id"))
+                    if ci_o and ci_o.weakness and ei.type == ci_o.weakness:
+                        dm *= 2
+                    best = max(best, dm)
+        if best >= (oa.get("hp") or 9999):
+            continue
+        sig(f"EvolveIntoLoss|activeへの進化が負けベイト化({nm(a.get('id'))}→{nm(evo)})",
+            g["ep"], cur.get("turn"))
+        return
+
+
 DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_wasted_investment, det_wall_retreat,
              det_valueless_support, det_last_stand,
@@ -1559,7 +1634,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_basic_unbenched, det_evolve_trigger_before_develop,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
-             det_base_line_sacrifice]
+             det_base_line_sacrifice, det_evolve_into_loss]
 
 
 # ============ Layer 2: Aggregator ============
