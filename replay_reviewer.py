@@ -580,6 +580,13 @@ def det_missed_free_advance(g, sig):
             if (_pv_m(b.get("id")) >= opp_left_m
                     and (b.get("hp") or 0) <= _incoming_next(b, oa_m, opp_seen, opp.get("handCount"), opp.get("bench"))):
                 continue                                # 負けベイト=前進しないのが正当
+            # 進化途中の線駒(手札に進化先あり×前進すると確殺圏)は守るのが正当=対象外
+            # (Benchmark Phase: alakazam botのKadabra=チップ30のために線を差し出さない)
+            evo_in_hand = any(C.get(c.get("id")) and C[c.get("id")].previous_stage == (bi.name or "")
+                              for c in (me.get("hand") or []))
+            if (evo_in_hand
+                    and (b.get("hp") or 0) <= _incoming_next(b, oa_m, opp_seen, opp.get("handCount"), opp.get("bench"))):
+                continue
             # bot側ゲートと同一意味論: 前進した先が実際に攻撃を払える場合のみ「攻撃可」
             # (エネ1枚在中=攻撃可の緩い判定はWallRetreat検出と矛盾する偽陽性源)
             if _payable(b) or (can_attach and any(_payable(b, e) for e in hand_e)):
@@ -1597,6 +1604,19 @@ def det_energy_type_skew(g, sig):
         prog = _progresses(eid, spot)
         if prog is not False:
             continue  # 進めている/最大技情報なし=対象外
+        # 特性燃料の例外: 対象の特性が「{X}エネが付いていること」を要求し、選んだエネがその型なら
+        # 技コストを進めなくても正着(例: Adrena-Brain=D付きマシマシラ。Benchmark Phase)
+        import re as _re_ab
+        si_ab = C.get(spot.get("id"))
+        ab_text = " ".join((mv.effect or "") for mv in (si_ab.moves if si_ab else [])
+                           if (mv.name or "").startswith("[Ability]"))
+        m_ab = _re_ab.search(r"has any \{([A-Z])\} Energy attached", ab_text)
+        if m_ab:
+            ei_ab = C.get(eid)
+            e_ty = (ei_ab.type or "") if ei_ab else ""
+            e_nm = (ei_ab.name or "") if ei_ab else ""
+            if ("{%s}" % m_ab.group(1)) in e_ty or ("{%s}" % m_ab.group(1)) in e_nm:
+                continue
         for o in (sel.get("option") or []):
             if o.get("type") != ATTACH or o is ch:
                 continue

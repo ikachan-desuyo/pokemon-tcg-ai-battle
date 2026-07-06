@@ -18,6 +18,23 @@ from .froslass_bot import FroslassBot
 from .scrafty_bot import ScraftyBot
 from .universal_bot import universal_for
 
+
+def _deck_bot(deck_key: str) -> type:
+    """cabt_bot/decks/<deck_key>.py のPLAN版botを引数なし生成可能な形で返す(Benchmark Phase)。"""
+    from ..decks import DECKS
+    mod = DECKS[deck_key]
+    path = mod.DECK_CSV
+
+    class _PlanDeckBot(mod.Bot):
+        def __init__(self, decklist=None, plan=None) -> None:
+            if decklist is None:
+                from pathlib import Path
+                decklist = [int(x) for x in (Path(__file__).resolve().parents[2] / path).read_text().split() if x.strip()]
+            super().__init__(decklist=decklist, plan=plan)
+
+    _PlanDeckBot.__name__ = f"Plan_{deck_key}"
+    return _PlanDeckBot
+
 # Mega Starmie（Nebula 主軸）
 STARMIE_PLAN = DeckPlan(
     name="MegaStarmie",
@@ -113,14 +130,15 @@ DECK_BOTS: dict[str, type] = {
     "archaludon_il": ImitationBot,
     # コンボ/Control系は config bot が壊れていた(無攻撃100%/82%)ため UniversalBot に置換(Benchmark Health回収)。
     # 旧 AlakazamBot/ScraftyBot はクラスとして残置(比較用)。
-    "alakazam": universal_for("alakazam"),   # 1位ログ由来: 超コンボ(フーディン ハンドパワー)
+    "alakazam": _deck_bot("alakazam"),       # 1位ログ由来: 超コンボ(PH)。Benchmark PhaseでPLAN版へ
     "froslass": FroslassBot,                 # 1位ログ由来: 水(メガユキメノコex)
     "scrafty": universal_for("scrafty"),     # Control原理: 手札干渉(メガズルズキンex)
     # 実ラダー復元ベンチ(2026-07): 1000PARTYの実対戦相手の最頻デッキをUniversalBotで操縦。
     # ローカル旧ベンチ(megaruka 87%/archaludon 70%勝ち)が実ラダー(同アーキ30%)を再現できない問題への回答。
-    "ladder_lucario": universal_for("ladder_lucario"),       # 実メタ最多(33戦)のMega Lucario ex
-    "ladder_archaludon": universal_for("ladder_archaludon"), # 実ラダーのArchaludon(Judge/Carmine型)
-    # 人間レビュー用ローテ拡充(2026-07-05): 実メタの主要アーキタイプを追加
-    "dragapult": universal_for("dragapult"),                 # ドラパルトex(ダメカン撒き)
-    "grimmsnarl": universal_for("meta_grimmsnarl"),          # マリィのオーロンゲex(悪コントロール)
+    # Benchmark Phase(2026-07-06): 相手をPLAN版(cabt_bot/decks/=デッキ知識モジュール)へ強化。
+    # Identity(らしさ)とH2H(対Universal同デッキ)で検収済み。Universal版はuniversal_forで残置(A/B用)。
+    "ladder_lucario": _deck_bot("lucario"),                  # 実メタ最多(33戦)のMega Lucario ex
+    "ladder_archaludon": _deck_bot("archaludon"),            # 実ラダーのArchaludon(Judge/Carmine型)
+    "dragapult": _deck_bot("dragapult"),                     # ドラパルトex(ダメカン撒き)
+    "grimmsnarl": _deck_bot("grimmsnarl"),                   # マリィのオーロンゲex(悪コントロール)
 }

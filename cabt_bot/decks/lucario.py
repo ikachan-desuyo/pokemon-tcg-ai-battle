@@ -34,7 +34,7 @@ PLAN = DeckPlan(
     boss_cards=(BOSS,),
     switch_cards=(SWITCH,),
     smart_take=True,
-    setup_wall=(MAKUHITA,),                # 先攻T1はマクノシタ壁(土台リオルを晒さない)
+    setup_wall=(LUNATONE, SOLROCK),        # 開幕壁は非土台(マクノシタはハリテヤマの土台=SetupSkew)
     dup_play_caps={SOLROCK: 1, LUNATONE: 1, MAKUHITA: 2},  # 条件系特性は各1体で充足=渋滞防止
 )
 
