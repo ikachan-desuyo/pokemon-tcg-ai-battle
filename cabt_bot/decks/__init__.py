@@ -12,9 +12,10 @@
 """
 from __future__ import annotations
 
-from . import alakazam, lucario
+from . import alakazam, dragapult, lucario
 
 DECKS = {
     "lucario": lucario,
     "alakazam": alakazam,
+    "dragapult": dragapult,
 }
