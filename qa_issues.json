@@ -63,6 +63,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -134,9 +137,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 6,
+  "regressions": 7,
   "cause": "緊急時Gate欠如",
   "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
@@ -205,6 +211,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -217,7 +226,7 @@
   "match": "MissedLethal",
   "fix": "assume_hand_attach(ボスゲート/ガスト選択を手貼り後火力で評価)+検出器のイグニ3エネ換算修正",
   "first_seen": "2026-07-03",
-  "graduated": "2026-07-05",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    1,
@@ -277,9 +286,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   2,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "評価タイミング(順序: 手貼り前に判断)",
   "note": "2026-07-04のRegressed判定は検出器偽陽性(lucario-1:T11=勝ち筋のエネがトウコ由来で1サポ制約と両立不能=H2)。検出器を選択肢実在+ターン単位+手貼り込み評価に修正(教訓4回目)。botの再発ではない"
  },
@@ -292,6 +304,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -416,6 +431,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -482,6 +500,9 @@
    115,
    102,
    123,
+   111,
+   116,
+   112,
    111
   ],
   "regressions": 0,
@@ -548,7 +569,10 @@
    22,
    13,
    15,
-   26
+   26,
+   26,
+   26,
+   27
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -618,7 +642,10 @@
    38,
    23,
    26,
-   39
+   39,
+   36,
+   31,
+   19
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -688,7 +715,10 @@
    20,
    17,
    25,
-   15
+   15,
+   21,
+   24,
+   24
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -746,6 +776,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -827,12 +860,15 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
  },
  "FetchIgnition(1エネ圏)": {
-  "status": "Regressed",
+  "status": "Graduated",
   "detector": "FetchSkew(1エネ圏○×Ignition)",
   "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
   "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
@@ -893,7 +929,10 @@
    0,
    0,
    0,
-   1
+   1,
+   0,
+   0,
+   0
   ],
   "regressions": 6
  },
@@ -959,6 +998,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -974,6 +1016,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1088,6 +1133,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1150,6 +1198,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4
@@ -1161,7 +1212,7 @@
   "cause": "相手最大火力の計算欠如(ケープの貼り先=被KO圏→生存圏の反転)",
   "fix": "_pick_attachにhp_boost_tools反転優先(avoid_overstackの死亡濃厚判定を上書き=ケープは死亡条件を変える)",
   "first_seen": "2026-07-04",
-  "graduated": "2026-07-04",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    0,
@@ -1211,9 +1262,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 0
+  "regressions": 1
  },
  "SetupSkew": {
   "status": "Graduated",
@@ -1225,6 +1279,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1331,6 +1388,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1382,6 +1442,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1451,6 +1514,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1468,6 +1534,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1569,9 +1638,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "WeakAdvance": {
   "status": "Graduated",
@@ -1628,6 +1700,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1646,6 +1721,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1739,6 +1817,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1753,6 +1834,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1844,6 +1928,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1897,6 +1984,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1910,6 +2000,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2000,6 +2093,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2053,9 +2149,12 @@
    0,
    1,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2,
+  "regressions": 3,
   "cause": "サイド計算がKO単位でなくゲーム単位の敗北条件(相手残りサイド充足)を見ていない。Mega ex=3枚ルールで especially 致命的",
   "evidence": {
    "frequency": 7,
@@ -2103,9 +2202,12 @@
    0,
    1,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2,
+  "regressions": 3,
   "cause": "脅威評価がdamage欄のみ参照=効果文の可変ダメージ(手札枚数×)が0/20点扱い。相手手札18枚=360点(公開情報)で330のMega ex=3枚ベイトを一撃圏に置いた",
   "evidence": {
    "frequency": 3,
@@ -2153,6 +2255,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2173,6 +2278,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2247,9 +2355,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2,
+  "regressions": 3,
   "cause": "Switch経由の前進パスだけT1/攻撃可否ガードなし(retreat系には有り)=ゲート間不整合。退避資源の浪費が終盤のDoomedGameLoss退避を不能に(arch-5でT1浪費→T7以降退避不能→3枚献上の連鎖を実証)",
   "evidence": {
    "frequency": 10,
@@ -2292,6 +2403,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -2312,6 +2426,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2376,9 +2493,12 @@
    0,
    1,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "相手の揮発エネ使用は盤面観測だけでは永遠に見えない(相手ターン内で消える)→Nebula 210圏を120と過小評価し死んだら負けのMega210を放置(mirror-9 T11)。トラッシュ=公開情報の未活用",
   "evidence": {
    "frequency": 1,
@@ -2396,6 +2516,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2444,6 +2567,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2475,9 +2601,12 @@
    0,
    1,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "退避判定の脅威評価が静的(相手activeが生存し続ける前提)。ign貼付でNebula=PH使いのKOが立った直後に退却し、W+ignを退却コストで浪費(alakazam-3 T9)",
   "evidence": {
    "frequency": 1,
@@ -2495,6 +2624,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2537,6 +2669,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2557,6 +2692,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2596,6 +2734,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2615,6 +2756,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2650,6 +2794,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2669,6 +2816,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2704,6 +2854,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2723,6 +2876,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2757,6 +2913,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2776,6 +2935,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2809,6 +2971,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2828,6 +2993,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2859,6 +3027,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2878,6 +3049,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2907,6 +3081,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2926,6 +3103,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2951,6 +3131,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2963,13 +3146,16 @@
   "graduated": "2026-07-06"
  },
  "HealTargetBaitBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(22巡目精読)",
   "match": "-",
   "fix": "Wally対象選択に負けベイト除去最優先キー(従来はダメージ量タイブレークのみ)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2978,16 +3164,20 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "ReviewerBenchGunParity": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "DoomedGameLoss/DoomedNoRetreat",
   "match": "-",
   "fix": "reviewer _incoming/_incoming_nextにベンチ装填銃(RH等)+スプラッシュ合算勝ち切り(_attack_prizes)を配線",
   "first_seen": "2026-07-07",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2996,6 +3186,72 @@
    "frequency": 2,
    "confirmed": 0,
    "rejected": 2
+  },
+  "graduated": "2026-07-06"
+ },
+ "EvolveIntoLossSalvatore": {
+  "status": "Fixed",
+  "detector": "EvolveIntoLoss",
+  "match": "alakazam",
+  "fix": "_has_evolution_targetにactive進化のベイト判定(_evolve_creates_loss_bait)を配線=Salvatoreサーチ経路もゲート",
+  "first_seen": "2026-07-06",
+  "cause": "手札EVOLVEのみゲートし、Salvatore(山サーチ進化)がactive Staryu70→Mega330(PH540圏×残3)で死1枚→死3枚の敗着(精読R23 alakazam T9)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "SurvivalHealPriority": {
+  "status": "Fixed",
+  "detector": "BenchHealMissed/手動精読",
+  "match": "lucario",
+  "fix": "healスコアに生存90条項(勝ち切り不可×act反転可(pv>=opp_left or 単騎)×hp<=th<maxHp→90)でBoss62を上回る",
+  "first_seen": "2026-07-06",
+  "cause": "単騎Mega60hp×Wally全回復可の局面でBoss62>Wally60の2点差により回復を捨て全滅負け(session58 lucario-7 T9)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "BossWinPriority": {
+  "status": "Fixed",
+  "detector": "手動精読",
+  "match": "grimmsnarl",
+  "fix": "_boss_wins_gameでboss=96(緊急リーリエ95より先取り)",
+  "first_seen": "2026-07-06",
+  "cause": "残1でboss+Jetting=勝ちの局面、緊急リーリエ95がBoss勝ち筋ごと手札を流した(session59 grimmsnarl-3 T11)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "PostKoThreatSemantics": {
+  "status": "Fixed",
+  "detector": "DoomedGameLoss/DoomedNoRetreat/CapeSkew",
+  "match": "arch",
+  "fix": "_post_ko_threat(KO後のベンチ残存脅威を実数評価)をbot/reviewer両側に。doomed被KO圏判定とCape反転判定をmax(line,現実評価)に",
+  "first_seen": "2026-07-06",
+  "cause": "①doomed判定が旧line評価(220)のみで現実340を見逃し/KO-removes-threatが「ベンチ充電有無」の粗さでArch40hpKO→昇格Duraludon80=無害を検出器が誤検出(arch-4 T7) ②Cape反転がベンチ銃RH300を見ず(arch-0 T15)",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 2,
+   "rejected": 0
+  }
+ },
+ "DoomedGameLossRareResidual": {
+  "status": "Watching",
+  "detector": "DoomedGameLoss",
+  "match": "arch",
+  "fix": "未再現(QA1回のみ、追試72戦+60戦+QA30戦で0件)。次回出現時にリプレイ精査",
+  "first_seen": "2026-07-06",
+  "cause": "不明。bot(_active_attack_potential=手貼り込み)と検出器(attack_dmg=現エネ)のKO判定差で手貼りKO前提残留が検出される仮説",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 0,
+   "rejected": 0
   }
  }
 }

@@ -1076,8 +1076,9 @@ def det_doomed_no_retreat(g, sig):
         _mp = me.get("prize")
         my_left = len(_mp) if _mp is not None else 6
         if oa and (oa.get("hp") or 999) <= dmg and (_pv(oa.get("id")) >= _pv(a.get("id"))
-                                                    or _pv(oa.get("id")) >= my_left):
-            continue                                    # 同等以上のトレード or 勝ち切り=残って殴るのは正当
+                                                    or _pv(oa.get("id")) >= my_left
+                                                    or _post_ko_next(a, opp_seen, opp.get("bench")) < (a.get("hp") or 0)):
+            continue                                    # 同等以上のトレード/勝ち切り/KO後残存脅威なし=残って殴るのは正当
         if _attack_prizes(cur, me, opp, a) >= my_left:
             continue                                    # スプラッシュKO合算で勝ち切り(bot同一意味論)
         h = hand_ids(me)
@@ -1259,6 +1260,43 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
     cc = C.get(a.get("id"))
     if cc and oi and cc.weakness and oi.type == cc.weakness:
         best *= 2
+    return best
+
+
+def _post_ko_next(a, opp_seen=None, opp_bench=None):
+    """相手activeをKOした後の残存脅威: ベンチの装填銃(昇格後の手貼り1枚/イグニ+3込みで払える技)の
+    現実的最大ダメージ(ダメカン×N実数・弱点込み)。bot側 _post_ko_threat と同一意味論
+    (人間レビュー23巡目: 瀕死activeのKOで装填銃の火力ごと消える局面を「残存脅威あり」と誤検出)。"""
+    import re
+    if not a:
+        return 0
+    best = 0
+    cc = C.get(a.get("id"))
+    for spb in (opp_bench or []):
+        if not spb:
+            continue
+        bi_ = C.get(spb.get("id"))
+        if not bi_:
+            continue
+        b_moves = list(bi_.moves)
+        for pe in (spb.get("preEvolution") or []):
+            pi_ = C.get((pe or {}).get("id"))
+            if pi_:
+                b_moves += list(pi_.moves)
+        be = len(spb.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
+        for m in b_moves:
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            if need > be:
+                continue
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            dm = int(mt.group(1)) if mt else 0
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            if m2:
+                cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
+                dm = max(dm, dm + int(m2.group(1)) * cnt)
+            if cc and cc.weakness and bi_.type == cc.weakness:
+                dm *= 2
+            best = max(best, dm)
     return best
 
 
@@ -1574,25 +1612,8 @@ def det_doomed_game_loss(g, sig):
             if adv >= (oa.get("hp") or 9999):
                 if _pv(oa.get("id")) >= my_left:
                     continue                            # 勝ち切り
-                # KOで脅威源が消える(相手ベンチに現エネで攻撃可能な後続なし)なら残って殴るのが正
-                def _charged(sp):
-                    import re as _re2
-                    bi2 = C.get(sp.get("id"))
-                    att2 = []
-                    for ec in (sp.get("energyCards") or []):
-                        ei2 = C.get(ec.get("id"))
-                        att2 += (_re2.findall(r"\{([A-Z])\}", (ei2.type or "") if ei2 else "")
-                                 or _re2.findall(r"\{([A-Z])\}", (ei2.name or "") if ei2 else "") or ["C"])
-                    for m in (bi2.moves if bi2 else []):
-                        if not m.damage:
-                            continue
-                        need2 = _re2.findall(r"\{([A-Z])\}", m.cost or "")
-                        pool2 = list(att2)
-                        ok2 = all((x in pool2 and (pool2.remove(x) or True)) for x in need2)
-                        if ok2 and len(pool2) >= (m.cost or "").count("●"):
-                            return True
-                    return False
-                if not any(sp and _charged(sp) for sp in (opp.get("bench") or [])):
+                # KOで脅威が消える(KO後の残存脅威<自HP)なら残って殴るのが正(bot _post_ko_threat同一意味論)
+                if _post_ko_next(a, opp_seen, opp.get("bench")) < (a.get("hp") or 0):
                     continue
         # 退避手段の実在: 入替効果札のPLAY か RETREAT。かつ「負けない/耐える」退避先がベンチに居る
         opts = (sel or {}).get("option") or []

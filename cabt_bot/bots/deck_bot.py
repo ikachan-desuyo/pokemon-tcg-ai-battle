@@ -326,6 +326,17 @@ class DeckBot(Bot):
             me_b = self._me() or {}
             pr_b = self.analyze_prize()
             opp_left_b = pr_b.get("opp_prizes") or 6
+            # activeの生存が負けを防ぐ回復も90: 「死んだら負け(相手残充足) or 単騎(=盤面全滅)」
+            # × 被KO圏 × 回復で生存反転。Boss62等のサイド獲得サポより優先(人間レビュー23巡目
+            # lucario T9敗着: 単騎Mega60でBoss62がWally60を2点差で先取り→+3取るも次ターン全滅)
+            act_b = (me_b.get("active") or [None])[0]
+            if act_b is not None:
+                alone_b = not any(x for x in (me_b.get("bench") or []) if x)
+                th_a = self._incoming_next_turn(act_b)
+                if ((self._prize_value(act_b.get("id")) >= opp_left_b or alone_b)
+                        and (act_b.get("hp") or 0) <= th_a < (act_b.get("maxHp") or 0)):
+                    if not (self._attack_prizes_now() >= (pr_b.get("my_prizes") or 6)):
+                        return 90
             if self._opp_boss_remaining() > 0:
                 for sp in me_b.get("bench") or []:
                     if not sp:
@@ -373,7 +384,10 @@ class DeckBot(Bot):
         if cid in self.plan.boss_cards:
             if not self._should_play_boss():
                 return None
-            return 95 if self._boss_wins_game() else 62
+            # 勝ち切りボスは緊急リーリエ(95)より上=「今勝てる」は生存準備に優先
+            # (人間レビュー23巡目 grimmsnarl T11: 残1でboss+Jetting=勝ちなのに同点95の
+            #  緊急リーリエが先取りしBossごと手札を流した)
+            return 96 if self._boss_wins_game() else 62
         # 回収系(夜のタンカ等): トラッシュに回収価値がある時のみ（無駄打ち防止）
         if cid in self.plan.recover_cards:
             return 50 if self._has_recover_target() else None
@@ -471,7 +485,7 @@ class DeckBot(Bot):
             act = (me.get("active") or [None])[0]
             if not act or act.get("id") not in self.plan.attackers:
                 continue
-            th = self._incoming_threat(act)
+            th = max(self._incoming_threat(act), self._incoming_next_turn(act))
             hp = act.get("hp") or 0
             if hp <= th < hp + boost:
                 return i
@@ -1778,8 +1792,8 @@ class DeckBot(Bot):
             ko_now = (oa and dmg > 0
                       and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999))
             wins_now = self._attack_prizes_now() >= (pr.get("my_prizes") or 6)
-            if ko_now and not self._opp_bench_charged():
-                wins_now = True    # KOで脅威源が消える(相手ベンチに即戦力なし)=残って殴る
+            if ko_now and self._post_ko_threat(act) < (act.get("hp") or 0):
+                wins_now = True    # KOで脅威が消える(KO後の残存脅威<自HP)=残って殴る
             if not wins_now:
                 for sp in me.get("bench") or []:
                     if not sp:
@@ -2062,23 +2076,24 @@ class DeckBot(Bot):
             return False
         if pv < 2 and not death_loses:
             return False
-        th = self._incoming_threat(act)
+        th = max(self._incoming_threat(act), self._incoming_next_turn(act))
         if th <= 0 or (act.get("hp") or 999) > th:
-            return False                       # 被KO圏でない
+            return False                       # 被KO圏でない(ライン最大と現実評価の高い方)
         # 残って殴った場合のトレード: 相手activeをKOでき、その価値が自分の損失以上なら残る
         dmg, ign = self._active_attack_potential(assume_hand_attach=True)
         opp = cur["players"][1 - cur["yourIndex"]]
         oa = (opp.get("active") or [None])[0]
         if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)):
             if death_loses:
-                # 死んだら負け: 「今殴れば勝ち切れる(スプラッシュKO込み)」or「KOで脅威源が
-                # 消える(相手ベンチに即戦力なし)」なら残って殴る(16巡目/19巡目)
+                # 死んだら負け: 「今殴れば勝ち切れる(スプラッシュKO込み)」or「KOで脅威が
+                # 消える(KO後の残存脅威<自HP)」なら残って殴る(16巡目/19巡目/23巡目)
                 if self._attack_prizes_now() >= (pr.get("my_prizes") or 6):
                     return False
-                if not self._opp_bench_charged():
+                if self._post_ko_threat(act) < (act.get("hp") or 0):
                     return False
-            elif self._prize_value(oa.get("id")) >= pv:
-                return False                   # 有利(同等以上の)トレード=受け入れて殴る
+            elif (self._prize_value(oa.get("id")) >= pv
+                  or self._post_ko_threat(act) < (act.get("hp") or 0)):
+                return False                   # 有利トレード or KO後は残存脅威なし=受け入れて殴る
         if death_loses:
             # 敗北回避: 後続の攻撃可否は問わない(負ければ攻撃テンポも無価値)。
             # 「死んでも負けない or 次打を耐える」後続が居れば退く。
@@ -2224,6 +2239,44 @@ class DeckBot(Bot):
             best *= 2
         return best
 
+    def _post_ko_threat(self, my_spot) -> int:
+        """相手activeをKOした後の残存脅威: 相手ベンチの装填済み銃(現エネで即払える技)の
+        現実的最大ダメージ。ダメカン×N技(Raging Hammer)は昇格時点のダメカンで実数評価
+        されるため、瀕死のactiveをKOすれば装填銃でも火力が消えることがある
+        (人間レビュー23巡目 arch-4 T7: Arch ex 40hpをKO→昇格Duraludonは80点=Mega330に無害)。"""
+        import re
+        cur = self._cur
+        if not cur or not my_spot:
+            return 0
+        opp = cur["players"][1 - cur["yourIndex"]]
+        best = 0
+        cc = self._cardinfo.get(my_spot.get("id"))
+        for sp in opp.get("bench") or []:
+            if not sp:
+                continue
+            si_ = self._cardinfo.get(sp.get("id"))
+            if not si_:
+                continue
+            b_moves = list(si_.moves)
+            for pe in (sp.get("preEvolution") or []):
+                pi_ = self._cardinfo.get((pe or {}).get("id"))
+                if pi_:
+                    b_moves += list(pi_.moves)
+            # 昇格後は手貼り1枚(イグニ観測済みなら+3)も想定
+            be = len(sp.get("energyCards") or []) + (3 if any(
+                v in self._opp_seen for v in (17,)) else 1)
+            for m in b_moves:
+                need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                if need > be:
+                    continue
+                mt = re.match(r"(\d+)", str(m.damage or ""))
+                dm = int(mt.group(1)) if mt else 0
+                dm = max(dm, self._effect_move_damage(m, my_spot, sp))
+                if cc and cc.weakness and si_.type == cc.weakness:
+                    dm *= 2
+                best = max(best, dm)
+        return best
+
     def _incoming_threat(self, my_spot) -> int:
         """相手バトル場ラインの最大火力(弱点込み)=このポケモンが次の相手ターンに受けうる最大ダメージ。"""
         cur = self._cur
@@ -2367,15 +2420,28 @@ class DeckBot(Bot):
         me = self._me()
         if not me or not self.deck_counts:
             return False
-        in_play_names = {(self._cardinfo.get(s.get("id")).name if s.get("id") in self._cardinfo else None)
-                         for s in ([(me.get("active") or [None])[0]] + list(me.get("bench") or [])) if s}
-        in_play_names.discard(None)
+        # 進化させる価値のある対象のみ数える: activeへの進化が負けベイトを作る(死1枚を
+        # 死3枚に変える)なら、その対象は「進化すべきでない」=Salvatoreを打つ理由にならない
+        # (人間レビュー23巡目 alakazam T9敗着: 唯一の対象=active Staryuで、進化後Mega330が
+        #  PH540圏×残3=Salvatore経路がEvolveIntoLossゲートを素通り)
+        act0 = (me.get("active") or [None])[0]
+        spots = [sp for sp in ([act0] + list(me.get("bench") or [])) if sp]
+        name2spot = {}
+        for sp in spots:
+            info_s = self._cardinfo.get(sp.get("id"))
+            if info_s:
+                name2spot.setdefault(info_s.name, []).append(sp)
         for cid, n in self.deck_counts.items():
             info = self._cardinfo.get(cid)
-            if (info and info.previous_stage in in_play_names
+            if not (info and info.previous_stage in name2spot
                     and self._deck_likely_has(cid)):
-                # 山に実際に残っている見込みのみ(手札に全部あると空振り=サポ権浪費。
-                # AI自己レビュー: alakazam-3 T11でMega4枚全部手札なのにセイジ使用)
+                continue
+            for sp in name2spot[info.previous_stage]:
+                if sp is act0:
+                    class _Op:  # activeへの進化のみベイト判定(ベンチ進化は常に価値あり)
+                        in_play_area = AreaType.ACTIVE
+                    if self._evolve_creates_loss_bait(cid, _Op()):
+                        continue
                 return True
         return False
 
