@@ -231,6 +231,36 @@ def infer_plan(decklist) -> DeckPlan:
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
+    # ===== Phase7(Knowledge Distillation): Benchmark Phaseの5デッキPLANから抽出した一般則を
+    # カードテキストから自動導出する(デッキ固有ロジックをUniversalへ還元) =====
+    import re as _re
+    # ① conserve_hand: 手札枚数スケール技(Powerful Hand等)を自分が使える=手札1枚に打点価値
+    conserve_hand = any(
+        _re.search(r"for each card in your hand", mv.effect or "")
+        for i in attackers for mv in C[i].moves if mv.damage or (mv.effect or ""))
+    # ② est_var_damage: 自分のダメカン数スケール技(Raging Hammer等)=可変打点の実数評価
+    est_var = any(
+        _re.search(r"more damage for each damage counter on this", mv.effect or "")
+        for i in attackers for mv in C[i].moves)
+    # ③ dup_play_caps: 「1ターンに1回まで」のグローバル制限特性(ルナサイクル等)は1体で充足
+    dup_caps = {}
+    for i in pokes:
+        ab_text = " ".join((mv.effect or "") for mv in C[i].moves
+                           if (mv.name or "").startswith("[Ability]"))
+        if _re.search(r"can[’']t use more than 1 .* Ability each turn", ab_text):
+            dup_caps[i] = 1
+    # ④ 特性燃料エネ規則: 「{X}エネが付いていれば」型の特性(Adrena-Brain等)へ該当エネを供給
+    fuel_rules = []
+    for i in pokes:
+        ab_text = " ".join((mv.effect or "") for mv in C[i].moves
+                           if (mv.name or "").startswith("[Ability]"))
+        m_f = _re.search(r"has any \{([A-Z])\} Energy attached", ab_text)
+        if m_f:
+            e = basic_of(m_f.group(1))
+            if e is not None:
+                fuel_rules.append((e, i))
+    rules = rules + [r for r in fuel_rules if r not in rules]
+
     opening = infer_opening(main, C)
     boss, recover, switch = infer_trainer_roles(ids, C)
     # HPブーストツール(名前ベース認識。ケープ=+100)。activeの被KO圏→生存圏の反転を最優先
@@ -253,6 +283,11 @@ def infer_plan(decklist) -> DeckPlan:
         setup_energy=setup or 0,
         card_values=card_values,
         play_priority=play_priority,
+        # Phase7還元(カードテキスト由来の一般則。Benchmark Phaseの5デッキPLANから抽出):
+        conserve_hand=conserve_hand,       # 手札スケール技デッキ=手札の切り売り防止
+        est_var_damage=est_var,            # 自己ダメカンスケール技=可変打点の実数評価
+        dup_play_caps=dup_caps,            # 1ターン1回のグローバル特性=1体で充足
+        smart_take=True,                   # サーチ/ポケギア取得の文脈選択(複数デッキでA/B正: +0.026〜+0.039)
     )
 
 
