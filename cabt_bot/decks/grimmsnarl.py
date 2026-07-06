@@ -21,21 +21,21 @@ D_E = 7
 BOSS, NIGHT_STRETCHER = 1182, 1097
 LINE = (IMPIDIMP, MORGREM, GRIMMSNARL)
 
-# ==== 操縦側: PLAN ====
-PLAN = DeckPlan(
+# ==== 操縦側: PLAN(Phase7卒業形 = infer_plan(deck) + 薄い差分) ====
+# 卒業証書(2026-07-06, N=50検収): Universal 84-86% ≒ 旧手書きPLAN 86% = Gap 0。
+# 蒸留済み: 特性燃料(D→マシマシラ)+燃料ポケ展開/土台優先/コンボ素材保持/ボスGate。
+import dataclasses as _dc
+
+from ..bots.universal_bot import infer_plan as _infer
+
+_deck = [int(x) for x in open(DECK_CSV).read().split() if x.strip()]
+_base = _infer(_deck)
+PLAN = _dc.replace(
+    _base,
     name="MetaGrimmsnarl",
-    go_first=True,
-    attackers=(GRIMMSNARL, MORGREM),
-    key_cards=(GRIMMSNARL, IMPIDIMP),
-    preferred_attacks=("Shadow Bullet",),
-    energy_rules=((D_E, GRIMMSNARL), (D_E, MUNKIDORI)),  # 悪→オーロンゲ、次点マシマシラ(Adrena起動)
-    play_priority={IMPIDIMP: 86, MUNKIDORI: 82, SNORUNT: 74},
-    card_values={GRIMMSNARL: 100, IMPIDIMP: 90, MORGREM: 85, MUNKIDORI: 80, FROSLASS: 70, SNORUNT: 64},
-    lethal=True,
-    boss_cards=(BOSS,),
-    recover_cards=(NIGHT_STRETCHER,),
-    smart_take=True,
-    dup_play_caps={FROSLASS: 1, MUNKIDORI: 2},
+    # 差分①(一般化候補): フロスラスは静的特性(Freezing Shroud)=1体で充足(静的特性cap未導出)。
+    # 差分②(一般化候補): マシマシラ(燃料ポケ)は2体まで
+    dup_play_caps={**_base.dup_play_caps, 104: 1, 112: 2},
 )
 
 

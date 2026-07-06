@@ -18,24 +18,22 @@ DECK_CSV = "decks/ladder_lucario.csv"
 RIOLU, ML, MAKUHITA, HARIYAMA, LUNATONE, SOLROCK = 677, 678, 673, 674, 675, 676
 CAPE, BOSS, SWITCH = 1159, 1182, 1123
 
-# ==== 操縦側: PLAN(観測済みの弱点=土台リオルのBoss/スプラッシュ狩り、への対策込み) ====
-PLAN = DeckPlan(
+# ==== 操縦側: PLAN(Phase7卒業形 = infer_plan(deck) + 薄い差分) ====
+# 卒業証書(2026-07-06, N=50検収): Universal 79-81% ≒ 旧手書きPLAN 81% = Gap 0。
+# 旧PLANの主要知識は全てUniversalへ蒸留済み(主火力集中/土台優先/1ターン1回特性cap/ケープ/ボスGate)。
+import dataclasses as _dc
+
+from ..bots.universal_bot import infer_plan as _infer
+
+_deck = [int(x) for x in open(DECK_CSV).read().split() if x.strip()]
+_base = _infer(_deck)
+PLAN = _dc.replace(
+    _base,
     name="LadderLucario",
-    go_first=True,
-    attackers=(ML, HARIYAMA, SOLROCK),
-    key_cards=(ML, RIOLU),
-    preferred_attacks=(),                  # 既定=最大ダメージ(MB⇄AJは使用ロックで自然交互)
-    energy_rules=((None, ML), (None, HARIYAMA)),
-    play_priority={RIOLU: 86, MAKUHITA: 78, SOLROCK: 74, LUNATONE: 74},
-    card_values={ML: 100, RIOLU: 85, HARIYAMA: 72, SOLROCK: 62, LUNATONE: 62},
-    lethal=True,
-    reposition=True,
-    hp_boost_tools={CAPE: 100},
-    boss_cards=(BOSS,),
-    switch_cards=(SWITCH,),
-    smart_take=True,
-    setup_wall=(LUNATONE, SOLROCK),        # 開幕壁は非土台(マクノシタはハリテヤマの土台=SetupSkew)
-    dup_play_caps={SOLROCK: 1, LUNATONE: 1, MAKUHITA: 2},  # 条件系特性は各1体で充足=渋滞防止
+    # 差分①(一般化候補): ソルロックは相方特性(ルナサイクル)の相棒=1体で充足。
+    #   「1ターン1回」テキストはルナトーン側にしか無いため相棒側capは未導出
+    # 差分②(デッキ固有): マクノシタはハリテヤマ(どすこい)土台=2枚まで
+    dup_play_caps={**_base.dup_play_caps, 676: 1, 673: 2},
 )
 
 

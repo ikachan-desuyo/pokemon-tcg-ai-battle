@@ -21,25 +21,28 @@ P_ENERGY, TELEPATH = 5, 19
 CAPE, BOSS, NIGHT_STRETCHER, SACRED_ASH = 1159, 1182, 1097, 1129
 LINE = (ABRA, KADABRA, ALAKAZAM)
 
-# ==== 操縦側: PLAN ====
-PLAN = DeckPlan(
+# ==== 操縦側: PLAN(Phase7卒業形 = infer_plan(deck) + 薄い差分) ====
+# 卒業証書(2026-07-06, N=50検収): Universal 76-80% ≒ 旧手書きPLAN 78% = Gap 2(分解能内)。
+# 蒸留済み: conserve_hand(手札=打点)/「1ターン1回」cap(フェザン)/P集中/コンボ素材保持。
+import dataclasses as _dc
+
+from ..bots.universal_bot import infer_plan as _infer
+
+_deck = [int(x) for x in open(DECK_CSV).read().split() if x.strip()]
+_base = _infer(_deck)
+PLAN = _dc.replace(
+    _base,
     name="Alakazam",
-    go_first=False,                        # ドロー枚数(後攻8枚)重視のコンボ系
-    attackers=(ALAKAZAM, DUDUNSPARCE, FEZ),
-    key_cards=(ALAKAZAM, KADABRA, ABRA),
+    # 差分①(デッキ固有): コンボ系はドロー枚数(後攻8枚)優先
+    go_first=False,
+    # 差分②(デッキ固有): 主技はPH(火力推定では他技と拮抗するため明示)
     preferred_attacks=("Powerful Hand",),
-    energy_rules=((TELEPATH, ALAKAZAM), (P_ENERGY, ALAKAZAM), (None, ABRA)),
-    play_priority={ABRA: 86, DUNSPARCE: 76, SHAYMIN: 70, FEZ: 66},
-    card_values={ALAKAZAM: 100, KADABRA: 88, ABRA: 85, DUNSPARCE: 62, SHAYMIN: 58},
-    lethal=True,
-    reposition=True,
-    hp_boost_tools={CAPE: 100},
-    boss_cards=(BOSS,),
-    recover_cards=(NIGHT_STRETCHER, SACRED_ASH),
-    smart_take=True,
-    setup_wall=(DUNSPARCE,),               # 開幕はドュンスパルスを壁に(アタッカー線を晒さない)
-    dup_play_caps={SHAYMIN: 1, FEZ: 1, DUNSPARCE: 2},
-    conserve_hand=True,               # 手札=打点(PH)。コストを進めないエネ貼り/超過展開をしない
+    # 差分③(データ欠如=固有): Telepathエネはtype欄が無くpayability導出不能(Comfey監査の既知問題)
+    energy_rules=((19, 743),) + tuple(_base.energy_rules),
+    # 差分④(Residual候補: 開幕壁条件): アタッカー線を晒さない非土台壁
+    setup_wall=(65,),
+    # 差分⑤(一般化候補: 静的特性cap): シェイミ(フラワーカーテン)1体/ドュンスパルス2体
+    dup_play_caps={**_base.dup_play_caps, 343: 1, 65: 2},
 )
 
 

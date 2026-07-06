@@ -19,24 +19,21 @@ METAL = 8
 CAPE, BOSS, SWITCH, NIGHT_STRETCHER, FML = 1159, 1182, 1123, 1097, 1244
 LINE = (DURALUDON, ARCH)
 
-# ==== 操縦側: PLAN ====
-PLAN = DeckPlan(
+# ==== 操縦側: PLAN(Phase7卒業形 = infer_plan(deck) + 薄い差分) ====
+# 卒業証書(2026-07-06, N=50検収): Universal 79-82% ≒ 旧手書きPLAN 83% = Gap 1(分解能内)。
+# 蒸留済み: RH実数評価(est_var)/鋼集中/ケープ/ボスGate。旧PLANの壁・repositionは逆効果で撤去済みの経緯。
+import dataclasses as _dc
+
+from ..bots.universal_bot import infer_plan as _infer
+
+_deck = [int(x) for x in open(DECK_CSV).read().split() if x.strip()]
+_base = _infer(_deck)
+PLAN = _dc.replace(
+    _base,
     name="LadderArchaludon",
-    go_first=True,
-    attackers=(ARCH, DURALUDON),
-    key_cards=(ARCH, DURALUDON),
-    preferred_attacks=(),                  # 既定=最大ダメージ(RHはest_var_damageで実数比較)
-    energy_rules=((METAL, ARCH), (METAL, DURALUDON)),
-    play_priority={DURALUDON: 86, RELICANTH: 82},
-    card_values={ARCH: 100, DURALUDON: 90, RELICANTH: 84},
-    lethal=True,
-    est_var_damage=True,                   # Raging Hammer=80+自分ダメカン×10の実数評価
-    hp_boost_tools={CAPE: 100},
-    boss_cards=(BOSS,),
-    recover_cards=(NIGHT_STRETCHER,),
-    switch_cards=(SWITCH,),
-    smart_take=True,
-    dup_play_caps={RELICANTH: 2},          # Memory Dive要員+ボス釣り対策の予備
+    # 差分①(一般化候補): ジーランスは静的特性(Memory Dive)=場に1体で充足、予備込み2枚まで。
+    #   静的特性(1ターン1回テキスト無し)のcap導出は未対応
+    dup_play_caps={**_base.dup_play_caps, 57: 2},
 )
 
 
