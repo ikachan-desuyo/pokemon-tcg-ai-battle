@@ -274,6 +274,28 @@ def infer_plan(decklist) -> DeckPlan:
     for i in fuel_pokes:
         play_priority[i] = max(play_priority.get(i, 0), 78)
         card_values.setdefault(i, 72)
+    # ⑤ 自滅特性(カースドボム等)の導出: 「この特性を使うとこのポケモンはきぜつ」
+    #   =価値は特性でありエネ投資先ではない(Dragapult Gap8: (P,Dusknoir)分散の排除)
+    sac_abilities = {}
+    for i in pokes:
+        for mv in C[i].moves:
+            if not (mv.name or "").startswith("[Ability]"):
+                continue
+            m_s = _re.search(r"put (\d+) damage counters on 1 of your opponent[’']s Pokémon.*this Pokémon is Knocked Out", mv.effect or "")
+            if m_s:
+                sac_abilities[i] = int(m_s.group(1)) * 10
+    rules = [(e, t) for e, t in rules if t not in sac_abilities]
+    # (試行済み・不採用) 主役へのワイルドカード受け皿 (None, main[0]) は単体移植すると
+    # 3デッキで微劣化(dragapult ③72%/lucario 79/arch 79)。PLANの(None,主役)は他の手書き要素
+    # との組合せで機能しており、二色エネ配分の完全な蒸留は未解決(Gap8=Deck Intent残差候補)
+    # ⑥ コンボ素材の保持: ふしぎなアメ+Stage2線があるデッキはキー在手時のリーリエ抑制
+    #   (Dragapult①着地14vs22: アメ/進化先を引き直しで流さない)
+    RARE_CANDY = 1079
+    has_stage2 = any(
+        C.get(i) and C[i].previous_stage and C.get(name2id.get(C[i].previous_stage, -1))
+        and C[name2id[C[i].previous_stage]].previous_stage
+        for i in pokes)
+    strict_lillie = RARE_CANDY in ids and has_stage2
 
     opening = infer_opening(main, C)
     boss, recover, switch = infer_trainer_roles(ids, C)
@@ -302,6 +324,9 @@ def infer_plan(decklist) -> DeckPlan:
         est_var_damage=est_var,            # 自己ダメカンスケール技=可変打点の実数評価
         dup_play_caps=dup_caps,            # 1ターン1回のグローバル特性=1体で充足
         smart_take=True,                   # サーチ/ポケギア取得の文脈選択(複数デッキでA/B正: +0.026〜+0.039)
+        sacrifice_abilities=tuple(sac_abilities),   # 自滅特性=ベンチ有×KO価値時のみ(既存Gate)
+        sacrifice_damage=dict(sac_abilities),
+        strict_lillie_guard=strict_lillie,          # アメ+Stage2=コンボ素材の保持
     )
 
 
