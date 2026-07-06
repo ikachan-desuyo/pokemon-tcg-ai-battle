@@ -737,7 +737,14 @@ def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
             m2 = re.search(r"lace (\d+) damage counters? on your opponent[’\']s Active Pokémon for each card in your hand", m.effect or "")
             if m2:
                 t = max(t, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
-    for spb in (opp_bench or []):
+    # ベンチ銃は相手actが動ける(現エネ+手貼り1で逃げコスト可)場合のみ(bot同一意味論)
+    def _esyms_i(eid):
+        ei_ = C.get(eid)
+        s_ = re.findall(r"\{[A-Z]\}", (ei_.type or "") if ei_ else "") or re.findall(r"\{[A-Z]\}", (ei_.name or "") if ei_ else "")
+        return len(s_) if s_ else (3 if eid == IGN else 1)
+    oa_ret = (getattr(oc, "retreat", 0) if oc else 0) or 0
+    oa_syms = sum(_esyms_i(ec.get("id")) for ec in (oa.get("energyCards") or []))
+    for spb in (opp_bench or []) if oa_syms + 1 >= oa_ret else []:
         if not spb:
             continue
         bi_ = C.get(spb.get("id"))
@@ -1233,8 +1240,15 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
             cnt = max(0, ((oa.get("maxHp") or 0) - (oa.get("hp") or 0)) // 10)
             dm = max(dm, dm + int(m2.group(1)) * cnt)
         best = max(best, dm)
-    # ベンチの装填済み銃(現エネで即払える技、ダメカン×N込み)=昇格1手で届く(bot同一意味論)
-    for spb in (opp_bench or []):
+    # ベンチの装填済み銃=昇格1手で届く。ただし相手actが動ける(現エネ+手貼り1で逃げ
+    # コスト支払い可)場合のみ(bot _incoming_next_turn同一意味論。act膠着では届かない)
+    def _esyms(eid):
+        ei_ = C.get(eid)
+        s_ = re.findall(r"\{[A-Z]\}", (ei_.type or "") if ei_ else "") or re.findall(r"\{[A-Z]\}", (ei_.name or "") if ei_ else "")
+        return len(s_) if s_ else (3 if eid == IGN else 1)
+    oa_ret = (getattr(oi, "retreat", 0) if oi else 0) or 0
+    oa_syms = sum(_esyms(ec.get("id")) for ec in (oa.get("energyCards") or []))
+    for spb in (opp_bench or []) if oa_syms + 1 >= oa_ret else []:
         if not spb:
             continue
         bi_ = C.get(spb.get("id"))

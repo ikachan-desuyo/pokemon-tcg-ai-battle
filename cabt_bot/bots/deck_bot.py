@@ -2212,9 +2212,15 @@ class DeckBot(Bot):
             dm = int(mt.group(1)) if mt else 0
             dm = max(dm, self._effect_move_damage(m, my_spot, oa))
             best = max(best, dm)
-        # ベンチの装填済み銃: 現エネで即払える技を持つベンチは昇格1手で届く(相手はKO後の
-        # 昇格/入替で前に出せる)。攻撃者自身のダメカン×N技(Raging Hammer)は瀕死ほど強い
-        for sp in opp.get("bench") or []:
+        # ベンチの装填済み銃: 現エネで即払える技を持つベンチは昇格1手で届く。ただし昇格には
+        # 相手の自主的な退却が必要=「相手actが動ける(現エネ+手貼り1で逃げコスト支払い可)」
+        # 場合のみ次ターン脅威(act e0×逃げ2の膠着では届かない。人間レビュー24巡目 arch T13:
+        # 幻の340を恐れてSwitch+イグニ+退却を空費)。自分がactをKOして昇格を強制する場合は
+        # _post_ko_threat 側で評価する。
+        oa_ret = (getattr(oi, "retreat", 0) if oi else 0) or 0
+        oa_syms = sum(len(self._energy_provides_syms(ec.get("id")))
+                      for ec in (oa.get("energyCards") or []))
+        for sp in (opp.get("bench") or []) if oa_syms + 1 >= oa_ret else []:
             if not sp:
                 continue
             si_ = self._cardinfo.get(sp.get("id"))
