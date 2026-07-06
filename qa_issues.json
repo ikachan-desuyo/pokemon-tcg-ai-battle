@@ -3865,5 +3865,18 @@
    "confirmed": 0,
    "rejected": 5
   }
+ },
+ "MunkidoriAbilityThreatBlind": {
+  "status": "Watching",
+  "detector": "手動精読(R28)",
+  "match": "dragapult",
+  "fix": "未修正(Watch)。特性ダメージ(Munkidori Adrena-Brain=ダメカン移動)が_incoming系脅威モデル外。R28 dragapult敗戦は判断ミスなし(全代替も敗北)だが、僅差局面では特性込み予測が差を生む可能性",
+  "first_seen": "2026-07-06",
+  "cause": "脅威評価は技ダメージのみで特性(ダメカン移動/ばら撒き)を数えない",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 0,
+   "rejected": 0
+  }
  }
 }
