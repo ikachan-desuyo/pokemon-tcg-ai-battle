@@ -929,10 +929,11 @@ class DeckBot(Bot):
         # 相手active(進化前スタック込み)のダメカン×N技で、次ターン払えるもの
         oi = self._cardinfo.get(oa.get("id"))
         moves = list(oi.moves) if oi else []
-        for pe in (oa.get("preEvolution") or []):
-            pi_ = self._cardinfo.get((pe or {}).get("id"))
-            if pi_:
-                moves += list(pi_.moves)
+        if self._opp_can_use_pre_evo_attacks():   # Memory Dive型在場時のみ進化前技を数える
+            for pe in (oa.get("preEvolution") or []):
+                pi_ = self._cardinfo.get((pe or {}).get("id"))
+                if pi_:
+                    moves += list(pi_.moves)
         oe = len(oa.get("energyCards") or []) + 1
         gun = None
         for m in moves:
@@ -2267,12 +2268,15 @@ class DeckBot(Bot):
             v in self._opp_seen for v in (17,)) else 1)
         oi = self._cardinfo.get(oa.get("id"))
         moves = list(oi.moves) if oi else []
-        # 進化前スタックの技も使える(エンジン実測: Archaludon exがDuraludonのRaging Hammer
-        # =80+ダメカン×10で満タンMega330を一撃。人間レビュー19巡目 arch T18)
-        for pe in (oa.get("preEvolution") or []):
-            pi_ = self._cardinfo.get((pe or {}).get("id"))
-            if pi_:
-                moves += list(pi_.moves)
+        # 進化前スタックの技も使える(エンジン実測: Memory Dive型特性の在場時のみ。
+        # Archaludon exがDuraludonのRaging Hammerで満タンMega330を一撃=人間レビュー19巡目 arch T18、
+        # ただしRelicanth不在では候補に出ない=精読R31実測)
+        _pre_ok = self._opp_can_use_pre_evo_attacks()
+        if _pre_ok:
+            for pe in (oa.get("preEvolution") or []):
+                pi_ = self._cardinfo.get((pe or {}).get("id"))
+                if pi_:
+                    moves += list(pi_.moves)
         for did, di in self._cardinfo.items():
             # 進化1段先の技も想定。ただし相手の場で観測済みのカードのみ(DB全体を見ると
             # 相手デッキに無い別進化形の技を拾い過大評価する)。
@@ -2303,10 +2307,11 @@ class DeckBot(Bot):
             if not si_:
                 continue
             b_moves = list(si_.moves)
-            for pe in (sp.get("preEvolution") or []):
-                pi_ = self._cardinfo.get((pe or {}).get("id"))
-                if pi_:
-                    b_moves += list(pi_.moves)
+            if _pre_ok:
+                for pe in (sp.get("preEvolution") or []):
+                    pi_ = self._cardinfo.get((pe or {}).get("id"))
+                    if pi_:
+                        b_moves += list(pi_.moves)
             be = len(sp.get("energyCards") or [])
             for m in b_moves:
                 need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
@@ -2320,6 +2325,23 @@ class DeckBot(Bot):
         if cc and oi and cc.weakness and oi.type == cc.weakness:
             best *= 2
         return best
+
+    def _opp_can_use_pre_evo_attacks(self) -> bool:
+        """相手の進化ポケが進化前の技を使えるか=Memory Dive型特性(『進化ポケモンは進化前の
+        技を使える』)持ちが相手の場に居るか。エンジン実測(2026-07-06): Relicanth在場36/36で
+        進化前技が候補に出る/不在31/31で出ない=完全分離。無条件に進化前スタック技を脅威に
+        数えるとRelicanth撃破後もRaging Hammer装填を恐れて安全なチップを自粛する(精読R31 arch T7)。"""
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if not sp:
+                continue
+            info = self._cardinfo.get(sp.get("id"))
+            for m in (info.moves if info else []):
+                if ((m.name or "").startswith("[Ability]")
+                        and "can use any attack from its previous Evolution" in (m.effect or "")):
+                    return True
+        return False
 
     def _post_ko_threat(self, my_spot) -> int:
         """相手activeをKOした後の残存脅威: 相手ベンチの装填済み銃(現エネで即払える技)の
@@ -2340,10 +2362,11 @@ class DeckBot(Bot):
             if not si_:
                 continue
             b_moves = list(si_.moves)
-            for pe in (sp.get("preEvolution") or []):
-                pi_ = self._cardinfo.get((pe or {}).get("id"))
-                if pi_:
-                    b_moves += list(pi_.moves)
+            if self._opp_can_use_pre_evo_attacks():
+                for pe in (sp.get("preEvolution") or []):
+                    pi_ = self._cardinfo.get((pe or {}).get("id"))
+                    if pi_:
+                        b_moves += list(pi_.moves)
             # 昇格後は手貼り1枚(イグニ観測済みなら+3)も想定
             be = len(sp.get("energyCards") or []) + (3 if any(
                 v in self._opp_seen for v in (17,)) else 1)

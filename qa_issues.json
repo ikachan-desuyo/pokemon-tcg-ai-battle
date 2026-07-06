@@ -3878,5 +3878,31 @@
    "confirmed": 0,
    "rejected": 0
   }
+ },
+ "MemoryDivePreEvoGate": {
+  "status": "Fixed",
+  "detector": "手動精読(R31)",
+  "match": "arch",
+  "fix": "進化前スタック技の脅威/装填評価を「Memory Dive型特性(進化ポケは進化前の技を使える)の在場時のみ」に条件付き化(bot3箇所+reviewer4箇所)",
+  "first_seen": "2026-07-06",
+  "cause": "エンジン実測でRelicanth在場36/36のみ進化前技が候補(不在31/31で不出=完全分離)。無条件評価だとRelicanth撃破後もRH装填を恐れ、フルHP時の安全なNebulaチップを砲装填ガードが封殺(R31 arch T7=END、修正後ATTACK)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "RaceAwareTradeCandidate": {
+  "status": "Watching",
+  "detector": "手動精読(R31)",
+  "match": "dragapult",
+  "fix": "未実装。トレード判定(pv比較)がサイドレース位置(自残2vs相手残6)を見ない=3枚犠牲でも2ターン早く勝つ線を温存が選ぶ(R31 dragapult T7、勝敗影響なし=T11勝ち)",
+  "first_seen": "2026-07-06",
+  "cause": "「有利トレード」の定義がサイド枚数比のみでレース優位を含まない",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 0,
+   "rejected": 0
+  }
  }
 }

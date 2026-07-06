@@ -730,6 +730,20 @@ def det_volatile_over_permanent(g, sig):
 WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
+def _pre_evo_ok(oa, opp_bench):
+    """相手の進化ポケが進化前の技を使えるか=Memory Dive型特性の在場(bot同一意味論、エンジン実測:
+    Relicanth在場36/36で進化前技が候補/不在31/31で不出=完全分離)。"""
+    for sp in [oa] + list(opp_bench or []):
+        if not sp:
+            continue
+        ci = C.get(sp.get("id"))
+        for m in (ci.moves if ci else []):
+            if ((m.name or "").startswith("[Ability]")
+                    and "can use any attack from its previous Evolution" in (m.effect or "")):
+                return True
+    return False
+
+
 def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
     """相手activeライン最大火力(弱点込み)=aが次の相手ターンに受けうる最大ダメージ。
     効果文の可変ダメージ(Powerful Hand=手札枚数×等)は実数で補完(bot _incoming_threatと同一意味論)。"""
@@ -758,10 +772,11 @@ def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
         if not bi_:
             continue
         b_moves = list(bi_.moves)
-        for pe in (spb.get("preEvolution") or []):
-            pi_ = C.get((pe or {}).get("id"))
-            if pi_:
-                b_moves += list(pi_.moves)
+        if _pre_evo_ok(oa, opp_bench):
+            for pe in (spb.get("preEvolution") or []):
+                pi_ = C.get((pe or {}).get("id"))
+                if pi_:
+                    b_moves += list(pi_.moves)
         be = len(spb.get("energyCards") or [])
         for m in b_moves:
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
@@ -1231,10 +1246,12 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
     e = len(oa.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
     oi = C.get(oa.get("id"))
     moves = list(oi.moves) if oi else []
-    for pe in (oa.get("preEvolution") or []):
-        pi_ = C.get((pe or {}).get("id"))
-        if pi_:
-            moves += list(pi_.moves)   # 進化前スタックの技も使える(エンジン実測: Raging Hammer)
+    _pre_ok = _pre_evo_ok(oa, opp_bench)
+    if _pre_ok:                        # 進化前スタックの技はMemory Dive型在場時のみ(エンジン実測)
+        for pe in (oa.get("preEvolution") or []):
+            pi_ = C.get((pe or {}).get("id"))
+            if pi_:
+                moves += list(pi_.moves)
     for did, di in C.items():
         if (oi and di.previous_stage == oi.name and di.is_pokemon
                 and (opp_seen is None or did in opp_seen)):
@@ -1278,10 +1295,11 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
         if not bi_:
             continue
         b_moves = list(bi_.moves)
-        for pe in (spb.get("preEvolution") or []):
-            pi_ = C.get((pe or {}).get("id"))
-            if pi_:
-                b_moves += list(pi_.moves)
+        if _pre_ok:
+            for pe in (spb.get("preEvolution") or []):
+                pi_ = C.get((pe or {}).get("id"))
+                if pi_:
+                    b_moves += list(pi_.moves)
         be = len(spb.get("energyCards") or [])
         for m in b_moves:
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
@@ -1326,10 +1344,11 @@ def _post_ko_next(a, opp_seen=None, opp_bench=None, opp_owner_hand_count=None):
         if not bi_:
             continue
         b_moves = list(bi_.moves)
-        for pe in (spb.get("preEvolution") or []):
-            pi_ = C.get((pe or {}).get("id"))
-            if pi_:
-                b_moves += list(pi_.moves)
+        if _pre_evo_ok(None, opp_bench):
+            for pe in (spb.get("preEvolution") or []):
+                pi_ = C.get((pe or {}).get("id"))
+                if pi_:
+                    b_moves += list(pi_.moves)
         be = len(spb.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
         for m in b_moves:
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
