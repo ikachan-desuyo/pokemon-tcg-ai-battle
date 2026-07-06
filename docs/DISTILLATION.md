@@ -88,12 +88,44 @@ N=20時代のGap(23/9/3/0/4)は測定誤差込みだった。確定値では**4/
 - 4/5デッキが卒業(PLAN=infer_plan+数行の差分)。dragapultのみResidual保有につき卒業保留
 - 測定分解能: N=50で総合±5 → Gap<5の議論は不毛(改善追跡はN≥50+差分の意味の明記で行う)
 
-## 次フェーズ: Universal Validation
+## Knowledge Evolution (Phase7で獲得したもの)
 
-目的は「未知デッキのGap測定」ではなく **「Residual Knowledgeが増えるか?」の検証**:
-- 増えなければ = Universal完成度の証明
-- 増えたら = Knowledge Inventoryへ追加(一般化を試み、できなければResidualへ)
-- Residualが十分蓄積した時のみ、新推論層(Deck Intent)を検討する
+| Knowledge | Source | Generalized | Residual |
+|---|---|---|---|
+| 主火力集中(エネ規則50%閾値) | Lucario | ✅ | - |
+| 土台優先展開(土台>支援) | Lucario/Dragapult | ✅ | - |
+| 特性燃料エネ+燃料ポケ展開 | Grimmsnarl/Dragapult | ✅ | - |
+| 可変火力手札管理(conserve_hand) | Alakazam | ✅ | - |
+| コンボ素材保持(アメ+Stage2) | Dragapult | ✅ | - |
+| 「1ターン1回」特性cap | Lucario | ✅ | - |
+| 自己ダメカンスケール実数評価 | Arch | ✅ | - |
+| 自滅特性の認識+価値ゲート | Dragapult | ✅ | - |
+| 特性コストの手貼りエネ保護 | Lucario | ✅(エンジン層) | - |
+| Wildcard貼り分け×優先度の組合せ | Dragapult | - | ✅(保有=卒業保留PLAN) |
+| 被弾価値(傷んだ砲の温存) | Arch | - | △(寄与~1) |
+| 開幕壁の条件 | Lucario/Alakazam/Arch | - | △(archで逆効果の前科) |
+
+**Phase7の最大の成果はGap 0ではなく、この切り分け表そのもの。**
+「Episode6/Deck Intentを作る」計画は「Residualが十分溜まるまで作らない」へ転換した
+(=「必要になったから作る」憲章の貫徹)。
+
+## 次フェーズ: Universal Validation (二段階)
+
+目的は「Gap測定」ではなく **「Residual Knowledgeが増えるか?」の検証**。
+未知デッキにはPLAN(=Gapの比較対象)が存在しないため、二段階に分ける:
+
+- **Validation-1(既知アーキタイプの派生)**: Lucario等の既知デッキのカード数・エネ配分・
+  サポート構成を変えた派生構築を投入。「構築変更でResidualが増えるか」を測る
+  (Identityメトリクスが既存なのでGapも測れる)
+- **Validation-2(完全未知)**: 新弾・新アーキタイプ(Comfey系/コントロール等)を投入。
+  「未知だからResidualが増えるのか」をV1と分離して観測
+
+判定: 増えなければ=Universal完成度の証明 / 増えたら=Inventoryへ追加(一般化を試み、
+できなければResidualへ) / Residualが十分蓄積した時のみ新推論層(Deck Intent)を検討する。
+
+---
+**Phase7 正式クローズ(2026-07-06)** — UniversalBot v1.0:
+4/5デッキ卒業(infer_plan+数行差分)、Residual 3件を特定・保存。
 
 ## Phase7完了条件(ユーザ定義)
 
