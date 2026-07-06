@@ -617,6 +617,21 @@ class DeckBot(Bot):
                 # 水2枚+手札水でイグニを貼った局面の修正)。
                 if self._basic_attach_suffices(me, op, hand):
                     continue
+            # 確殺圏activeへの恒久エネ給餌ガード(人間レビュー指摘・DoomedActiveEnergyFeed):
+            # activeが次ターン確殺×このエネを貼ってもサイドが立たないなら、恒久エネは体と
+            # 一緒に失われる=同じエネのベンチ候補を優先(揮発エネ=イグニは番末消滅で損失
+            # ゼロのためチップ解放を許容。勝ちエネ/ケープ反転/退却燃料の各プリパスは通過済み)
+            if (op.in_play_area == AreaType.ACTIVE
+                    and self._is_energy(energy)
+                    and energy not in self.plan.volatile_energies):
+                act_g = (me.get("active") or [None])[0]
+                if (act_g is not None
+                        and (act_g.get("hp") or 0) <= self._incoming_next_turn(act_g)
+                        and self._attack_prizes_now(extra_energy_id=energy) <= 0
+                        and any(options[j].in_play_area != AreaType.ACTIVE
+                                and self._hand_id(hand, options[j].index) == energy
+                                for j in idxs)):
+                    continue
             spots_k = (me.get("active") if op.in_play_area == AreaType.ACTIVE else me.get("bench")) or []
             sp_k = (spots_k[op.in_play_index]
                     if op.in_play_index is not None and 0 <= op.in_play_index < len(spots_k) else None)
@@ -2026,6 +2041,15 @@ class DeckBot(Bot):
                 # 前に出す逆転を防ぐ。alakazam-3 T9: Powerful Hand 500の前へMega330)
                 if self._is_loss_bait(sp):
                     continue
+                # 殴れない高価値後続を身代わりに出さない(人間レビュー指摘: lucario bot
+                # lucario-3 T4/lucario-7 T6: Lunatone110温存のためML340e0=攻撃不能の主力を
+                # 前進させ無償被弾。守る価値<晒す価値かつ後続が今ターン攻撃不能なら温存しない)
+                sp_can = self._move_payable(sp) or (not cur.get("energyAttached") and any(
+                    self._is_energy(c.get("id")) and self._move_payable(sp, c.get("id"))
+                    for c in (me.get("hand") or [])))
+                if (not sp_can
+                        and self._prize_value(sp.get("id")) > self._prize_value(act.get("id"))):
+                    continue    # 守る価値<晒す価値の時のみ(同価値Mega同士の温存は正当=QA回帰で確認)
                 return True
             return False
         # 前進パス: retreat版(_should_reposition)と同じ検証に委譲=先攻T1ガード+
@@ -3398,6 +3422,17 @@ class DeckBot(Bot):
                          and self._cardinfo[sp.get("id")].name == c.name)
             if n_play >= self.plan.dup_play_caps[cid]:
                 return 30
+        # 手札からの破棄コスト(ハイパーボール等・GIVE=低価値から捨てる)の保護序列:
+        # 生存反転ツール(ケープ)とStage2必須素材(ふしぎなあめ)を安易に食わせない
+        # (人間レビュー指摘: 進化元不在でCape+Arch本体を捨て同名Archをサーチ=净損失/
+        #  アメをコストで捨て進化線ごと破壊。リーリエ側のstrict_lillie_guardと同じ保持意味論)
+        if op.area == AreaType.HAND:
+            if cid in (self.plan.hp_boost_tools or {}):
+                return 88
+            if cid == RARE_CANDY and any(
+                    ci2 and "Stage 2" in (ci2.stage or "")
+                    for ci2 in (self._cardinfo.get(x) for x in (self.deck_counts or {}))):
+                return 85
         if cid in self.plan.card_values:
             return self.plan.card_values[cid]
         if cid in self.plan.attackers:

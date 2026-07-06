@@ -209,6 +209,10 @@ def det_missed_lethal(g, sig):
         a = (me.get("active") or [None])[0]
         if not a:
             continue
+        if _attack_prizes(cur, me, opp, a) >= 1:
+            continue    # 素の攻撃(スプラッシュ込み)で1枚=勝ちが既に立っている=Boss不要
+                        # (bot _should_play_bossの勝ち切りガードと同一意味論。残1でJetting+撒き
+                        #  勝ちを取ったターンの誤検出3件/QA)
         ci = C.get(a.get("id"))
         evolved = bool(ci) and not getattr(ci, "is_basic", True)
         e = sum(3 if (ec.get("id") == IGN and evolved) else 1

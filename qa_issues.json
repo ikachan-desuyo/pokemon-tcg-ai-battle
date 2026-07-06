@@ -4807,9 +4807,9 @@
    "rejected": 0
   },
   "first_seen": "2026-07-07",
-  "fix": "未実装。方針: activeが確殺圏×攻撃してもKO/勝ちに届かない場合、(a)恒久エネは後続へ (b)チップ価値(次ターンの後続KO装填)とprize損失(pv×)の比較 (c)退避可能なら退避を優先。17巡目comp格上げに「act非確殺」条件の追加を検討(壁ケースの再検証必須)",
+  "fix": "_pick_attach: 確殺圏active×このエネでサイドが立たない×同エネのベンチ候補あり→恒久エネはベンチへ(揮発エネのチップ解放は許容=grimm T11勝ち筋保護)。stay-vs-evacuateのレース算術はRaceAwareTradeCandidateとしてWatch継続",
   "match": "arch",
-  "status": "Open"
+  "status": "Fixed"
  },
  "SwitchAdvanceUnpayableMain": {
   "cause": "(人間レビュー指摘・相手lucario bot側) 攻撃コストを払えない主力を Switch で前進させ被弾させる。登録リプレイ実測2件: lucario-3 T4(act Lunatone110e0でSwitch→Mega Lucario 340e0=エネ0が前進→被弾)、lucario-7 T6(act Solrock110e0でSwitch→ML340e0前進→被弾)。_should_switchの前進パスの「前進すれば殴れる」検証が甘い疑い(手貼り1枚でML(コスト2+)は払えないのに前進、または昇格選択がエネ0のMLを選ぶ)。SwitchWaste修正(retreat系)と同じゲートがSwitch前進パスに未適用の可能性",
@@ -4823,9 +4823,9 @@
    "rejected": 0
   },
   "first_seen": "2026-07-07",
-  "fix": "未実装(次セッション): ①_should_switch前進パスに_move_payable(後続, 手札エネ込み・全コスト充足)検証 ②昇格選択で「殴れない主力を確殺圏に出さない」 ③ベンチマークbot健全性の観点(memory: benchmark-health-first)でも優先",
+  "fix": "_should_switch温存パス: 後続が攻撃不能(現エネ+手貼りでも不可)×守る価値<晒す価値なら温存しない(lucario-7 T6型=単独ML340e0の無償被弾を解消。同価値Mega同士の正当温存はQA回帰で保護)",
   "match": "lucario",
-  "status": "Open"
+  "status": "Fixed"
  },
  "HyperBallWastefulCost": {
   "cause": "(人間レビュー指摘・相手arch bot側) ハイパーボールのコスト/価値評価の欠如: ①ベンチにDuraludonが不在=サーチしたArchaludon(ブリジュラス)を置く先が無い(進化元不在でDeadEvolutionPickと同根)のに使用 ②コストでHero's Cape(ヒーローマント=耐久+100の生存反転ツール)とArchaludon本体をトラッシュし、同名のArchaludonを手札に加える=净損失(Cape喪失+同名入替)。Capeを貼って耐久を上げる方が明確に優位な場面だった。登録リプレイのarch対面(arch-7/arch-9)で観測。追加指摘: 同様にコストで「ふしぎなあめ」(Stage2進化の必須素材)をトラッシュ=進化線自体を破壊",
@@ -4839,8 +4839,8 @@
    "rejected": 0
   },
   "first_seen": "2026-07-07",
-  "fix": "未実装(次セッション): ①ハイパーボール使用ゲート=「サーチ対象が今/次ターンに置ける・進化できる」(進化元の在場確認=DeadEvolutionPickの意味論を使用側に適用) ②捨て札選択=生存反転ツール(Cape)と主役実物・コンボ必須素材(ふしぎなあめ=strict_lillie_guardと同じ「アメ+Stage2」保持意味論)を最後尾に(価値順) ③「捨てる2枚の価値>得る1枚」なら不使用。ベンチマークbot健全性案件",
+  "fix": "_opt_valueに手札破棄(GIVE)保護序列: hp_boostツール(ケープ)=88・ふしぎなあめ(山にStage2線がある時)=85(HAND areaのみ=取得側の歪みなし)。使用ゲート(サーチ対象が置けるか)は取得側の死進化30点が既に抑制",
   "match": "arch",
-  "status": "Open"
+  "status": "Fixed"
  }
 }
