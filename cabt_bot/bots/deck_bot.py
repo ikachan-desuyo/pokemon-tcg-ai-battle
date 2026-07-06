@@ -217,6 +217,14 @@ class DeckBot(Bot):
                 return [g[OptionType.END][0]]
             if live:
                 idxs = live
+            # 砲装填ガード: 非KOチップが相手のダメカン×N技(Raging Hammer等)を自分の致死圏まで
+            # 装填する攻撃は撃たない(人間レビュー20巡目 arch T9: Jetting90でArch100→10残し
+            # →RH 280→370に装填→Mega330一撃死=敗着。撃たなければ280<330で生存だった)
+            safe = self._filter_gun_loading(idxs, options)
+            if not safe and OptionType.END in g:
+                return [g[OptionType.END][0]]
+            if safe:
+                idxs = safe
             # Turn Evaluator 限定接続: 「攻撃 vs 育成」の1判断のみ委譲(flag)。リーサルは必ず攻撃。
             if self.plan.use_turn_evaluator and OptionType.END in g:
                 lethal = self._lethal_choice(idxs, options) if self.plan.lethal else None
@@ -804,6 +812,56 @@ class DeckBot(Bot):
         return 0
 
     # ===== 攻撃 =====
+    def _filter_gun_loading(self, idxs, options):
+        """「この攻撃で相手のダメカン×N技が自分のactiveの致死圏に入る(攻撃前は圏外)」
+        非KO攻撃を除外して返す。KOする攻撃・非装填攻撃はそのまま。"""
+        import re
+        cur = self._cur or {}
+        me = self._me() or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        act = (me.get("active") or [None])[0]
+        if not oa or not act or self._prize_value(act.get("id")) < 2:
+            return idxs
+        # 相手active(進化前スタック込み)のダメカン×N技で、次ターン払えるもの
+        oi = self._cardinfo.get(oa.get("id"))
+        moves = list(oi.moves) if oi else []
+        for pe in (oa.get("preEvolution") or []):
+            pi_ = self._cardinfo.get((pe or {}).get("id"))
+            if pi_:
+                moves += list(pi_.moves)
+        oe = len(oa.get("energyCards") or []) + 1
+        gun = None
+        for m in moves:
+            mt = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            if not mt:
+                continue
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            if need > oe:
+                continue
+            base_m = re.match(r"(\d+)", str(m.damage or ""))
+            gun = (int(base_m.group(1)) if base_m else 0, int(mt.group(1)))
+        if gun is None:
+            return idxs
+        base, per = gun
+        hp_o = oa.get("hp") or 0
+        max_o = oa.get("maxHp") or 0
+        act_hp = act.get("hp") or 0
+        pre_th = base + per * max(0, (max_o - hp_o) // 10)
+        if pre_th >= act_hp:
+            return idxs                    # 既に圏内=装填の概念なし(退避系ゲートの領分)
+        out = []
+        for i in idxs:
+            dmg = self._dmg(options[i]) or 0
+            eff = self._eff_dmg(dmg, False, oa.get("id"))
+            if eff >= hp_o:
+                out.append(i)              # KO=装填ごと除去
+                continue
+            post_th = base + per * max(0, (max_o - (hp_o - eff)) // 10)
+            if post_th < act_hp:
+                out.append(i)              # 撃っても圏外のまま
+        return out
+
     def _best_attack(self, idxs, options) -> int:
         idxs = list(idxs)
         if self.plan.lethal:
@@ -1052,6 +1110,10 @@ class DeckBot(Bot):
             dmg = max(dmg, self._effect_move_damage(m, my_a, opp_a))
         if mc and oc and mc.weakness and oc.type == mc.weakness:
             dmg *= 2                                      # 自分の弱点で2倍
+        # 現実的次ターン評価(進化1段・可変ダメ・ベンチ装填銃・進化前スタック込み)とのmax。
+        # activeのKadabra(30)しか見ずベンチのAlakazam PH 360を見落とし、can_ko_me偽陰性で
+        # 死にゆくactiveへエネ投資(人間レビュー20巡目 alakazam T11)
+        dmg = max(dmg, self._incoming_next_turn(my_a))
         hp = my_a.get("hp", 0)
         out.update(my_active_hp=hp, opp_line_damage=dmg,
                    can_ko_me=(dmg >= hp and hp > 0),
@@ -1936,11 +1998,20 @@ class DeckBot(Bot):
         return self._eff_dmg(dmg, ign, act.get("id")) >= (act.get("hp") or 9999)
 
     def _eff_dmg(self, base, ign, target_id) -> int:
-        """対象(target_id)へ与える実効ダメージ（弱点2倍を考慮、弱点無視技は据置）。"""
+        """対象(target_id)へ与える実効ダメージ（弱点2倍・スタジアム軽減を考慮。
+        効果無視技(ign=Nebula等)は据置）。"""
         my_type = self._my_active_type()
         c = self._cardinfo.get(target_id)
         weak = c.weakness if c else None
-        return base * 2 if (weak and my_type and weak == my_type and not ign) else base
+        out = base * 2 if (weak and my_type and weak == my_type and not ign) else base
+        # Full Metal Lab: {M}ポケモンへの技ダメージ-30(エンジン実測: FML下のJetting=90/Nebula=210
+        # =効果無視技は素通し。人間レビュー20巡目: Jetting120≥100の偽リーサル予測でRH砲を装填し敗着)
+        if not ign and out > 0 and c and (c.type or "") == "{M}":
+            stad = (self._cur or {}).get("stadium")
+            ids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
+            if 1244 in ids:
+                out = max(0, out - 30)
+        return out
 
     def _should_retreat_doomed(self, me, hand) -> bool:
         """死亡確定×不利トレードの前逃げ判定。①前が攻撃役×サイド2+ ②被KO確定圏 ③残って殴っても

@@ -91,16 +91,22 @@ def _dmg_with_units(cid, e):
     return best
 
 
-def attack_dmg(spot):
+def attack_dmg(spot, cur=None, target_id=None):
     """そのポケモンが現在の付きエネ(イグニは進化ポケ上で無3扱い)で払える技の最大ダメージ。
-    カードデータから汎用計算(Starmie固定の120/210マップはMega Lucario(130/270)等を誤算し
-    相手bot側検出で偽陽性を生んだ)。"""
+    cur+target_id指定時はスタジアム軽減(Full Metal Lab: {M}への技-30, 効果無視技は素通し)を適用
+    (bot _eff_dmgと同一意味論。人間レビュー20巡目: FML下Jetting=90/Nebula=210の実測)。"""
     import re
     if not spot:
         return 0
     ci = C.get(spot.get("id"))
     if not ci:
         return 0
+    fml = False
+    if cur is not None and target_id is not None:
+        tc = C.get(target_id)
+        stad = cur.get("stadium")
+        ids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
+        fml = (1244 in ids and tc is not None and (tc.type or "") == "{M}")
     evolved = not getattr(ci, "is_basic", True)
     e = sum(3 if (ec.get("id") == IGN and evolved) else 1
             for ec in (spot.get("energyCards") or []))
@@ -113,7 +119,10 @@ def attack_dmg(spot):
         need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
         mt = re.match(r"(\d+)", str(m.damage))
         if mt and need <= e:
-            best = max(best, int(mt.group(1)))
+            dm = int(mt.group(1))
+            if fml and not re.search(r"isn[’']t affected", m.effect or ""):
+                dm = max(0, dm - 30)
+            best = max(best, dm)
     return best
 
 
@@ -304,12 +313,19 @@ def det_last_stand(g, sig):
     last_of_turn = {}
     lil_turns = set()      # そのターン中にリーリエのPLAY選択肢が実在した(ターン単位評価)
     lil_played = set()     # そのターン中にリーリエを実際に打った(=未使用でない)
+    sup_alone = {}         # サポーターを打った瞬間に単騎だったか(自爆コンボ等で後から単騎化した
+                           # ケースは「リーリエを打つべきだった」が成立しない=部品を流す)
     for t, ob, act in g["decisions"]:
         cur = ob.get("current")
         sel, ch = chosen(ob, act)
         if not ch or not cur or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
         h0 = hand_ids(cur["players"][g["my"]])
+        if (ch.get("type") == PLAY and ch.get("index") is not None and ch["index"] < len(h0)):
+            ci0 = C.get(h0[ch["index"]])
+            if ci0 and ci0.stage == "Supporter":
+                bench0 = [b for b in (cur["players"][g["my"]].get("bench") or []) if b]
+                sup_alone.setdefault(cur.get("turn"), not bench0)
         if any(o.get("type") == PLAY and o.get("index") is not None
                and o["index"] < len(h0) and h0[o["index"]] == LIL
                for o in (sel.get("option") or [])):
@@ -336,7 +352,7 @@ def det_last_stand(g, sig):
             continue                                        # そのターンにリーリエを打っている
         # 「攻撃が致死ならスキップ」は勝ち切れる(このKOで残サイドを取り切る)場合のみ。
         # KOしても勝たなければ単騎リスクは続き、リーリエ(サポ)と攻撃は両立する(lucario-10の教訓)。
-        if (attack_dmg(a) >= (oa.get("hp") or 999)
+        if (attack_dmg(a, cur, oa.get("id")) >= (oa.get("hp") or 999)
                 and _pv(oa.get("id")) >= len(me.get("prize") or [])):
             continue
         h = hand_ids(me)
@@ -353,6 +369,9 @@ def det_last_stand(g, sig):
                                for o in (sel.get("option") or []))
         lil = ("リーリエ打てたのに未使用" if lil_playable else
                ("リーリエ手札あり(打てない)" if LIL in h else "リーリエなし"))
+        if cur.get("supporterPlayed") and sup_alone.get(turn) is False:
+            continue    # サポ使用時点ではベンチが居た=単騎は後から(自爆コンボ等)発生。
+                        # その時点でリーリエ優先は成立しない(dragapult相手bot: Cursed Bomb)
         sup = "サポ権未使用" if not cur.get("supporterPlayed") else "サポ権使用済"
         sig(f"LastStand|単騎×被KO×非致死|{lil}|{sup}", g["ep"], turn)
 
@@ -749,7 +768,7 @@ def det_heal_missed(g, sig):
         if not a or (a.get("maxHp") or 0) - (a.get("hp") or 0) < 150:
             continue
         oa = (opp.get("active") or [None])[0]
-        if oa and (oa.get("hp") or 999) <= attack_dmg(a):
+        if oa and (oa.get("hp") or 999) <= attack_dmg(a, cur, oa.get("id")):
             continue                                    # 今KOできるなら攻撃優先=回復不要
         if (a.get("maxHp") or 0) <= _incoming(a, oa, opp.get("handCount")):
             continue    # 満タンでもワンパン圏=回復は生存反転しない(bot heal句と同一意味論。
@@ -963,8 +982,18 @@ def det_doomed_no_retreat(g, sig):
     """DoomedNoRetreat: 前の攻撃役(サイド2+)が次ターン被KO確定圏×不利トレード(取れるサイド<
     失うサイド)×RETREAT可×ベンチに攻撃可能な主力後続、なのに残って手番を閉じた(人間レビュー6巡目⑤)。"""
     from cabt_bot.state_encoder import line_threat
+    opp_seen = set()
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
+        for c in (opp.get("discard") or []):
+            ci_d = C.get(c.get("id"))
+            if ci_d and "Energy" in (ci_d.name or ""):
+                opp_seen.add(c.get("id"))
+        for sp_o in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if sp_o:
+                opp_seen.add(sp_o.get("id"))
+                for ec in (sp_o.get("energyCards") or []):
+                    opp_seen.add(ec.get("id"))
         sel, ch = chosen(ob, act)
         if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
             continue
@@ -980,7 +1009,7 @@ def det_doomed_no_retreat(g, sig):
         th = _incoming(a, oa, opp.get("handCount"))
         if th <= 0 or (a.get("hp") or 999) > th:
             continue                                    # 被KO圏でない
-        dmg = attack_dmg(a)
+        dmg = attack_dmg(a, cur, (oa or {}).get("id"))
         _mp = me.get("prize")
         my_left = len(_mp) if _mp is not None else 6
         if oa and (oa.get("hp") or 999) <= dmg and (_pv(oa.get("id")) >= _pv(a.get("id"))
@@ -994,7 +1023,7 @@ def det_doomed_no_retreat(g, sig):
                 continue
             bi = C.get(b.get("id"))
             if (bi and not bi.is_basic and (line_threat(b.get("id")) or 0) >= 180
-                    and (b.get("hp") or 0) > _incoming_next(b, oa, None, opp.get("handCount"))
+                    and (b.get("hp") or 0) > _incoming_next(b, oa, opp_seen, opp.get("handCount"))
                     and ((b.get("energyCards") or []) or can_pay)):
                 sig(f"DoomedNoRetreat|被KO確定×不利トレードで{nm(a.get('id'))}が残留",
                     g["ep"], cur.get("turn"))
@@ -1445,7 +1474,7 @@ def det_doomed_game_loss(g, sig):
         _mp = me.get("prize")
         my_left = len(_mp) if _mp is not None else 6
         if ch.get("type") == ATTACK:
-            adv = attack_dmg(a)                         # 既存: 現エネで払える最大打点
+            adv = attack_dmg(a, cur, oa.get("id"))      # 既存: 現エネで払える最大打点(スタジアム込)
             ai = C.get(a.get("id"))
             oi = C.get(oa.get("id"))
             if ai and oi and oi.weakness and ai.type == oi.weakness:

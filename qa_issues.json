@@ -56,6 +56,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -120,9 +122,11 @@
    0,
    1,
    0,
+   0,
+   1,
    0
   ],
-  "regressions": 5,
+  "regressions": 6,
   "cause": "緊急時Gate欠如",
   "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
@@ -175,6 +179,8 @@
    0,
    0,
    3,
+   0,
+   0,
    0,
    0,
    0,
@@ -249,6 +255,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -264,6 +272,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -374,6 +384,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -433,7 +445,9 @@
    113,
    107,
    103,
-   103
+   103,
+   111,
+   100
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -492,7 +506,9 @@
    26,
    17,
    25,
-   16
+   16,
+   15,
+   12
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -555,7 +571,9 @@
    30,
    28,
    28,
-   24
+   24,
+   34,
+   41
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -618,7 +636,9 @@
    17,
    22,
    18,
-   17
+   17,
+   16,
+   22
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -676,6 +696,8 @@
    0,
    0,
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -743,6 +765,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -801,6 +825,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0
   ],
@@ -861,6 +887,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -876,6 +904,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
    0,
    0,
    0,
@@ -976,6 +1006,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1031,6 +1063,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 4
@@ -1045,6 +1079,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1138,6 +1174,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1162,6 +1200,8 @@
    2,
    0,
    3,
+   0,
+   0,
    0,
    0,
    0,
@@ -1244,6 +1284,8 @@
    2,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1297,9 +1339,11 @@
    0,
    0,
    0,
+   0,
+   1,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "GustTargetSkew": {
   "status": "Graduated",
@@ -1314,6 +1358,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1401,6 +1447,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1453,6 +1501,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1471,6 +1521,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1550,6 +1602,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1564,6 +1618,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -1641,6 +1697,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1687,6 +1745,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1700,6 +1760,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1776,6 +1838,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1808,6 +1872,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1865,6 +1931,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1908,6 +1976,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1928,6 +1998,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -1988,6 +2060,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2026,6 +2100,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -2046,6 +2122,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2096,6 +2174,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2116,6 +2196,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2150,6 +2232,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2170,6 +2254,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2198,6 +2284,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2218,6 +2306,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2246,6 +2336,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2267,6 +2359,8 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2286,6 +2380,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0
   ],
@@ -2307,6 +2403,8 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2326,6 +2424,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0
   ],
@@ -2347,6 +2447,8 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2367,6 +2469,8 @@
   "cycles": [
    1,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2379,13 +2483,15 @@
   "graduated": "2026-07-06"
  },
  "SwitchPreservesEnergy": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(19巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "温存パスの「常設エネ投資あり」ブロック撤去(Switchはエネを付けたまま交代=退却意味論の誤流用)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2394,16 +2500,19 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "RagingHammerBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(19巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "_effect_move_damageに「ダメカン×N」パターン+preEvolutionスタック技+ベンチ装填銃(現エネで即撃てるベンチ)を脅威評価に編入(bot3箇所+reviewer)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2412,16 +2521,19 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "SplashWinBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(19巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "_attack_prizes_now(active KO+スプラッシュKOの合算サイド)をwins_now判定に使用",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2430,20 +2542,78 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "HandGrowthProjection": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(19巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "可変ダメ(手札×20)の次ターンprojectionを+1→+4(Alakazamドローエンジン実測+5/ターン)。bot+reviewer統一",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
   "cause": "+1(素引きのみ)では~100点の過小評価→生存圏の誤認で退却先を焼く(alakazam T9: 330>320判定→実際420で死亡)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  },
+  "graduated": "2026-07-06"
+ },
+ "GunLoadingAttack": {
+  "status": "Fix Applied",
+  "detector": "(20巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "_filter_gun_loading: 非KOチップが相手のダメカン×N技を自分のactiveの致死圏まで装填する攻撃を除外(KO/非装填攻撃は通す)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "Jetting90でArch100→10残し=RH 280→370に装填→Mega330一撃死(arch T9敗着)。撃たなければ280<330で生存",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "FMLStadiumBlind": {
+  "status": "Fix Applied",
+  "detector": "(20巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "_eff_dmg+reviewer attack_dmgにFull Metal Lab補正({M}への技-30、効果無視技=Nebulaは素通し。エンジン実測)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "FML下のJetting=90をカードデータ抵抗({G})で120と予測→偽リーサルで攻撃選択を誤る(装填敗着の上流原因)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "AnalyzerThreatNarrow": {
+  "status": "Fix Applied",
+  "detector": "(20巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "analyze_threat(can_ko_me)を_incoming_next_turn(進化・可変・ベンチ砲・スタック込み)とのmaxに",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "activeのKadabra30しか見ずベンチAlakazam PH360を見落とし→can_ko_me偽陰性→死にゆくactiveへエネ投資(alakazam T11)",
   "evidence": {
    "frequency": 1,
    "confirmed": 1,
