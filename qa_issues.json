@@ -78,6 +78,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -151,6 +152,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -250,6 +252,7 @@
    0,
    0,
    0,
+   1,
    1
   ],
   "regressions": 6,
@@ -337,6 +340,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -352,6 +356,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
    0,
    0,
    0,
@@ -506,6 +511,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -587,7 +593,8 @@
    117,
    121,
    104,
-   117
+   117,
+   126
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -668,7 +675,8 @@
    18,
    16,
    24,
-   12
+   12,
+   11
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -753,7 +761,8 @@
    29,
    31,
    43,
-   21
+   21,
+   32
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -838,6 +847,7 @@
    21,
    24,
    15,
+   24,
    24
   ],
   "regressions": 0,
@@ -922,6 +932,7 @@
    0,
    0,
    1,
+   0,
    0
   ],
   "regressions": 5,
@@ -1007,12 +1018,13 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2
  },
  "FetchIgnition(1エネ圏)": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "FetchSkew(1エネ圏○×Ignition)",
   "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
   "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
@@ -1088,9 +1100,10 @@
    0,
    0,
    0,
-   0
+   0,
+   1
   ],
-  "regressions": 7
+  "regressions": 8
  },
  "BossNoPathGain": {
   "status": "Graduated",
@@ -1169,6 +1182,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1184,6 +1198,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
    0,
    0,
    0,
@@ -1328,6 +1343,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 6,
@@ -1399,6 +1415,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1481,6 +1498,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -1495,6 +1513,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -1631,6 +1650,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -1700,6 +1720,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1781,6 +1802,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -1798,6 +1820,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1929,6 +1952,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -2003,6 +2027,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2
@@ -2021,6 +2046,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2144,6 +2170,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -2158,6 +2185,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -2279,6 +2307,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2347,6 +2376,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2360,6 +2390,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2480,6 +2511,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2536,6 +2568,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2613,6 +2646,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3,
@@ -2678,6 +2712,7 @@
    0,
    0,
    0,
+   1,
    1
   ],
   "regressions": 4,
@@ -2734,6 +2769,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2802,6 +2838,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 4,
@@ -2862,6 +2899,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 5,
@@ -2882,6 +2920,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2976,6 +3015,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2996,6 +3036,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3074,6 +3115,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -3108,6 +3150,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -3166,6 +3209,7 @@
    0,
    0,
    1,
+   0,
    0
   ],
   "regressions": 1,
@@ -3186,6 +3230,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3258,6 +3303,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3278,6 +3324,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3343,6 +3390,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3362,6 +3410,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3427,6 +3476,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3446,6 +3496,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3511,6 +3562,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3530,6 +3582,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3593,6 +3646,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3612,6 +3666,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3675,6 +3730,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3694,6 +3750,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3753,6 +3810,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3772,6 +3830,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3829,6 +3888,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3858,6 +3918,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -3900,6 +3961,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3919,6 +3981,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -3969,6 +4032,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -3985,6 +4049,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4023,6 +4088,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4039,6 +4105,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4077,6 +4144,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4093,6 +4161,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4125,6 +4194,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4141,6 +4211,7 @@
    "rejected": 1
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4171,6 +4242,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4187,6 +4259,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4211,6 +4284,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4227,6 +4301,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4251,6 +4326,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4267,6 +4343,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4291,6 +4368,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4307,6 +4385,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4331,14 +4410,15 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
  "WallRetreatRareResidual": {
-  "status": "Watching",
+  "status": "Closed",
   "detector": "WallRetreat",
   "match": "alakazam",
-  "fix": "未再現(QA1回のみ、追試80戦+QA2回で0件)。次回出現時にリプレイ精査",
+  "fix": "根因特定=LossBaitKoExemptionShallow(KO免除がKO後脅威を見ず死に前進→Switchで撤回の往復)。同issueで修正済(2026-07-07)",
   "first_seen": "2026-07-06",
   "cause": "不明(逃げ0壁Cinderaceから交代し攻撃なし)。Memory Dive/装填ガード修正の副作用の可能性は追試で否定的",
   "evidence": {
@@ -4347,6 +4427,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4371,12 +4452,14 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
  "VolatileRetreatFuelWaste": {
   "cause": "前逃げ(_should_retreat_doomed)待機中=退却コスト未充足でRETREAT選択肢が無い間に、attachのrule順位がIgnition→actを選び、エネ充足でRETREAT出現→前逃げ発火→貼ったばかりのIgnitionを退却コストで即捨て(R35 mirror T13: Basic{W}在手)。加えて退却コスト破棄選択が低価値順=W先捨てでIgnitionも追加破棄(エンジン実測: 累積ユニット≥コストで停止、進化ポケ上のIgnition=3ユニット=1枚でコスト2充足)",
   "cycles": [
+   0,
    0,
    0,
    0
@@ -4395,6 +4478,7 @@
  "LethalSplashChoiceBlind": {
   "cause": "_lethal_choiceが「相手activeをKOできる技」しか評価せず、スプラッシュKOで勝ち切る技を特定できない(_attack_prizes_nowは勝ちを認識するが技へのマッピングが無い)→通常スコアが最大ダメを選ぶ。R37 grimmsnarl T13: 残1でJetting 120+スプラッシュ50=Imp20 KO=勝利なのにNebula 210=Grimm230残20を選びT14に3枚取られ敗北(確定敗着)。R35 dragapult T19でも同型の勝ち遅延(T19勝ち→T21)を確認",
   "cycles": [
+   0,
    0
   ],
   "detector": "MissedLethal|攻撃選択が勝ち切り技を外した(新設・BLOCKING)",
@@ -4411,6 +4495,7 @@
  "LineEvolutionThreatBlind": {
   "cause": "_incoming_next_turn/_incoming_threatの進化1段先読みが「観測済みカードのみ」ゲート=相手の場に進化前(Kadabra)が居ても進化先(Alakazam)未観測なら脅威0。R37セッション alakazam-7 T5:PH300圏のMega290e0をSwitch在手なのにEND放置→T6進化+PHで3枚失点(DoomedNoSwitch再発の根因)",
   "cycles": [
+   0,
    0
   ],
   "detector": "DoomedNoSwitch(既存・再発として検出)",
@@ -4428,6 +4513,7 @@
  "SwitchPostKoThreatBlind": {
   "cause": "_should_switchの被KO圏判定が「相手の現activeが生きている前提の脅威」のみ=自分のKOが装填銃の昇格を強制するケースが見えない。R38 arch T15: 現行脅威30<300で安全判定→Jetting KO→Arch80(maxHp300・カウンタ22)が昇格しRH320でMega300一撃=3枚献上の敗着。Switch在手でMega330を前に出せば同じKOを取りRH320を10残しで耐えた(SwitchPreservesEnergyと同型の残差)",
   "cycles": [
+   0,
    0
   ],
   "detector": "DoomedNoSwitch(KO後脅威込みへ拡張。死んだら負けでは投資スキップ無効化)",
@@ -4445,6 +4531,7 @@
  "AttachMaxMoveOnlyCompletion": {
   "cause": "_pick_attachのcomp(コスト充足)が最大ダメージ技(Nebula)基準のみ=act e0へのW(Jetting{W}即完成)がcomp=1に留まり、ベンチの将来完成(comp=2)に負ける。R39 dragapult T13: W→ベンチMega90(PD60+Munkidori30でちょうど死ぬ3枚ベイト)へ貼りact Mega330を2ターン無攻撃で放置=敗着圏。R39 lucario T5でも同型(W→actならJetting+撒き50=Riolu30 KO+ML線否定を放棄しEND)",
   "cycles": [
+   0,
    0
   ],
   "detector": "AttachIdleActive(新設・主役級actに限定)",
@@ -4457,6 +4544,40 @@
   "first_seen": "2026-07-07",
   "fix": "comp格上げ: activeへの貼りで「このターン攻撃が立つ」(_move_payable反転)ならcomp=2(最大技完成と同格)。先攻T1は除外。rule第一キーは不変=壁active優先の設計は保持(WallRetreat再発防止と両立)",
   "match": "dragapult",
+  "status": "Fixed"
+ },
+ "BossKillVsThreatRemoval": {
+  "cause": "(仮説・未確定) Boss対象選択が「今KOできる獲物(Munkidori110=1枚)」を「主砲の排除(Dragapult ex 270e3をチップ→次ターン2枚+脅威源除去)」より優先。R41 dragapult T7: どちらの線でもT8のPD200+60撒きで4枚失点は不可避だが、以後のレース形状が異なる(主砲生存vs主砲排除)。優劣は未実証",
+  "cycles": [
+   0,
+   0
+  ],
+  "detector": "手動精読(R41)",
+  "evidence": {
+   "confirmed": 0,
+   "frequency": 1,
+   "rejected": 0
+  },
+  "first_seen": "2026-07-07",
+  "fix": "未実装。修正するには「Boss+獲物KO」vs「主砲チップ」のロールアウト比較かレース算術の拡張が必要。再出現時に複数例で優劣を検証してから着手",
+  "match": "dragapult",
+  "status": "Watching"
+ },
+ "LossBaitKoExemptionShallow": {
+  "cause": "_is_loss_baitの免除「今KOできればベイト扱いしない」がKO後の残存脅威を見ない=攻撃すれば即負けの個体を前進させる。R42セッション mirror-0 T9: reposition がMega120(Mega90 KO可だがKO後にMega230+イグニのNebula210が確殺=残3充足)を前進→直後に_should_switchが正しく退避=Switch1枚を無駄往復で焼いた(WallRetreat/SwitchWaste再発の根因)。加えて_should_switchの敗北回避ブロックが「残って殴る」(wins_now)結論をreturnせず温存パスへ落とす経路も同時に確認",
+  "cycles": [
+   0
+  ],
+  "detector": "WallRetreat(再発として捕捉)+DoomedNoSwitch(残って殴る例外を追加=bot同一意味論)",
+  "evidence": {
+   "confirmed": 1,
+   "frequency": 1,
+   "rejected": 0,
+   "ab": "対フィールドN=300: 83%(dragapult 49/50)で健全。8ラウンド再スキャン=確定敗着のみ検出・誤爆0"
+  },
+  "first_seen": "2026-07-07",
+  "fix": "①_is_loss_bait: KO免除に「KO後残存脅威<自HP」を追加(全前進経路の共通判定) ②_should_switch: wins_now(勝ち切り/KO後安全)ならreturn False=温存パスに落とさない ③det_doomed_no_switch: 同例外を追加(擬陽性除去)",
+  "match": "mirror",
   "status": "Fixed"
  }
 }

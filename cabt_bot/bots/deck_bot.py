@@ -831,7 +831,12 @@ class DeckBot(Bot):
             return False
         if (sp.get("hp") or 0) > self._incoming_next_turn(sp):
             return False
-        return not self._spot_kos_opp_active(sp)
+        if not self._spot_kos_opp_active(sp):
+            return True
+        # 「今KOできる」免除はKO後の残存脅威(装填済みベンチ銃の昇格)が自分を確殺しない場合のみ
+        # (R42セッション mirror-0 T9: Mega120→Mega90 KO可だがKO後にMega230+イグニのNebula 210
+        #  が確殺=攻撃すれば即負け。免除で前進→直後にSwitchで撤回=無駄な往復を生んだ)
+        return self._post_ko_threat(sp) >= (sp.get("hp") or 0)
 
     def _spot_kos_opp_active(self, sp) -> bool:
         """このスポットが(前に出れば)現在の付きエネで相手activeをKOできるか。"""
@@ -1979,16 +1984,20 @@ class DeckBot(Bot):
                 wins_now = self._attack_prizes_now() >= (pr.get("my_prizes") or 6)
                 if ko_now and self._post_ko_threat(act) < (act.get("hp") or 0):
                     wins_now = True    # KOで脅威が消える(KO後の残存脅威<自HP)=残って殴る
-                if not wins_now:
-                    for sp in me.get("bench") or []:
-                        if not sp:
-                            continue
-                        sp_th = self._incoming_next_turn(sp)
-                        if ko_now:
-                            sp_th = max(sp_th, self._post_ko_threat(sp))
-                        if (self._prize_value(sp.get("id")) < opp_left
-                                or (sp.get("hp") or 0) > sp_th):
-                            return True   # 死んでも負けない/次打(KO後脅威込み)を耐える退避先がある
+                if wins_now:
+                    # 「残って殴る」結論を温存パスへ落とさない(R42セッション mirror-0 T9:
+                    # Jetting 120=相手act Mega90 KO=3枚×KO後残存脅威0なのに、ここを素通りした
+                    # 温存パスがSwitchで壁に戻しEND=Switch1枚と3枚取りを同時に浪費)
+                    return False
+                for sp in me.get("bench") or []:
+                    if not sp:
+                        continue
+                    sp_th = self._incoming_next_turn(sp)
+                    if ko_now:
+                        sp_th = max(sp_th, self._post_ko_threat(sp))
+                    if (self._prize_value(sp.get("id")) < opp_left
+                            or (sp.get("hp") or 0) > sp_th):
+                        return True   # 死んでも負けない/次打(KO後脅威込み)を耐える退避先がある
         if act.get("id") in self.plan.attackers or (_line_threat(act.get("id")) or 0) >= 180:
             # 温存パス: 次の相手ターンにKO確定圏(現実的評価=相手の現エネ+1で払える技)なら、
             # 対象はplan.attackersまたはライン180+の主役級(planに列挙されない主役=Hariyama等を

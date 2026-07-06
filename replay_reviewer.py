@@ -626,6 +626,12 @@ def det_doomed_no_switch(g, sig):
             dmg_in = max(dmg_in, _post_ko_next(a, None, opp.get("bench"), opp.get("handCount")))
         if dmg_in <= 0 or (a.get("hp") or 999) > dmg_in:
             continue                                    # 被KO圏でない
+        # 残って殴る例外(bot同一意味論): 勝ち切り or KOで脅威が消える(KO後残存<自HP)
+        if _attack_prizes(cur, me, opp, a) >= (len(me.get("prize") or []) or 6):
+            continue
+        if (ko_now and _post_ko_next(a, None, opp.get("bench"), opp.get("handCount"))
+                < (a.get("hp") or 0)):
+            continue
         if (not death_loses
                 and any(e.get("id") != IGN for e in (a.get("energyCards") or []))):
             continue    # 常設エネ投資あり=退くと損失(温存対象外)。ただし死んだら負けなら投資無関係
