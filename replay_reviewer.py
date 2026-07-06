@@ -762,10 +762,18 @@ def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
                 continue
             mt = re.match(r"(\d+)", str(m.damage or ""))
             dm = int(mt.group(1)) if mt else 0
-            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            eff_b = m.effect or ""
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", eff_b)
             if m2:
                 cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
                 dm = max(dm, dm + int(m2.group(1)) * cnt)
+            if opp_owner_hand_count is not None:
+                m2 = re.search(r"lace (\d+) damage counters? on your opponent[’']s Active Pokémon for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
+                m2 = re.search(r"does (\d+) (?:more )?damage for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, dm + int(m2.group(1)) * (opp_owner_hand_count + 4))
             t = max(t, dm)
     if cc and oc and cc.weakness and oc.type == cc.weakness:
         t *= 2
@@ -1084,7 +1092,7 @@ def det_doomed_no_retreat(g, sig):
         my_left = len(_mp) if _mp is not None else 6
         if oa and (oa.get("hp") or 999) <= dmg and (_pv(oa.get("id")) >= _pv(a.get("id"))
                                                     or _pv(oa.get("id")) >= my_left
-                                                    or _post_ko_next(a, opp_seen, opp.get("bench")) < (a.get("hp") or 0)):
+                                                    or _post_ko_next(a, opp_seen, opp.get("bench"), opp.get("handCount")) < (a.get("hp") or 0)):
             continue                                    # 同等以上のトレード/勝ち切り/KO後残存脅威なし=残って殴るのは正当
         if _attack_prizes(cur, me, opp, a) >= my_left:
             continue                                    # スプラッシュKO合算で勝ち切り(bot同一意味論)
@@ -1266,10 +1274,20 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
                 continue
             mt = re.match(r"(\d+)", str(m.damage or ""))
             dm = int(mt.group(1)) if mt else 0
-            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            eff_b = m.effect or ""
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", eff_b)
             if m2:
                 cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
                 dm = max(dm, dm + int(m2.group(1)) * cnt)
+            if hc is not None:
+                # 手札枚数可変(Powerful Hand等)もベンチ銃で実数評価(bot _effect_move_damage同一意味論。
+                # 人間レビュー26巡目: PH360のAlakazamベンチ銃を0点扱い→SwitchWaste誤検出)
+                m2 = re.search(r"lace (\d+) damage counters? on your opponent[’']s Active Pokémon for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, 10 * int(m2.group(1)) * (hc + 4))
+                m2 = re.search(r"does (\d+) (?:more )?damage for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, dm + int(m2.group(1)) * (hc + 4))
             best = max(best, dm)
     cc = C.get(a.get("id"))
     if cc and oi and cc.weakness and oi.type == cc.weakness:
@@ -1277,7 +1295,7 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
     return best
 
 
-def _post_ko_next(a, opp_seen=None, opp_bench=None):
+def _post_ko_next(a, opp_seen=None, opp_bench=None, opp_owner_hand_count=None):
     """相手activeをKOした後の残存脅威: ベンチの装填銃(昇格後の手貼り1枚/イグニ+3込みで払える技)の
     現実的最大ダメージ(ダメカン×N実数・弱点込み)。bot側 _post_ko_threat と同一意味論
     (人間レビュー23巡目: 瀕死activeのKOで装填銃の火力ごと消える局面を「残存脅威あり」と誤検出)。"""
@@ -1304,10 +1322,18 @@ def _post_ko_next(a, opp_seen=None, opp_bench=None):
                 continue
             mt = re.match(r"(\d+)", str(m.damage or ""))
             dm = int(mt.group(1)) if mt else 0
-            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            eff_b = m.effect or ""
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", eff_b)
             if m2:
                 cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
                 dm = max(dm, dm + int(m2.group(1)) * cnt)
+            if opp_owner_hand_count is not None:
+                m2 = re.search(r"lace (\d+) damage counters? on your opponent[’']s Active Pokémon for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
+                m2 = re.search(r"does (\d+) (?:more )?damage for each card in your hand", eff_b)
+                if m2:
+                    dm = max(dm, dm + int(m2.group(1)) * (opp_owner_hand_count + 4))
             if cc and cc.weakness and bi_.type == cc.weakness:
                 dm *= 2
             best = max(best, dm)
@@ -1627,7 +1653,7 @@ def det_doomed_game_loss(g, sig):
                 if _pv(oa.get("id")) >= my_left:
                     continue                            # 勝ち切り
                 # KOで脅威が消える(KO後の残存脅威<自HP)なら残って殴るのが正(bot _post_ko_threat同一意味論)
-                if _post_ko_next(a, opp_seen, opp.get("bench")) < (a.get("hp") or 0):
+                if _post_ko_next(a, opp_seen, opp.get("bench"), opp.get("handCount")) < (a.get("hp") or 0):
                     continue
         # 退避手段の実在: 入替効果札のPLAY か RETREAT。かつ「負けない/耐える」退避先がベンチに居る
         opts = (sel or {}).get("option") or []
@@ -1805,8 +1831,13 @@ def det_base_line_sacrifice(g, sig):
         oa0 = (opp.get("active") or [None])[0]
         _op0 = opp.get("prize")
         opp_left0 = len(_op0) if _op0 is not None else 6
+        # 死んだら負けの被KO圏は悲観バー(ライン最大との高い方)=bot _should_retreat_doomed の
+        # th=max(line,現実) と同一意味論(26巡目 mirror-8 T11: 相手e1でも手札イグニ+手貼りで
+        # Nebula210が届く。現実評価のみだと正当な土台壁を誤検出)
+        from cabt_bot.state_encoder import line_threat as _lt0
         if (a0 and oa0 and _pv(a0.get("id")) >= opp_left0
-                and (a0.get("hp") or 0) <= _incoming_next(a0, oa0, opp_seen, opp.get("handCount"), opp.get("bench"))):
+                and (a0.get("hp") or 0) <= max(_lt0(oa0.get("id")) or 0,
+                                               _incoming_next(a0, oa0, opp_seen, opp.get("handCount"), opp.get("bench")))):
             def _is_base_alt(sp):
                 ci0 = C.get(sp.get("id"))
                 return bool(ci0) and getattr(ci0, "is_basic", False) and any(
@@ -1815,7 +1846,8 @@ def det_base_line_sacrifice(g, sig):
 
             def _is_bait_alt(sp):
                 return (_pv(sp.get("id")) >= opp_left0
-                        and (sp.get("hp") or 0) <= _incoming_next(sp, oa0, opp_seen, opp.get("handCount"), opp.get("bench")))
+                        and (sp.get("hp") or 0) <= max(_lt0(oa0.get("id")) or 0,
+                                                       _incoming_next(sp, oa0, opp_seen, opp.get("handCount"), opp.get("bench"))))
             if not any(sp and not _is_base_alt(sp) and not _is_bait_alt(sp)
                        for sp in (me.get("bench") or [])):
                 continue    # 非土台かつ非ベイトの代替後続なし=土台の犠牲は強制(最善)

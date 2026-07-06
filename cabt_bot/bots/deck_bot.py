@@ -497,6 +497,9 @@ class DeckBot(Bot):
         pr_w = self.analyze_prize()
         my_left_w = pr_w.get("my_prizes") or 6
         win_opts = []
+        if self._attack_prizes_now() >= my_left_w:
+            my_left_w = 9999    # 貼らずに既に勝ち切れる=勝ちエネ不要(イグニを番末丸損で貼らない。
+                                # 人間レビュー26巡目 lucario T13: e4のJetting勝ちにイグニe5を追加)
         for i in idxs:
             op = options[i]
             if op.in_play_area != AreaType.ACTIVE:
