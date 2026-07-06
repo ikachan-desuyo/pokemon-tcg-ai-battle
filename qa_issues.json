@@ -4441,5 +4441,22 @@
   "fix": "_should_switch: death_loses×ko_nowなら被KO圏判定にth=max(th,_post_ko_threat)。退避先の生存判定も同様にKO後脅威込み。retreat系は「退けばKOしない=昇格しない」ため変更なし(意味論の非対称が正しい)",
   "match": "arch",
   "status": "Fixed"
+ },
+ "AttachMaxMoveOnlyCompletion": {
+  "cause": "_pick_attachのcomp(コスト充足)が最大ダメージ技(Nebula)基準のみ=act e0へのW(Jetting{W}即完成)がcomp=1に留まり、ベンチの将来完成(comp=2)に負ける。R39 dragapult T13: W→ベンチMega90(PD60+Munkidori30でちょうど死ぬ3枚ベイト)へ貼りact Mega330を2ターン無攻撃で放置=敗着圏。R39 lucario T5でも同型(W→actならJetting+撒き50=Riolu30 KO+ML線否定を放棄しEND)",
+  "cycles": [
+   0
+  ],
+  "detector": "AttachIdleActive(新設・主役級actに限定)",
+  "evidence": {
+   "confirmed": 2,
+   "frequency": 2,
+   "rejected": 0,
+   "ab": "対フィールドN=300: 82%(非mirror88%)で健全"
+  },
+  "first_seen": "2026-07-07",
+  "fix": "comp格上げ: activeへの貼りで「このターン攻撃が立つ」(_move_payable反転)ならcomp=2(最大技完成と同格)。先攻T1は除外。rule第一キーは不変=壁active優先の設計は保持(WallRetreat再発防止と両立)",
+  "match": "dragapult",
+  "status": "Fixed"
  }
 }

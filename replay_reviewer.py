@@ -1147,6 +1147,49 @@ def _attack_prizes(cur, me, opp, a):
     return best_total
 
 
+def det_attach_idle_active(g, sig):
+    """AttachIdleActive: activeが攻撃役級×健在×このエネを貼れば今ターン殴れた、のにエネを
+    ベンチへ貼り、そのターン攻撃なし(R39 dragapult T13: comp=最大技基準でW→ベンチMega90=
+    PD60+Munkidori30でちょうど死ぬベイトへ貼り、act Mega330を2ターン無攻撃で放置)。"""
+    turns = {}
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        tn = cur.get("turn")
+        rec = turns.setdefault(tn, {"idle_attach": False, "attacked": False})
+        if ch.get("type") == ATTACH and ch.get("inPlayArea") == 5 and tn != 1:
+            h = hand_ids(me)
+            idx = ch.get("index")
+            eid = h[idx] if idx is not None and idx < len(h) else None
+            ci_e = C.get(eid)
+            if not (ci_e and "Energy" in (ci_e.name or "") and not ci_e.is_pokemon):
+                continue
+            a = (me.get("active") or [None])[0]
+            oa = (opp.get("active") or [None])[0]
+            if not a or not oa:
+                continue
+            ci_a = C.get(a.get("id"))
+            from cabt_bot.state_encoder import line_threat as _lt_ai
+            if (_lt_ai(a.get("id")) or 0) < 180 and _pv(a.get("id")) < 2:
+                continue    # 壁active: 技解放より主役育成が正(botのrule設計と同一意味論)
+            evolved = bool(ci_a) and not ci_a.is_basic
+            e_now = sum(3 if (ec.get("id") == IGN and evolved) else 1
+                        for ec in (a.get("energyCards") or []))
+            e_plus = e_now + (3 if (eid == IGN and evolved) else 1)
+            th = _incoming_next(a, oa, None, opp.get("handCount"), opp.get("bench"))
+            if (ci_a and (a.get("hp") or 0) > th
+                    and _dmg_with_units(a.get("id"), e_now) == 0
+                    and _dmg_with_units(a.get("id"), e_plus) > 0):
+                rec["idle_attach"] = True
+        elif ch.get("type") == ATTACK:
+            rec["attacked"] = True
+    for tn, rec in turns.items():
+        if rec["idle_attach"] and not rec["attacked"]:
+            sig("AttachIdleActive|actが殴れるエネをベンチへ貼り無攻撃", g["ep"], tn)
+
+
 _ATK_TBL = None
 
 
@@ -2211,7 +2254,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
              det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss,
-             det_volatile_retreat_fuel, det_attack_win_skipped]
+             det_volatile_retreat_fuel, det_attack_win_skipped,
+             det_attach_idle_active]
 
 
 # ============ Layer 2: Aggregator ============

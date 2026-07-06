@@ -621,6 +621,17 @@ class DeckBot(Bot):
             sp_k = (spots_k[op.in_play_index]
                     if op.in_play_index is not None and 0 <= op.in_play_index < len(spots_k) else None)
             comp = self._completes_cost(energy, target, sp_k)
+            # activeが「このターン殴れる」ようになる貼りは最大技完成と同格(comp=2)。
+            # compは最大技(Nebula)基準のため、act e0へのW=Jetting{W}完成がcomp=1に留まり
+            # ベンチの将来完成(comp=2)に負けていた(R39 dragapult T13: W→ベンチMega90=
+            # PD60+Munkidori30でちょうど死ぬベイトに貼り、act Mega330を2ターン無攻撃で放置)。
+            if (op.in_play_area == AreaType.ACTIVE and comp == 1 and sp_k is not None
+                    and not self._move_payable(sp_k)
+                    and self._move_payable(sp_k, energy)):
+                cur_c = self._cur or {}
+                if not (cur_c.get("turn") == 1
+                        and cur_c.get("yourIndex") == cur_c.get("firstPlayer")):
+                    comp = 2
             if self.plan.conserve_hand and self._is_energy(energy) and comp == 0:
                 continue    # 手札温存デッキ: コストを進めないエネ貼りは手札の切り売り
                             # (PH=手札×20点。勝ちエネ/ケープ反転の前段パスは対象外のまま)
