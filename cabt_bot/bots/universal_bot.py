@@ -251,6 +251,7 @@ def infer_plan(decklist) -> DeckPlan:
             dup_caps[i] = 1
     # ④ 特性燃料エネ規則: 「{X}エネが付いていれば」型の特性(Adrena-Brain等)へ該当エネを供給
     fuel_rules = []
+    fuel_pokes = set()
     for i in pokes:
         ab_text = " ".join((mv.effect or "") for mv in C[i].moves
                            if (mv.name or "").startswith("[Ability]"))
@@ -259,7 +260,13 @@ def infer_plan(decklist) -> DeckPlan:
             e = basic_of(m_f.group(1))
             if e is not None:
                 fuel_rules.append((e, i))
+                fuel_pokes.add(i)
     rules = rules + [r for r in fuel_rules if r not in rules]
+    # 特性燃料ポケ(Adrena-Brain等)は展開してエネを供給する価値がある(Phase7:
+    # grimmsnarl④Adrena起動10%=マシマシラが展開されずD燃料規則が死ぬ、の還元)
+    for i in fuel_pokes:
+        play_priority[i] = max(play_priority.get(i, 0), 78)
+        card_values.setdefault(i, 72)
 
     opening = infer_opening(main, C)
     boss, recover, switch = infer_trainer_roles(ids, C)
