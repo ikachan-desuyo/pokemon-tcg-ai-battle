@@ -70,6 +70,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -148,6 +151,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 7,
@@ -203,6 +209,9 @@
    0,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -305,6 +314,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -320,6 +332,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -458,6 +473,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -531,7 +549,10 @@
    90,
    112,
    115,
-   110
+   110,
+   107,
+   102,
+   116
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -604,6 +625,9 @@
    22,
    19,
    24,
+   22,
+   15,
+   19,
    22
   ],
   "regressions": 0,
@@ -681,7 +705,10 @@
    23,
    36,
    26,
-   32
+   32,
+   43,
+   42,
+   24
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -758,7 +785,10 @@
    24,
    19,
    24,
-   21
+   21,
+   20,
+   21,
+   18
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -816,6 +846,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -911,6 +944,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -984,9 +1020,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 6
+  "regressions": 7
  },
  "BossNoPathGain": {
   "status": "Graduated",
@@ -1057,6 +1096,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1072,6 +1114,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1200,9 +1245,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 5,
+  "regressions": 6,
   "note": " / 2026-07-04再発3件は偽陽性(生きたミツル温存=リーリエ意図的保留のH1)。検出器に除外追加"
  },
  "HealMissed": {
@@ -1269,9 +1317,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 4
+  "regressions": 5
  },
  "CapeSkew": {
   "status": "Graduated",
@@ -1337,6 +1388,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1351,6 +1405,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1471,6 +1528,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1538,9 +1598,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 3
+  "regressions": 4
  },
  "DoomedNoRetreat": {
   "status": "Graduated",
@@ -1605,6 +1668,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1622,6 +1688,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1737,9 +1806,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2
+  "regressions": 3
  },
  "WeakAdvance": {
   "status": "Graduated",
@@ -1803,6 +1875,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1821,6 +1896,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1928,6 +2006,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1942,6 +2023,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2047,9 +2131,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
  },
  "AttackPotentialPlanBlind": {
@@ -2062,6 +2149,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2120,6 +2210,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2224,6 +2317,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2280,6 +2376,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2341,6 +2440,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -2375,6 +2477,9 @@
    0,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2452,9 +2557,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "「ベンチ=安全」の暗黙仮定。相手デッキのボス残数を推定せず、KO=残サイド充足の急所を放置(grimmsnarl-6 T9-11: 傷Mega+Wally在手でサポ権をSalvatoreへ→T12ボスで敗北)。初のアーキタイプ推定(未見カード推定)の実装",
   "evidence": {
    "frequency": 2,
@@ -2506,6 +2614,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -2558,6 +2669,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -2578,6 +2692,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2656,6 +2773,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2676,6 +2796,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2738,9 +2861,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "「手札の枚数より質」の原則がactive限定=ベンチのGrimmsnarl(Shadow Bullet不能)×死に手札9枚を放置(grimmsnarl相手bot)",
   "evidence": {
    "frequency": 3,
@@ -2776,6 +2902,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2796,6 +2925,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2852,6 +2984,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2872,6 +3007,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2925,6 +3063,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2944,6 +3085,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2993,6 +3137,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3012,6 +3159,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3061,6 +3211,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3080,6 +3233,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3128,6 +3284,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3147,6 +3306,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3194,6 +3356,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3213,6 +3378,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3258,6 +3426,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3277,6 +3448,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3320,6 +3494,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3339,6 +3516,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3378,6 +3558,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -3404,6 +3587,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3423,6 +3609,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3457,6 +3646,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ]
  },
@@ -3473,6 +3665,9 @@
    "rejected": 0
   },
   "cycles": [
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3495,6 +3690,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ]
  },
@@ -3511,6 +3709,9 @@
    "rejected": 0
   },
   "cycles": [
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -3533,6 +3734,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ]
  },
@@ -3550,6 +3754,9 @@
   },
   "cycles": [
    0,
+   0,
+   0,
+   0,
    0
   ]
  },
@@ -3564,7 +3771,12 @@
    "frequency": 2,
    "confirmed": 2,
    "rejected": 0
-  }
+  },
+  "cycles": [
+   0,
+   0,
+   0
+  ]
  },
  "ReviewerBenchGunHandVar": {
   "status": "Fixed",
@@ -3577,7 +3789,12 @@
    "frequency": 1,
    "confirmed": 0,
    "rejected": 1
-  }
+  },
+  "cycles": [
+   0,
+   0,
+   0
+  ]
  },
  "BaseLineSacrificePessimisticBar": {
   "status": "Fixed",
@@ -3590,6 +3807,63 @@
    "frequency": 1,
    "confirmed": 0,
    "rejected": 1
+  },
+  "cycles": [
+   0,
+   0,
+   0
+  ]
+ },
+ "HealTargetLossPrevention": {
+  "status": "Fixed",
+  "detector": "手動精読(R27)",
+  "match": "mirror",
+  "fix": "HEAL/REMOVE_DAMAGE_COUNTER対象選択に_heal_target_key(①負け防止=act生存反転×死んだら負け/単騎 or ベンチベイト圏外化×ボス残推定 ②act反転 ③ダメージ+攻撃役)を実装",
+  "first_seen": "2026-07-06",
+  "cause": "対象選択が汎用_take(attackers=95同点→先頭=act)に落ち、act310(脅威210=圏外)を回復しベンチMega50e1を放置→T16相手Boss+KO 3枚で敗北(R27 mirror)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "WinAttachSuppressionBug": {
+  "status": "Fixed",
+  "detector": "手動精読(R27)",
+  "match": "grimmsnarl",
+  "fix": "①勝ちエネ抑制の判定を_attack_prizes_now(no_attach=True)に(「貼れば勝てる」を抑制しない) ②_should_switch/_should_retreat_doomedの冒頭に勝ち切りガード",
+  "first_seen": "2026-07-06",
+  "cause": "R26の抑制が手貼り込み判定のため「W貼り→Jetting=KO=勝ち」の勝ちエネまで抑制、Wがベンチへ+温存Switch2連発でEND=勝ち逃し(grimmsnarl-7 T13 残1)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "WinTurnSupporterWaste": {
+  "status": "Fixed",
+  "detector": "手動精読(R27)",
+  "match": "lucario",
+  "fix": "heal handlerの非救命ヒール前に_attack_prizes_now勝ち切りゲート(手貼り込み)。ベンチベイト90の勝ち判定も_active_lethal_now→_attack_prizes_nowに統一",
+  "first_seen": "2026-07-06",
+  "cause": "勝利ターン(ign→Nebula KO Mega Lucario=+3)の直前にWally60を消費(_active_lethal_nowは現エネのみで手貼り勝ちを見ない)(R27 lucario T13)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "ReviewerWinSkips": {
+  "status": "Fixed",
+  "detector": "HealMissed/BenchHealMissed/BenchBaitLoss/LillieOverLiveHeal/EnergyStuckNoLillie",
+  "match": "alakazam/grimmsnarl/arch",
+  "fix": "①HealMissed/BenchHealMissed/BenchBaitLossにスプラッシュ合算勝ち切りスキップ ②LillieOverLiveHealに単騎例外(ベンチ供給=全滅回避が先) ③EnergyStuckNoLillieのエネ仮定13→11(実デッキ)",
+  "first_seen": "2026-07-06",
+  "cause": "偽陽性4件: スプラッシュKO勝利ターンの回復不要/単騎Lillie→Staryu3体が正着/bot p_draw=0.37の正当見送りを13枚仮定のp_hit=0.75が誤検出",
+  "evidence": {
+   "frequency": 5,
+   "confirmed": 0,
+   "rejected": 5
   }
  }
 }

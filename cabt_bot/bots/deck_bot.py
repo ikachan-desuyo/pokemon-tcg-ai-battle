@@ -344,11 +344,14 @@ class DeckBot(Bot):
                     th_b = self._incoming_next_turn(sp)
                     if (self._prize_value(sp.get("id")) >= opp_left_b
                             and (sp.get("hp") or 0) <= th_b < (sp.get("maxHp") or 0)):
-                        # 今殴って自分が勝ち切れるなら攻撃優先
-                        oa_b = ((cur := self._cur or {}).get("players", [{}, {}])[1 - cur.get("yourIndex", 0)].get("active") or [None])[0]
-                        if not (oa_b and self._active_lethal_now()
-                                and self._prize_value(oa_b.get("id")) >= (pr_b.get("my_prizes") or 6)):
+                        # 今殴って自分が勝ち切れる(手貼り込み)なら攻撃優先
+                        if not (self._attack_prizes_now() >= (pr_b.get("my_prizes") or 6)):
                             return 90
+            # 今殴れば勝ち切れる(手貼り込み・スプラッシュ込み)なら以降の非救命ヒールは無意味
+            # (人間レビュー27巡目 lucario T13: ign→Nebula KO Mega Lucario=+3=勝利のターンに
+            # Wally60を先に消費。_active_lethal_nowは現エネのみで手貼り勝ちを見ない)
+            if self._attack_prizes_now() >= (pr_b.get("my_prizes") or 6):
+                return None
             # ベンチの重傷攻撃役(エネ0=エネ戻し損失ゼロ)の回復は攻撃と両立する=lethalでも打つ
             # (AI自己レビュー: dragapult-3 T11 ベンチMega30を放置→翌ターン多面KO負けの修正)。
             me_h = self._me() or {}
@@ -497,9 +500,10 @@ class DeckBot(Bot):
         pr_w = self.analyze_prize()
         my_left_w = pr_w.get("my_prizes") or 6
         win_opts = []
-        if self._attack_prizes_now() >= my_left_w:
-            my_left_w = 9999    # 貼らずに既に勝ち切れる=勝ちエネ不要(イグニを番末丸損で貼らない。
-                                # 人間レビュー26巡目 lucario T13: e4のJetting勝ちにイグニe5を追加)
+        if self._attack_prizes_now(no_attach=True) >= my_left_w:
+            my_left_w = 9999    # 「貼らずに」既に勝ち切れる=勝ちエネ不要(イグニを番末丸損で貼らない。
+                                # 26巡目 lucario T13)。※手貼り込み判定だと「貼れば勝てる」場合まで
+                                # 抑制しWがベンチへ→攻撃不能の勝ち逃し(27巡目 grimmsnarl-7 T13)
         for i in idxs:
             op = options[i]
             if op.in_play_area != AreaType.ACTIVE:
@@ -628,7 +632,7 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
-    def _attack_prizes_now(self, extra_energy_id=None) -> int:
+    def _attack_prizes_now(self, extra_energy_id=None, no_attach=False) -> int:
         """このターンの攻撃(手貼り込み)で取れるサイドの最大(相手active KO + スプラッシュKO)。
         wins_now判定はactive KOだけでなくスプラッシュの1枚も数える(人間レビュー19巡目
         alakazam T13: 残1でJettingスプラッシュ50=Abra50 KO=勝利を見ずに退避した)。"""
@@ -646,7 +650,9 @@ class DeckBot(Bot):
         att = []
         for ec in (act.get("energyCards") or []):
             att += self._energy_provides_syms(ec.get("id"))
-        if extra_energy_id is not None:
+        if no_attach:
+            pools = [list(att)]        # 現エネのみ(手貼りを仮定しない)
+        elif extra_energy_id is not None:
             pools = [att + self._energy_provides_syms(extra_energy_id)]
         else:
             pools = [list(att)]
@@ -1785,6 +1791,11 @@ class DeckBot(Bot):
         if not act:
             return False
         cur = self._cur or {}
+        # 今殴れば勝ち切れる(手貼り込み・スプラッシュ込み)なら退避も温存も不要=残って勝つ
+        # (人間レビュー27巡目 grimmsnarl-7 T13: 残1でW→Jetting=Froslass90 KO=勝ちの局面で
+        # 温存Switchを2連発しWをベンチへ→ENDの勝ち逃し。温存パスに勝ち判定が無かった)
+        if self._attack_prizes_now() >= (self.analyze_prize().get("my_prizes") or 6):
+            return False
         # 敗北回避オーバーライド: このactiveのKO=相手の残りサイド充足(死んだら負け)なら、
         # エネ投資もこのターンの攻撃テンポも無関係(負ければ全て無価値)。「今殴れば自分が
         # 勝ち切れる」場合だけ殴る。壁(非攻撃役)にも適用。(自己レビュー: arch-7 T17
@@ -2077,6 +2088,8 @@ class DeckBot(Bot):
             return False
         pv = self._prize_value(act.get("id"))
         pr = self.analyze_prize()
+        if self._attack_prizes_now() >= (pr.get("my_prizes") or 6):
+            return False    # 今殴れば勝ち切れる=退かず勝つ(27巡目: 温存/退避系に共通の勝ち切りガード)
         opp_left = pr.get("opp_prizes") or 6
         death_loses = pv >= opp_left           # このactiveのKO=相手の残りサイド充足=負け確定
         if act.get("id") not in self.plan.attackers and not death_loses:
@@ -2824,6 +2837,19 @@ class DeckBot(Bot):
         k = max(0, min(k, n))
         if k == 0:
             return []
+        # 回復対象(HEAL/REMOVE_DAMAGE_COUNTER)は自分の場スポット選択=「負けを防ぐ回復」を最優先。
+        # 汎用価値(attackers=95同点→先頭=act)だとベンチのボス釣りベイト(KO=相手残充足=負け)を
+        # 差し置いてactを回復する(人間レビュー27巡目 mirror T15: act310(脅威210=圏外)を回復し
+        # Mega50e1を放置→T16 Boss+KO 3枚で敗北)。_play_scoreのWally 90条項と同一意味論。
+        if (prefer_high and getattr(sel, "context", None) in
+                (SelectContext.HEAL, SelectContext.REMOVE_DAMAGE_COUNTER)
+                and all(op.player_index in (None, (self._cur or {}).get("yourIndex"))
+                        and op.area in (AreaType.ACTIVE, AreaType.BENCH)
+                        for op in sel.options)):
+            ranked_h = sorted(range(n),
+                              key=lambda i: self._heal_target_key(sel.options[i]),
+                              reverse=True)
+            return sorted(ranked_h[:k])
         # Resolver v1: 取得(take)は Need改善量 で選ぶ(限定導入・Explain Log付き)。give(discard)は従来通り。
         if prefer_high and self.plan.use_resolver:
             return self._resolve_target(sel, k)
@@ -2832,6 +2858,33 @@ class DeckBot(Bot):
         ranked = sorted(range(n), key=lambda i: keyfn(sel.options[i]),
                         reverse=prefer_high)
         return sorted(ranked[:k])
+
+    def _heal_target_key(self, op):
+        """回復対象の優先度: ①負けを防ぐ回復(act生存反転×死んだら負け/単騎、またはベンチの
+        ボス釣りベイト圏外化×相手ボス残数推定>=1) ②act生存反転 ③ダメージ量+攻撃役ボーナス。"""
+        cur = self._cur or {}
+        me = self._me() or {}
+        spots = (me.get("active") if op.area == AreaType.ACTIVE else me.get("bench")) or []
+        sp = (spots[op.index] if op.index is not None and 0 <= op.index < len(spots) else None)
+        if not sp:
+            return (-1, -1, -1)
+        is_act = op.area == AreaType.ACTIVE
+        pr = self.analyze_prize()
+        opp_left = pr.get("opp_prizes") or 6
+        hp, mx = sp.get("hp") or 0, sp.get("maxHp") or 0
+        th = self._incoming_next_turn(sp)
+        flip = hp <= th < mx                      # 回復で「前に出た時に耐える」へ反転
+        death = self._prize_value(sp.get("id")) >= opp_left
+        alone = not any(x for x in (me.get("bench") or []) if x)
+        loss_fix = 0
+        if is_act and flip and (death or alone):
+            loss_fix = 2                          # act死=負け/全滅を回復で防ぐ
+        elif (not is_act) and death and flip and self._opp_boss_remaining() > 0:
+            loss_fix = 2                          # ベンチのボス釣りベイトを圏外化
+        elif is_act and flip:
+            loss_fix = 1
+        dmg = mx - hp
+        return (loss_fix, dmg + (40 if sp.get("id") in self.plan.attackers else 0), -0 if is_act else -1)
 
     def _resolve_target(self, sel, k) -> list[int]:
         """Resolver v1: 候補(sel.options) × Need改善量(_need_improvement) → 最良k件。カード選択は最後の argmax のみ。

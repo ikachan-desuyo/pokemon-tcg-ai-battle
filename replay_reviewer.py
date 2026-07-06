@@ -808,6 +808,10 @@ def det_heal_missed(g, sig):
         oa = (opp.get("active") or [None])[0]
         if oa and (oa.get("hp") or 999) <= attack_dmg(a, cur, oa.get("id")):
             continue                                    # 今KOできるなら攻撃優先=回復不要
+        _mph = me.get("prize")
+        if _attack_prizes(cur, me, opp, a) >= (len(_mph) if _mph is not None else 6):
+            continue    # スプラッシュ合算で今殴れば勝ち切り=回復不要(bot _attack_prizes_now同一意味論。
+                        # 27巡目 alakazam-3 T15: Jetting+スプラッシュAbra50 KO=+1=勝利をHealMissedと誤検出)
         if (a.get("maxHp") or 0) <= _incoming(a, oa, opp.get("handCount"), opp.get("bench")):
             continue    # 満タンでもワンパン圏=回復は生存反転しない(bot heal句と同一意味論。
                         # alakazam-2 T7: 330 vs Powerful Hand 340で回復無意味=Salvatoreが正)
@@ -874,7 +878,8 @@ def det_energy_stuck_no_lillie(g, sig):
                      and "Energy" in (C[c.get("id")].name or ""))
         deck_n = me.get("deckCount") or len(me.get("deck") or []) or 0
         pool = deck_n + len(me.get("prize") or [])   # 未見エネは山+サイドに分散(サイド落ち希釈)
-        rem = max(0, 13 - vis_e)
+        rem = max(0, 11 - vis_e)  # 実デッキ構成=イグニ4+基本W7の11枚(13仮定はp_hit過大→bot p_draw=0.37の
+                                  # 正当見送りを偽陽性化: 人間レビュー27巡目 arch-8 T21)
         p_hit = 0.0
         if pool > 0 and rem > 0:
             miss = 1.0
@@ -1011,6 +1016,9 @@ def det_lillie_over_live_heal(g, sig):
             continue
         a = (me.get("active") or [None])[0]
         oa = (opp.get("active") or [None])[0]
+        if not any(sp for sp in (me.get("bench") or []) if sp):
+            continue    # 単騎: リーリエでたねを引いてベンチ供給=全滅回避が回復より先
+                        # (27巡目 alakazam-6 T9: 単騎Mega110+Cape、Lillie→Staryu3体で正着)
         if (a and (a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
                 and (a.get("maxHp") or 0) > _incoming(a, oa, opp.get("handCount"), opp.get("bench"))):
             sig("LillieOverLiveHeal|重傷×反転可のミツルをリーリエで流すリスク", g["ep"], cur.get("turn"))
@@ -1518,6 +1526,11 @@ def det_bench_heal_missed(g, sig):
                      for sp in (me.get("bench") or []))
         if not target:
             continue
+        a_w = (me.get("active") or [None])[0]
+        _mpw = me.get("prize")
+        if _attack_prizes(cur, me, opp, a_w) >= (len(_mpw) if _mpw is not None else 6):
+            continue    # 今殴れば勝ち切り=回復不要(27巡目 grimmsnarl-4 T11: KO=ベンチアウト勝ちの
+                        # ターンをBenchHealMissedと誤検出)
         sig("BenchHealMissed|エネ0重傷ベンチ×ミツル在手なのに回復せず", g["ep"], cur.get("turn"))
 
 
@@ -1777,6 +1790,10 @@ def det_bench_bait_loss(g, sig):
             ci = C.get(hand[ch["index"]].get("id")) if ch.get("index") is not None and ch["index"] < len(hand) else None
             if not ci or ci.stage != "Supporter":
                 continue
+        a_bb = (me.get("active") or [None])[0]
+        _mpb = me.get("prize")
+        if _attack_prizes(cur, me, opp, a_bb) >= (len(_mpb) if _mpb is not None else 6):
+            continue    # 今殴れば勝ち切り=相手のボスターンは来ない(27巡目 grimmsnarl-4 T11)
         _op = opp.get("prize")
         opp_left = len(_op) if _op is not None else 6
         # ボス残数推定(アーキタイプ既定2, Arch/Dragapult=3, Alakazam=1) - トラッシュ使用分
