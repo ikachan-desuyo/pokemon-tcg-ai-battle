@@ -78,6 +78,9 @@ class DeckPlan:
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
     dup_play_caps: dict = field(default_factory=dict)  # {card_id: n}: 場に同名n体以上いる時の追加展開/取得価値を30へ(条件系特性の2体目渋滞防止)
+    conserve_hand: bool = False               # 手札1枚に打点価値があるデッキ(Powerful Hand等)向け:
+                                              # コストを進めないエネ貼り(comp=0)と重複超過の展開をしない
+                                              # (手札の切り売り防止。Benchmark Phase: alakazamから抽出)
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
     energy_supporters: tuple[int, ...] = ()   # エネ補給サポ(例:トウコ)。進化アタッカーが居てエネ切れ＝攻撃不可の時に優先して打つ
     eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
@@ -450,7 +453,7 @@ class DeckBot(Bot):
                          if sp and self._cardinfo.get(sp.get("id"))
                          and self._cardinfo[sp.get("id")].name == ci0.name)
             if n_play >= self.plan.dup_play_caps[cid]:
-                return 30
+                return None if self.plan.conserve_hand else 30
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if ci0 and not ci0.is_pokemon and "Stadium" in (ci0.stage or ""):
@@ -592,6 +595,9 @@ class DeckBot(Bot):
             sp_k = (spots_k[op.in_play_index]
                     if op.in_play_index is not None and 0 <= op.in_play_index < len(spots_k) else None)
             comp = self._completes_cost(energy, target, sp_k)
+            if self.plan.conserve_hand and self._is_energy(energy) and comp == 0:
+                continue    # 手札温存デッキ: コストを進めないエネ貼りは手札の切り売り
+                            # (PH=手札×20点。勝ちエネ/ケープ反転の前段パスは対象外のまま)
             # 規則(plan)適合を最上位に、その中でコスト充足を優先。compを全体最優先にすると
             # 脇役の1エネ技「完成」(comp=2)が計画の主役育成(水→メガ, rule>0)を上書きして
             # WallRetreat再発(QA 2件)。逆にruleを最上位にすると同一対象のR+R重ね(rule大)が
