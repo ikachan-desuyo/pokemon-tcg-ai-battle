@@ -196,8 +196,11 @@ def infer_plan(decklist) -> DeckPlan:
         if b0:
             setup = len(b0["cost_syms"])                 # setup = 主役の主技コスト(最初に使う技)
         assign(main[0], primary=True)
+        # Phase7蒸留(Lucario Gap23): エネ規則は主火力の50%以上の副役のみ。三次アタッカー
+        # (例: Solrock 70 vs ML 270)へ規則を張るとエネが分散し主線が立たない(③エネ配分34-49%の主因)
         for atk in main[1:3]:
-            assign(atk, primary=False)
+            if maxdmg(atk) >= maxdmg(main[0]) * 0.5:
+                assign(atk, primary=False)
     rules = list(dict.fromkeys(rules))
 
     # card_values / play_priority を火力から自動導出（デッキ固有チューニングでなくカードデータ由来）
@@ -226,8 +229,12 @@ def infer_plan(decklist) -> DeckPlan:
         d = maxdmg(i)
         card_values[i] = min(100, 50 + d // 3)
         base = 50 + min(40, d // 5)                    # 火力ベース(0火力=50, 高火力ほど高い)
-        play_priority[i] = (base + (20 if i in main_line else 0)
+        play_priority[i] = (base + (30 if i in main_line else 0)
                             + (15 if i in partners else 0))
+        # Phase7蒸留(土台>支援, dragapult/lucarioで実証): 主線土台は火力ゼロでも勝ち筋の入口。
+        # 火力由来値だと土台(Riolu60)が支援(Solrock73)を下回り、サーチが勝ち筋を無視する
+        if i in main_line:
+            card_values[i] = max(card_values[i], 88)
     for e in energy_cards:
         card_values.setdefault(e, 82)                  # エネは温存価値やや高め
 
