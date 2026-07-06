@@ -60,6 +60,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -128,6 +131,9 @@
    1,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 6,
@@ -183,6 +189,9 @@
    0,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -265,6 +274,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -280,6 +292,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -398,6 +413,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -461,7 +479,10 @@
    111,
    100,
    95,
-   115
+   115,
+   102,
+   123,
+   111
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -524,7 +545,10 @@
    15,
    12,
    16,
-   22
+   22,
+   13,
+   15,
+   26
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -591,7 +615,10 @@
    34,
    41,
    60,
-   38
+   38,
+   23,
+   26,
+   39
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -658,7 +685,10 @@
    16,
    22,
    17,
-   20
+   20,
+   17,
+   25,
+   15
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -716,6 +746,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -791,12 +824,15 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
  },
  "FetchIgnition(1エネ圏)": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "FetchSkew(1エネ圏○×Ignition)",
   "match": "FetchSkew|トウコのエネ選択→Ignition Energy|1エネ圏○",
   "cause": "Fetch選択の文脈評価欠如(静的card_values: イグニ90>水42)",
@@ -854,9 +890,12 @@
    0,
    0,
    0,
-   0
+   0,
+   0,
+   0,
+   1
   ],
-  "regressions": 5
+  "regressions": 6
  },
  "BossNoPathGain": {
   "status": "Graduated",
@@ -917,6 +956,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -932,6 +974,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1040,6 +1085,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1099,6 +1147,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4
@@ -1113,6 +1164,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1214,6 +1268,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1238,6 +1295,9 @@
    2,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1328,6 +1388,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1385,9 +1448,12 @@
    1,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 2
+  "regressions": 3
  },
  "GustTargetSkew": {
   "status": "Graduated",
@@ -1402,6 +1468,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1497,6 +1566,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1553,6 +1625,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1571,6 +1646,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1658,6 +1736,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1672,6 +1753,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1757,6 +1841,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1807,6 +1894,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1820,6 +1910,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1904,6 +1997,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1954,9 +2050,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "サイド計算がKO単位でなくゲーム単位の敗北条件(相手残りサイド充足)を見ていない。Mega ex=3枚ルールで especially 致命的",
   "evidence": {
    "frequency": 7,
@@ -2001,9 +2100,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "脅威評価がdamage欄のみ参照=効果文の可変ダメージ(手札枚数×)が0/20点扱い。相手手札18枚=360点(公開情報)で330のMega ex=3枚ベイトを一撃圏に置いた",
   "evidence": {
    "frequency": 3,
@@ -2048,6 +2150,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2068,6 +2173,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2136,6 +2244,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2178,6 +2289,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -2198,6 +2312,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2256,9 +2373,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "相手の揮発エネ使用は盤面観測だけでは永遠に見えない(相手ターン内で消える)→Nebula 210圏を120と過小評価し死んだら負けのMega210を放置(mirror-9 T11)。トラッシュ=公開情報の未活用",
   "evidence": {
    "frequency": 1,
@@ -2276,6 +2396,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2318,6 +2441,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2346,9 +2472,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "cause": "退避判定の脅威評価が静的(相手activeが生存し続ける前提)。ign貼付でNebula=PH使いのKOが立った直後に退却し、W+ignを退却コストで浪費(alakazam-3 T9)",
   "evidence": {
    "frequency": 1,
@@ -2366,6 +2495,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2402,6 +2534,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2422,6 +2557,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2455,6 +2593,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2474,6 +2615,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2503,6 +2647,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2522,6 +2669,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2551,6 +2701,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2570,6 +2723,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2598,6 +2754,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2617,6 +2776,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2644,6 +2806,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2663,6 +2828,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -2688,6 +2856,9 @@
    1,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2707,6 +2878,9 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0
@@ -2730,6 +2904,9 @@
    1,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2742,13 +2919,16 @@
   "graduated": "2026-07-06"
  },
  "LethalAttachBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(21巡目精読)",
   "match": "-",
   "fix": "_pick_attachに勝ちエネ最優先キー(_attack_prizes_now(extra_energy)で残サイド充足)+勝ちエネ複数時は非揮発優先",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2757,16 +2937,20 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "SacrificeLineValue": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "BaseLineSacrifice",
   "match": "BaseLineSacrifice",
   "fix": "昇格キーに「全候補が土台犠牲なら線価値(line_threat)の低い方を差し出す」タイブレーク",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2775,6 +2959,43 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
+  },
+  "graduated": "2026-07-06"
+ },
+ "HealTargetBaitBlind": {
+  "status": "Fix Applied",
+  "detector": "(22巡目精読)",
+  "match": "-",
+  "fix": "Wally対象選択に負けベイト除去最優先キー(従来はダメージ量タイブレークのみ)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "arch T17: act210とベンチ110が同ダメージ量でactive選択→ベンチのボス釣り即負けベイト残置(当該局面は二重拘束で結果不変だが一般には決定的)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "ReviewerBenchGunParity": {
+  "status": "Fix Applied",
+  "detector": "DoomedGameLoss/DoomedNoRetreat",
+  "match": "-",
+  "fix": "reviewer _incoming/_incoming_nextにベンチ装填銃(RH等)+スプラッシュ合算勝ち切り(_attack_prizes)を配線",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   2,
+   0
+  ],
+  "regressions": 0,
+  "cause": "botはベンチ銃RH330で「逃げ場なし」を正しく判定/スプラッシュ2枚で勝ち切り攻撃、検出器が旧意味論で偽陽性",
+  "evidence": {
+   "frequency": 2,
+   "confirmed": 0,
+   "rejected": 2
   }
  }
 }

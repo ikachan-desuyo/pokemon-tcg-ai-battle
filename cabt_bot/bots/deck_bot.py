@@ -1657,7 +1657,9 @@ class DeckBot(Bot):
         # 回復(ミツル等)の対象選択: 最も重傷の攻撃役を回復(人間レビュー7巡目④)。
         cc = getattr(sel, "context_card", None)
         if cc is not None and getattr(cc, "card_id", None) in self.plan.heal_return_cards:
-            best_i, best_dmg = None, -1
+            best_i, best_key_h = None, (-1, -1)
+            pr_h = self.analyze_prize()
+            opp_left_h = pr_h.get("opp_prizes") or 6
             for i, op in enumerate(sel.options):
                 me2 = self._me() or {}
                 spots = (me2.get("active") if op.area == AreaType.ACTIVE else me2.get("bench")) or []
@@ -1667,8 +1669,14 @@ class DeckBot(Bot):
                 d = (sp.get("maxHp") or 0) - (sp.get("hp") or 0)
                 if sp.get("id") in self.plan.attackers:
                     d += 40                               # 攻撃役を優先
-                if d > best_dmg:
-                    best_dmg, best_i = d, i
+                # 負けベイト除去を最優先: 「KO=相手残サイド充足×確殺圏×回復で圏外化」の個体
+                # (人間レビュー22巡目 arch T17: ダメージ量タイブレークが同点でactiveを選び、
+                #  ベンチのボス釣り即負けベイトを残した)
+                th_h = self._incoming_next_turn(sp)
+                bait = (1 if (self._prize_value(sp.get("id")) >= opp_left_h
+                              and (sp.get("hp") or 0) <= th_h < (sp.get("maxHp") or 0)) else 0)
+                if (bait, d) > best_key_h:
+                    best_key_h, best_i = (bait, d), i
             if best_i is not None:
                 return [best_i]
         # 昇格/退避先(自分の新しいバトル場)選択: 相手の最大火力を1発耐える攻撃役を優先

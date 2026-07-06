@@ -578,7 +578,7 @@ def det_missed_free_advance(g, sig):
             opp_left_m = len(_op_m) if _op_m is not None else 6
             oa_m = (opp.get("active") or [None])[0]
             if (_pv_m(b.get("id")) >= opp_left_m
-                    and (b.get("hp") or 0) <= _incoming_next(b, oa_m, opp_seen, opp.get("handCount"))):
+                    and (b.get("hp") or 0) <= _incoming_next(b, oa_m, opp_seen, opp.get("handCount"), opp.get("bench"))):
                 continue                                # 負けベイト=前進しないのが正当
             # bot側ゲートと同一意味論: 前進した先が実際に攻撃を払える場合のみ「攻撃可」
             # (エネ1枚在中=攻撃可の緩い判定はWallRetreat検出と矛盾する偽陽性源)
@@ -608,7 +608,7 @@ def det_doomed_no_switch(g, sig):
             continue    # 温存する価値があるのは主役のみ(壁の温存に主役を晒す提案は逆転。bot温存パスと同一意味論)
         # 現実的評価(相手の現エネ+1で払える技)。bot側温存パスと同一意味論
         # (ライン最大基準だとbotが退避しない局面を検出=不整合)
-        dmg_in = _incoming_next(a, oa, None, opp.get("handCount"))
+        dmg_in = _incoming_next(a, oa, None, opp.get("handCount"), opp.get("bench"))
         if dmg_in <= 0 or (a.get("hp") or 999) > dmg_in:
             continue                                    # 被KO圏でない
         if any(e.get("id") != IGN for e in (a.get("energyCards") or [])):
@@ -628,7 +628,7 @@ def det_doomed_no_switch(g, sig):
             _op_dns = opp.get("prize")
             opp_left_dns = len(_op_dns) if _op_dns is not None else 6
             bait = (_pv(b.get("id")) >= opp_left_dns
-                    and (b.get("hp") or 0) <= _incoming_next(b, oa, None, opp.get("handCount")))
+                    and (b.get("hp") or 0) <= _incoming_next(b, oa, None, opp.get("handCount"), opp.get("bench")))
             if (bi and not bait and not bi.is_basic and any(m.damage for m in bi.moves)
                     and (line_threat(b.get("id")) or 0) >= 180
                     and b.get("hp") == b.get("maxHp") and (b.get("hp") or 0) > (a.get("hp") or 0)):
@@ -723,7 +723,7 @@ def det_volatile_over_permanent(g, sig):
 WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
-def _incoming(a, oa, opp_owner_hand_count=None):
+def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
     """相手activeライン最大火力(弱点込み)=aが次の相手ターンに受けうる最大ダメージ。
     効果文の可変ダメージ(Powerful Hand=手札枚数×等)は実数で補完(bot _incoming_threatと同一意味論)。"""
     import re
@@ -737,6 +737,29 @@ def _incoming(a, oa, opp_owner_hand_count=None):
             m2 = re.search(r"lace (\d+) damage counters? on your opponent[’\']s Active Pokémon for each card in your hand", m.effect or "")
             if m2:
                 t = max(t, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
+    for spb in (opp_bench or []):
+        if not spb:
+            continue
+        bi_ = C.get(spb.get("id"))
+        if not bi_:
+            continue
+        b_moves = list(bi_.moves)
+        for pe in (spb.get("preEvolution") or []):
+            pi_ = C.get((pe or {}).get("id"))
+            if pi_:
+                b_moves += list(pi_.moves)
+        be = len(spb.get("energyCards") or [])
+        for m in b_moves:
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            if need > be:
+                continue
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            dm = int(mt.group(1)) if mt else 0
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            if m2:
+                cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
+                dm = max(dm, dm + int(m2.group(1)) * cnt)
+            t = max(t, dm)
     if cc and oc and cc.weakness and oc.type == cc.weakness:
         t *= 2
     return t
@@ -770,7 +793,7 @@ def det_heal_missed(g, sig):
         oa = (opp.get("active") or [None])[0]
         if oa and (oa.get("hp") or 999) <= attack_dmg(a, cur, oa.get("id")):
             continue                                    # 今KOできるなら攻撃優先=回復不要
-        if (a.get("maxHp") or 0) <= _incoming(a, oa, opp.get("handCount")):
+        if (a.get("maxHp") or 0) <= _incoming(a, oa, opp.get("handCount"), opp.get("bench")):
             continue    # 満タンでもワンパン圏=回復は生存反転しない(bot heal句と同一意味論。
                         # alakazam-2 T7: 330 vs Powerful Hand 340で回復無意味=Salvatoreが正)
         sig(f"HealMissed|重傷activeでミツルでなく{ci.name}を使用", g["ep"], cur.get("turn"))
@@ -797,7 +820,7 @@ def det_cape_skew(g, sig):
             continue    # activeが主力線(threat>=180)の進化アタッカーの時のみ
                         # (壁Cinderace=Stage2だが主力でない、へのケープ温存は正当)
         oa = (opp.get("active") or [None])[0]
-        th = _incoming(a, oa, opp.get("handCount"))
+        th = _incoming(a, oa, opp.get("handCount"), opp.get("bench"))
         hp = a.get("hp") or 0
         if hp <= th < hp + 100:
             sig("CapeSkew|activeに貼れば被KO圏→生存圏だったのにベンチへ", g["ep"], cur.get("turn"))
@@ -852,7 +875,7 @@ def det_energy_stuck_no_lillie(g, sig):
             oa0 = (opp.get("active") or [None])[0]
             hurt = any(sp and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
                        for sp in [a] + list(me.get("bench") or []))
-            if hurt and (a.get("maxHp") or 0) > _incoming(a, oa0, opp.get("handCount")):
+            if hurt and (a.get("maxHp") or 0) > _incoming(a, oa0, opp.get("handCount"), opp.get("bench")):
                 continue
         ci = C.get((a or {}).get("id"))
         if not a or not ci or ci.is_basic or not any(m.damage for m in ci.moves):
@@ -974,8 +997,48 @@ def det_lillie_over_live_heal(g, sig):
         a = (me.get("active") or [None])[0]
         oa = (opp.get("active") or [None])[0]
         if (a and (a.get("maxHp") or 0) - (a.get("hp") or 0) >= 150
-                and (a.get("maxHp") or 0) > _incoming(a, oa, opp.get("handCount"))):
+                and (a.get("maxHp") or 0) > _incoming(a, oa, opp.get("handCount"), opp.get("bench"))):
             sig("LillieOverLiveHeal|重傷×反転可のミツルをリーリエで流すリスク", g["ep"], cur.get("turn"))
+
+
+def _attack_prizes(cur, me, opp, a):
+    """このターンの攻撃で取れるサイド合算(active KO + スプラッシュKO)。bot _attack_prizes_nowと同一意味論。"""
+    import re
+    oa = (opp.get("active") or [None])[0]
+    ci = C.get((a or {}).get("id"))
+    if not a or not oa or not ci:
+        return 0
+    evolved = not getattr(ci, "is_basic", True)
+    e = sum(3 if (ec.get("id") == IGN and evolved) else 1 for ec in (a.get("energyCards") or []))
+    hand_es = []
+    if not cur.get("energyAttached"):
+        for c in (me.get("hand") or []):
+            cc0 = C.get(c.get("id"))
+            if cc0 and "Energy" in (cc0.name or "") and not cc0.is_pokemon:
+                hand_es.append(3 if (c.get("id") == IGN and evolved) else 1)
+    best_total = 0
+    for extra in [0] + hand_es:
+        ee = e + extra
+        for m in ci.moves:
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            if not mt:
+                continue
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            if need > ee:
+                continue
+            total = 0
+            if int(mt.group(1)) >= (oa.get("hp") or 9999):
+                total += _pv(oa.get("id"))
+            spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
+            if spm:
+                spread = int(spm.group(1))
+                bs = 0
+                for spb in (opp.get("bench") or []):
+                    if spb and (spb.get("hp") or 9999) <= spread:
+                        bs = max(bs, _pv(spb.get("id")))
+                total += bs
+            best_total = max(best_total, total)
+    return best_total
 
 
 def det_doomed_no_retreat(g, sig):
@@ -1006,7 +1069,7 @@ def det_doomed_no_retreat(g, sig):
         oa = (opp.get("active") or [None])[0]
         if not a or _pv(a.get("id")) < 2:
             continue
-        th = _incoming(a, oa, opp.get("handCount"))
+        th = _incoming(a, oa, opp.get("handCount"), opp.get("bench"))
         if th <= 0 or (a.get("hp") or 999) > th:
             continue                                    # 被KO圏でない
         dmg = attack_dmg(a, cur, (oa or {}).get("id"))
@@ -1015,6 +1078,8 @@ def det_doomed_no_retreat(g, sig):
         if oa and (oa.get("hp") or 999) <= dmg and (_pv(oa.get("id")) >= _pv(a.get("id"))
                                                     or _pv(oa.get("id")) >= my_left):
             continue                                    # 同等以上のトレード or 勝ち切り=残って殴るのは正当
+        if _attack_prizes(cur, me, opp, a) >= my_left:
+            continue                                    # スプラッシュKO合算で勝ち切り(bot同一意味論)
         h = hand_ids(me)
         can_pay = (not cur.get("energyAttached")
                    and any(C.get(x) and not C[x].is_pokemon and "Energy" in (C[x].name or "") for x in h))
@@ -1023,7 +1088,7 @@ def det_doomed_no_retreat(g, sig):
                 continue
             bi = C.get(b.get("id"))
             if (bi and not bi.is_basic and (line_threat(b.get("id")) or 0) >= 180
-                    and (b.get("hp") or 0) > _incoming_next(b, oa, opp_seen, opp.get("handCount"))
+                    and (b.get("hp") or 0) > _incoming_next(b, oa, opp_seen, opp.get("handCount"), opp.get("bench"))
                     and ((b.get("energyCards") or []) or can_pay)):
                 sig(f"DoomedNoRetreat|被KO確定×不利トレードで{nm(a.get('id'))}が残留",
                     g["ep"], cur.get("turn"))
@@ -1112,7 +1177,7 @@ def det_promotion_skew(g, sig):
         if not pick:
             continue
         def survives(sp):
-            return (sp.get("hp") or 0) > _incoming(sp, oa, opp.get("handCount"))
+            return (sp.get("hp") or 0) > _incoming(sp, oa, opp.get("handCount"), opp.get("bench"))
         def is_main(sp):
             return (line_threat(sp.get("id")) or 0) >= 180
         if survives(pick) and is_main(pick):
@@ -1124,7 +1189,7 @@ def det_promotion_skew(g, sig):
                 g["ep"], cur.get("turn"))
 
 
-def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None):
+def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=None):
     """次の相手ターンの現実的な最大被ダメ: 相手activeライン(進化1段含む)の技のうち
     現エネ+1(手貼り)で払える最大(弱点込み)。進化候補は観測済み(opp_seen)に限定。
     opp_owner_hand_count=相手手札枚数(可変ダメージ=Powerful Hand等を実数評価。bot側
@@ -1167,6 +1232,30 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None):
             cnt = max(0, ((oa.get("maxHp") or 0) - (oa.get("hp") or 0)) // 10)
             dm = max(dm, dm + int(m2.group(1)) * cnt)
         best = max(best, dm)
+    # ベンチの装填済み銃(現エネで即払える技、ダメカン×N込み)=昇格1手で届く(bot同一意味論)
+    for spb in (opp_bench or []):
+        if not spb:
+            continue
+        bi_ = C.get(spb.get("id"))
+        if not bi_:
+            continue
+        b_moves = list(bi_.moves)
+        for pe in (spb.get("preEvolution") or []):
+            pi_ = C.get((pe or {}).get("id"))
+            if pi_:
+                b_moves += list(pi_.moves)
+        be = len(spb.get("energyCards") or [])
+        for m in b_moves:
+            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+            if need > be:
+                continue
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            dm = int(mt.group(1)) if mt else 0
+            m2 = re.search(r"does (\d+) more damage for each damage counter on this", m.effect or "")
+            if m2:
+                cnt = max(0, ((spb.get("maxHp") or 0) - (spb.get("hp") or 0)) // 10)
+                dm = max(dm, dm + int(m2.group(1)) * cnt)
+            best = max(best, dm)
     cc = C.get(a.get("id"))
     if cc and oi and cc.weakness and oi.type == cc.weakness:
         best *= 2
@@ -1195,7 +1284,7 @@ def det_weak_advance(g, sig):
             a = (me.get("active") or [None])[0]
             oa = (opp.get("active") or [None])[0]
             prev_retreat = (bool(ch) and ch.get("type") == RETREAT and a
-                            and (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen, opp.get("handCount")))  # 壁は耐えていた
+                            and (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen, opp.get("handCount"), opp.get("bench")))  # 壁は耐えていた
             continue
         if not prev_retreat or sel.get("context") != 3:
             continue
@@ -1468,11 +1557,14 @@ def det_doomed_game_loss(g, sig):
         opp_left = len(_op) if _op is not None else 6
         if _pv(a.get("id")) < opp_left:
             continue                                    # 死んでも負けない
-        if (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen, opp.get("handCount")):
+        if (a.get("hp") or 0) > _incoming_next(a, oa, opp_seen, opp.get("handCount"), opp.get("bench")):
             continue                                    # 被KO圏でない
         # 殴って勝ち切れるなら残って殴るのが正(自分の残りサイド充足)
         _mp = me.get("prize")
         my_left = len(_mp) if _mp is not None else 6
+        _mp0 = me.get("prize")
+        if ch.get("type") == ATTACK and _attack_prizes(cur, me, opp, a) >= (len(_mp0) if _mp0 is not None else 6):
+            continue                                    # スプラッシュ合算で勝ち切り攻撃=正当
         if ch.get("type") == ATTACK:
             adv = attack_dmg(a, cur, oa.get("id"))      # 既存: 現エネで払える最大打点(スタジアム込)
             ai = C.get(a.get("id"))
@@ -1517,7 +1609,7 @@ def det_doomed_game_loss(g, sig):
         if not esc:
             continue
         ok_succ = any(sp and (_pv(sp.get("id")) < opp_left
-                              or (sp.get("hp") or 0) > _incoming_next(sp, oa, opp_seen, opp.get("handCount")))
+                              or (sp.get("hp") or 0) > _incoming_next(sp, oa, opp_seen, opp.get("handCount"), opp.get("bench")))
                       for sp in (me.get("bench") or []))
         if not ok_succ:
             continue
@@ -1558,7 +1650,7 @@ def det_switch_waste(g, sig):
                 a = (me.get("active") or [None])[0]
                 oa = (opp.get("active") or [None])[0]
                 doomed = (a and oa
-                          and (a.get("hp") or 0) <= _incoming_next(a, oa, opp_seen, opp.get("handCount")))
+                          and (a.get("hp") or 0) <= _incoming_next(a, oa, opp_seen, opp.get("handCount"), opp.get("bench")))
                 if not doomed:
                     rec["switch"] = tn
     for tn, rec in turns.items():
@@ -1641,7 +1733,7 @@ def det_bench_bait_loss(g, sig):
         for sp in (me.get("bench") or []):
             if not sp:
                 continue
-            th = _incoming_next(sp, oa, opp_seen, opp.get("handCount"))
+            th = _incoming_next(sp, oa, opp_seen, opp.get("handCount"), opp.get("bench"))
             if (_pv(sp.get("id")) >= opp_left
                     and (sp.get("hp") or 0) <= th < (sp.get("maxHp") or 0)):
                 sig(f"BenchBaitLoss|ボス釣りベイト放置({nm(sp.get('id'))}hp{sp.get('hp')}, 回復サポ在手)",
@@ -1679,7 +1771,7 @@ def det_base_line_sacrifice(g, sig):
         _op0 = opp.get("prize")
         opp_left0 = len(_op0) if _op0 is not None else 6
         if (a0 and oa0 and _pv(a0.get("id")) >= opp_left0
-                and (a0.get("hp") or 0) <= _incoming_next(a0, oa0, opp_seen, opp.get("handCount"))):
+                and (a0.get("hp") or 0) <= _incoming_next(a0, oa0, opp_seen, opp.get("handCount"), opp.get("bench"))):
             def _is_base_alt(sp):
                 ci0 = C.get(sp.get("id"))
                 return bool(ci0) and getattr(ci0, "is_basic", False) and any(
@@ -1688,7 +1780,7 @@ def det_base_line_sacrifice(g, sig):
 
             def _is_bait_alt(sp):
                 return (_pv(sp.get("id")) >= opp_left0
-                        and (sp.get("hp") or 0) <= _incoming_next(sp, oa0, opp_seen, opp.get("handCount")))
+                        and (sp.get("hp") or 0) <= _incoming_next(sp, oa0, opp_seen, opp.get("handCount"), opp.get("bench")))
             if not any(sp and not _is_base_alt(sp) and not _is_bait_alt(sp)
                        for sp in (me.get("bench") or [])):
                 continue    # 非土台かつ非ベイトの代替後続なし=土台の犠牲は強制(最善)
@@ -1708,7 +1800,7 @@ def det_base_line_sacrifice(g, sig):
                 break
             evo_in_hand = any(C.get(c.get("id")) and C[c.get("id")].previous_stage == ci.name
                               for c in (me2.get("hand") or []))
-            dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, opp_seen, opp2.get("handCount"))
+            dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, opp_seen, opp2.get("handCount"), opp2.get("bench"))
             kos = attack_dmg(a2) >= (oa2.get("hp") or 9999)
             if evo_in_hand and dies and not kos:
                 sig(f"BaseLineSacrifice|進化土台{nm(a2.get('id'))}を確定死圏に前進(進化先在手)",
@@ -1754,7 +1846,7 @@ def det_evolve_into_loss(g, sig):
         evo_spot = dict(a)
         evo_spot["id"] = evo
         evo_spot["hp"] = evo_spot["maxHp"] = ei.hp or 0
-        if (evo_spot["hp"] or 0) > _incoming_next(evo_spot, oa, None, opp.get("handCount")):
+        if (evo_spot["hp"] or 0) > _incoming_next(evo_spot, oa, None, opp.get("handCount"), opp.get("bench")):
             continue                                    # 耐える=ベイトでない
         # 進化後の攻撃(手貼り込み)で相手activeを取れるなら正当
         def _esyms(eid):
@@ -1838,7 +1930,7 @@ def det_switch_into_loss(g, sig):
         if not cands:
             continue
         all_bait = all(_pv2(sp.get("id")) >= opp_left
-                       and (sp.get("hp") or 0) <= _incoming_next(sp, oa, opp_seen, opp.get("handCount"))
+                       and (sp.get("hp") or 0) <= _incoming_next(sp, oa, opp_seen, opp.get("handCount"), opp.get("bench"))
                        for sp in cands)
         if all_bait:
             sig(f"SwitchIntoLoss|負けベイトを前に出す入替({nm(a.get('id'))}→全後続が確殺×残サイド充足)",
