@@ -475,6 +475,24 @@ class DeckBot(Bot):
             hp = act.get("hp") or 0
             if hp <= th < hp + boost:
                 return i
+        # 勝ちエネ最優先: このエネをactiveに貼ると攻撃(スプラッシュKO込み)で残りサイドを
+        # 取り切れるなら、rule順位に関係なくそれを貼る(人間レビュー21巡目 mirror T11:
+        # W→Jetting+スプラッシュ50=ベンチMega20 KO=勝ちなのにrule上位のイグニを貼り
+        # Jetting不能→退却→勝利がT15に遅延)
+        pr_w = self.analyze_prize()
+        my_left_w = pr_w.get("my_prizes") or 6
+        win_opts = []
+        for i in idxs:
+            op = options[i]
+            if op.in_play_area != AreaType.ACTIVE:
+                continue
+            energy = self._hand_id(hand, op.index)
+            if not self._is_energy(energy):
+                continue
+            if self._attack_prizes_now(extra_energy_id=energy) >= my_left_w:
+                win_opts.append((1 if energy in self.plan.volatile_energies else 0, i))
+        if win_opts:
+            return min(win_opts)[1]    # 勝ちエネ複数なら非揮発(基本エネ)優先=イグニ温存
         best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
@@ -592,7 +610,7 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
-    def _attack_prizes_now(self) -> int:
+    def _attack_prizes_now(self, extra_energy_id=None) -> int:
         """このターンの攻撃(手貼り込み)で取れるサイドの最大(相手active KO + スプラッシュKO)。
         wins_now判定はactive KOだけでなくスプラッシュの1枚も数える(人間レビュー19巡目
         alakazam T13: 残1でJettingスプラッシュ50=Abra50 KO=勝利を見ずに退避した)。"""
@@ -610,11 +628,14 @@ class DeckBot(Bot):
         att = []
         for ec in (act.get("energyCards") or []):
             att += self._energy_provides_syms(ec.get("id"))
-        pools = [list(att)]
-        if not cur.get("energyAttached"):
-            for c in (me.get("hand") or []):
-                if self._is_energy(c.get("id")):
-                    pools.append(att + self._energy_provides_syms(c.get("id")))
+        if extra_energy_id is not None:
+            pools = [att + self._energy_provides_syms(extra_energy_id)]
+        else:
+            pools = [list(att)]
+            if not cur.get("energyAttached"):
+                for c in (me.get("hand") or []):
+                    if self._is_energy(c.get("id")):
+                        pools.append(att + self._energy_provides_syms(c.get("id")))
         best_total = 0
         for m in info.moves:
             mt = re.match(r"(\d+)", str(m.damage or ""))
@@ -1675,6 +1696,9 @@ class DeckBot(Bot):
                 key = (0 if loses_game else 1,                      # 次打KO=負け確定の昇格先を避ける
                        1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
                        0 if base_sac else 1,                        # 確定死圏の進化土台を避ける(線の保護)
+                       # 全候補が土台犠牲なら線価値の低い方を犠牲に(主力線=Grimm180の土台でなく
+                       # 弱線=Froslass60の土台を差し出す。人間レビュー21巡目 grimmsnarl相手bot T10)
+                       -(_line_threat(sp.get("id")) or 0) if base_sac else 0,
                        1 if sp.get("id") in self.plan.attackers else 0,
                        len(sp.get("energyCards") or []),
                        sp.get("hp") or 0)

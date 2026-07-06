@@ -58,6 +58,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -124,6 +126,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0
   ],
   "regressions": 6,
@@ -179,6 +183,8 @@
    0,
    0,
    3,
+   0,
+   0,
    0,
    0,
    0,
@@ -257,6 +263,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -272,6 +280,8 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
    0,
    0,
    0,
@@ -386,6 +396,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -447,7 +459,9 @@
    103,
    103,
    111,
-   100
+   100,
+   95,
+   115
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -508,7 +522,9 @@
    25,
    16,
    15,
-   12
+   12,
+   16,
+   22
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -573,7 +589,9 @@
    28,
    24,
    34,
-   41
+   41,
+   60,
+   38
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -638,7 +656,9 @@
    18,
    17,
    16,
-   22
+   22,
+   17,
+   20
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -696,6 +716,8 @@
    0,
    0,
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -767,6 +789,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -825,6 +849,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -889,6 +915,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -904,6 +932,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
    0,
    0,
    0,
@@ -1008,6 +1038,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1065,6 +1097,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 4
@@ -1079,6 +1113,8 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1176,6 +1212,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1200,6 +1238,8 @@
    2,
    0,
    3,
+   0,
+   0,
    0,
    0,
    0,
@@ -1286,6 +1326,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 3
@@ -1341,6 +1383,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1358,6 +1402,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1449,6 +1495,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1503,6 +1551,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1521,6 +1571,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1604,6 +1656,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1618,6 +1672,8 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -1699,6 +1755,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1747,6 +1805,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1760,6 +1820,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1840,6 +1902,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1872,6 +1936,8 @@
    0,
    0,
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -1933,6 +1999,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1978,6 +2046,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1998,6 +2068,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
    0,
    0,
    0,
@@ -2062,6 +2134,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2102,9 +2176,11 @@
    0,
    0,
    0,
+   0,
+   1,
    0
   ],
-  "regressions": 3,
+  "regressions": 4,
   "cause": "「壁が耐えないなら土台前進OK」の例外がG予測(次ターンの自分の場)を見ない。前進で確定ライン(進化先在手)を20点と引き換えに破壊→盤面全滅(grimmsnarl-0: Salvatore+Mega+W×2在手で敗着と実証)",
   "evidence": {
    "frequency": 3,
@@ -2122,6 +2198,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2176,6 +2254,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2196,6 +2276,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2234,6 +2316,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2254,6 +2338,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2286,6 +2372,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2306,6 +2394,8 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2338,6 +2428,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2358,6 +2450,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2383,6 +2477,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2402,6 +2498,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2427,6 +2525,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2446,6 +2546,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0,
@@ -2471,6 +2573,8 @@
    0,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2490,6 +2594,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0
@@ -2513,6 +2619,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2532,6 +2640,8 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0,
    0,
    0
@@ -2555,6 +2665,8 @@
    1,
    0,
    0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2567,13 +2679,15 @@
   "graduated": "2026-07-06"
  },
  "GunLoadingAttack": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(20巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "_filter_gun_loading: 非KOチップが相手のダメカン×N技を自分のactiveの致死圏まで装填する攻撃を除外(KO/非装填攻撃は通す)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2582,16 +2696,19 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "FMLStadiumBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(20巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "_eff_dmg+reviewer attack_dmgにFull Metal Lab補正({M}への技-30、効果無視技=Nebulaは素通し。エンジン実測)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2600,20 +2717,60 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "AnalyzerThreatNarrow": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(20巡目・新規6戦全決定精読)",
   "match": "-",
   "fix": "analyze_threat(can_ko_me)を_incoming_next_turn(進化・可変・ベンチ砲・スタック込み)とのmaxに",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
+   0,
    0
   ],
   "regressions": 0,
   "cause": "activeのKadabra30しか見ずベンチAlakazam PH360を見落とし→can_ko_me偽陰性→死にゆくactiveへエネ投資(alakazam T11)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  },
+  "graduated": "2026-07-06"
+ },
+ "LethalAttachBlind": {
+  "status": "Fix Applied",
+  "detector": "(21巡目精読)",
+  "match": "-",
+  "fix": "_pick_attachに勝ちエネ最優先キー(_attack_prizes_now(extra_energy)で残サイド充足)+勝ちエネ複数時は非揮発優先",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "attachがrule順位でイグニ選択→C3ではJetting({W})を払えず、W貼りならスプラッシュ50=ベンチMega20 KO=3枚=即勝利だった(mirror T11の勝ち逃し→T15に遅延)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "SacrificeLineValue": {
+  "status": "Fix Applied",
+  "detector": "BaseLineSacrifice",
+  "match": "BaseLineSacrifice",
+  "fix": "昇格キーに「全候補が土台犠牲なら線価値(line_threat)の低い方を差し出す」タイブレーク",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "強制犠牲の2択でGrimm線(180)の土台を差し出しFroslass線(60)の土台を温存(grimmsnarl相手bot T10)",
   "evidence": {
    "frequency": 1,
    "confirmed": 1,
