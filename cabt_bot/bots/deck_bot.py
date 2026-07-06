@@ -584,6 +584,59 @@ class DeckBot(Bot):
             return 2
         return 1 if energy_id is not None else 0
 
+    def _attack_prizes_now(self) -> int:
+        """このターンの攻撃(手貼り込み)で取れるサイドの最大(相手active KO + スプラッシュKO)。
+        wins_now判定はactive KOだけでなくスプラッシュの1枚も数える(人間レビュー19巡目
+        alakazam T13: 残1でJettingスプラッシュ50=Abra50 KO=勝利を見ずに退避した)。"""
+        import re
+        cur = self._cur or {}
+        me = self._me() or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        act = (me.get("active") or [None])[0]
+        if not act or not oa:
+            return 0
+        info = self._cardinfo.get(act.get("id"))
+        if not info:
+            return 0
+        att = []
+        for ec in (act.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        pools = [list(att)]
+        if not cur.get("energyAttached"):
+            for c in (me.get("hand") or []):
+                if self._is_energy(c.get("id")):
+                    pools.append(att + self._energy_provides_syms(c.get("id")))
+        best_total = 0
+        for m in info.moves:
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            if not mt:
+                continue
+            need = re.findall(r"\{([A-Z])\}", m.cost or "")
+            n_any = (m.cost or "").count("●")
+            payable = False
+            for pool0 in pools:
+                pool = list(pool0)
+                if all((t in pool and (pool.remove(t) or True)) for t in need) and len(pool) >= n_any:
+                    payable = True
+                    break
+            if not payable:
+                continue
+            total = 0
+            if self._eff_dmg(int(mt.group(1)), False, oa.get("id")) >= (oa.get("hp") or 9999):
+                total += self._prize_value(oa.get("id"))
+            sp_mt = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
+            spread = int(sp_mt.group(1)) if sp_mt else 0
+            if spread:
+                bs = 0
+                for sp in opp.get("bench") or []:
+                    if (sp and not self._bench_damage_immune(sp.get("id"))
+                            and (sp.get("hp") or 9999) <= spread):
+                        bs = max(bs, self._prize_value(sp.get("id")))
+                total += bs
+            best_total = max(best_total, total)
+        return best_total
+
     def _opp_bench_charged(self) -> bool:
         """相手ベンチに現在の付きエネで攻撃を払える後続が居るか。居なければ相手activeの
         KOで脅威は一旦消える(=死んだら負けでも残ってKOする価値がある)。"""
@@ -996,7 +1049,7 @@ class DeckBot(Bot):
         mc = self._cardinfo.get(my_a.get("id")); oc = self._cardinfo.get(opp_a.get("id"))
         # 効果文の可変ダメージ(Powerful Hand=手札枚数×等)はline_threat(静的)に乗らない=実数で補完
         for m in (oc.moves if oc else []):
-            dmg = max(dmg, self._effect_move_damage(m, my_a))
+            dmg = max(dmg, self._effect_move_damage(m, my_a, opp_a))
         if mc and oc and mc.weakness and oc.type == mc.weakness:
             dmg *= 2                                      # 自分の弱点で2倍
         hp = my_a.get("hp", 0)
@@ -1630,7 +1683,7 @@ class DeckBot(Bot):
             oa = (opp.get("active") or [None])[0]
             ko_now = (oa and dmg > 0
                       and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999))
-            wins_now = ko_now and self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6)
+            wins_now = self._attack_prizes_now() >= (pr.get("my_prizes") or 6)
             if ko_now and not self._opp_bench_charged():
                 wins_now = True    # KOで脅威源が消える(相手ベンチに即戦力なし)=残って殴る
             if not wins_now:
@@ -1648,9 +1701,9 @@ class DeckBot(Bot):
             # SwitchWaste(検出器=現実的評価)と不整合(QA lucario相手bot T12)。
             if (act.get("hp") or 0) > self._incoming_next_turn(act):
                 return False
-            if any(e.get("id") not in self.plan.volatile_energies
-                   for e in (act.get("energyCards") or [])):
-                return False              # 常設エネ投資あり=退くと損失
+            # ※Switch札はエネを付けたまま交代する(退却と違い投資は失われない)ため
+            # 「常設エネ投資あり」でブロックしない(人間レビュー19巡目 arch T11: W1枚を理由に
+            # 温存拒否→330の体から同じNebulaを撃てたのに110のMegaで殴って3枚献上=敗着)
             # このターンの攻撃を失わないこと。前が攻撃可能なら、交代後も攻撃できる(手貼り権+手札エネ)
             # 時のみ。前がどうせ攻撃不可(エネ0×手札エネ0等)なら失う攻撃が無い=温存だけで交代してよい
             # (QA: 手札エネ0の被KO圏放置4件の修正)。
@@ -1915,10 +1968,9 @@ class DeckBot(Bot):
         oa = (opp.get("active") or [None])[0]
         if (oa and dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999)):
             if death_loses:
-                # 死んだら負け: 「今殴れば勝ち切れる」or「KOで脅威源が消える(相手ベンチに
-                # 即戦力なし)」なら残って殴る(人間レビュー16巡目 alakazam-3 T9: ign貼付で
-                # Nebula=PH使いのKOが立ったのに退却し両エネを浪費)
-                if self._prize_value(oa.get("id")) >= (pr.get("my_prizes") or 6):
+                # 死んだら負け: 「今殴れば勝ち切れる(スプラッシュKO込み)」or「KOで脅威源が
+                # 消える(相手ベンチに即戦力なし)」なら残って殴る(16巡目/19巡目)
+                if self._attack_prizes_now() >= (pr.get("my_prizes") or 6):
                     return False
                 if not self._opp_bench_charged():
                     return False
@@ -1943,8 +1995,9 @@ class DeckBot(Bot):
             info = self._cardinfo.get(sp.get("id"))
             if not info or info.is_basic:
                 continue
-            if (sp.get("hp") or 0) <= self._incoming_threat(sp):
-                continue                       # 後続も即死圏なら意味がない
+            if (sp.get("hp") or 0) <= self._incoming_next_turn(sp):
+                continue        # 後続も即死圏(現実的評価=可変ダメ込み)なら退却は損失だけ
+                                # (19巡目 alakazam T9: PH420圏の後続を旧line評価で安全と誤認しW2枚を燃やした)
             if (sp.get("energyCards") or []) or (not_attached and have_energy):
                 return True
         return False
@@ -1968,7 +2021,7 @@ class DeckBot(Bot):
                 return True
         return False
 
-    def _effect_move_damage(self, m, my_spot) -> int:
+    def _effect_move_damage(self, m, my_spot, attacker_spot=None) -> int:
         """damage欄が空/固定の技でも、効果文の可変ダメージを「見えている実数」で評価する。
         Powerful Hand(ダメカン2×相手手札枚数=公開情報)で330のMegaが一撃圏なのに
         20点扱い→3枚献上ベイトを前に出して敗北(自己レビュー alakazam-9 T7)。
@@ -1981,7 +2034,9 @@ class DeckBot(Bot):
         if hc is None:
             h = opp.get("hand")
             hc = len(h) if isinstance(h, list) else 0
-        hc += 1
+        hc += 4    # 次の相手ターンの手札成長projection。+1(素引きのみ)だとAlakazam等の
+                   # ドローエンジン(実測+5/ターン)を~100点過小評価し、生存圏の誤認で
+                   # 退却先を焼く(19巡目 alakazam T9: 330>320判定→実際は420で死亡)
         base = 0
         mt = re.match(r"(\d+)", str(m.damage or ""))
         if mt:
@@ -1996,6 +2051,10 @@ class DeckBot(Bot):
         mt = re.search(r"does (\d+) more damage for each Energy attached to your opponent[’']s Active", eff)
         if mt and my_spot is not None:
             dmg = max(dmg, base + int(mt.group(1)) * len(my_spot.get("energyCards") or []))
+        mt = re.search(r"does (\d+) more damage for each damage counter on this", eff)
+        if mt and attacker_spot is not None:
+            cnt = max(0, ((attacker_spot.get("maxHp") or 0) - (attacker_spot.get("hp") or 0)) // 10)
+            dmg = max(dmg, base + int(mt.group(1)) * cnt)
         return dmg
 
     def _incoming_next_turn(self, my_spot) -> int:
@@ -2014,6 +2073,12 @@ class DeckBot(Bot):
             v in self._opp_seen for v in (17,)) else 1)
         oi = self._cardinfo.get(oa.get("id"))
         moves = list(oi.moves) if oi else []
+        # 進化前スタックの技も使える(エンジン実測: Archaludon exがDuraludonのRaging Hammer
+        # =80+ダメカン×10で満タンMega330を一撃。人間レビュー19巡目 arch T18)
+        for pe in (oa.get("preEvolution") or []):
+            pi_ = self._cardinfo.get((pe or {}).get("id"))
+            if pi_:
+                moves += list(pi_.moves)
         for did, di in self._cardinfo.items():
             # 進化1段先の技も想定。ただし相手の場で観測済みのカードのみ(DB全体を見ると
             # 相手デッキに無い別進化形の技を拾い過大評価する)。
@@ -2027,8 +2092,30 @@ class DeckBot(Bot):
                 continue
             mt = re.match(r"(\d+)", str(m.damage or ""))
             dm = int(mt.group(1)) if mt else 0
-            dm = max(dm, self._effect_move_damage(m, my_spot))
+            dm = max(dm, self._effect_move_damage(m, my_spot, oa))
             best = max(best, dm)
+        # ベンチの装填済み銃: 現エネで即払える技を持つベンチは昇格1手で届く(相手はKO後の
+        # 昇格/入替で前に出せる)。攻撃者自身のダメカン×N技(Raging Hammer)は瀕死ほど強い
+        for sp in opp.get("bench") or []:
+            if not sp:
+                continue
+            si_ = self._cardinfo.get(sp.get("id"))
+            if not si_:
+                continue
+            b_moves = list(si_.moves)
+            for pe in (sp.get("preEvolution") or []):
+                pi_ = self._cardinfo.get((pe or {}).get("id"))
+                if pi_:
+                    b_moves += list(pi_.moves)
+            be = len(sp.get("energyCards") or [])
+            for m in b_moves:
+                need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                if need > be:
+                    continue
+                mt = re.match(r"(\d+)", str(m.damage or ""))
+                dm = int(mt.group(1)) if mt else 0
+                dm = max(dm, self._effect_move_damage(m, my_spot, sp))
+                best = max(best, dm)
         cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oi and cc.weakness and oi.type == cc.weakness:
             best *= 2
@@ -2051,7 +2138,7 @@ class DeckBot(Bot):
             if oc and di.previous_stage == oc.name and di.is_pokemon and did in self._opp_seen:
                 moves += list(di.moves)
         for m in moves:
-            t = max(t, self._effect_move_damage(m, my_spot))
+            t = max(t, self._effect_move_damage(m, my_spot, oa))
         cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2

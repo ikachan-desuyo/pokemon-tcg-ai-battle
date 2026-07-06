@@ -55,6 +55,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -118,6 +119,7 @@
    0,
    0,
    1,
+   0,
    0
   ],
   "regressions": 5,
@@ -173,6 +175,7 @@
    0,
    0,
    3,
+   0,
    0,
    0,
    0,
@@ -245,6 +248,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -260,6 +264,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
    0,
    0,
    0,
@@ -368,6 +373,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -426,6 +432,7 @@
    120,
    113,
    107,
+   103,
    103
   ],
   "regressions": 0,
@@ -484,7 +491,8 @@
    19,
    26,
    17,
-   25
+   25,
+   16
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -546,7 +554,8 @@
    25,
    30,
    28,
-   28
+   28,
+   24
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -608,7 +617,8 @@
    23,
    17,
    22,
-   18
+   18,
+   17
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -666,6 +676,7 @@
    0,
    0,
    2,
+   0,
    0,
    0,
    0,
@@ -731,6 +742,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 2
@@ -789,6 +801,7 @@
    0,
    0,
    1,
+   0,
    0
   ],
   "regressions": 5
@@ -847,6 +860,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -862,6 +876,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
    0,
    0,
    0,
@@ -960,6 +975,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1014,6 +1030,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 4
@@ -1028,6 +1045,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -1119,6 +1137,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -1143,6 +1162,7 @@
    2,
    0,
    3,
+   0,
    0,
    0,
    0,
@@ -1223,6 +1243,7 @@
    0,
    2,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -1275,6 +1296,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -1292,6 +1314,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1377,6 +1400,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -1428,6 +1452,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2
@@ -1446,6 +1471,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1523,6 +1549,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0
@@ -1537,6 +1564,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -1612,6 +1640,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1657,6 +1686,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1670,6 +1700,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -1744,6 +1775,7 @@
    0,
    1,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1776,6 +1808,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1831,6 +1864,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1873,6 +1907,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1893,6 +1928,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -1951,6 +1987,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1988,6 +2025,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3,
@@ -2008,6 +2046,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2056,6 +2095,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2076,6 +2116,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2108,6 +2149,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2128,6 +2170,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2154,6 +2197,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2174,6 +2218,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2200,6 +2245,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2213,13 +2259,14 @@
   "graduated": "2026-07-06"
  },
  "SwitchOverFreeRetreat": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "_should_switch前進パス: activeが逃げ0なら入替札を温存(無料退却が同効果)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -2228,16 +2275,18 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "GustEnergyTiebreak": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "_ko_gust_pick(ボス/釣り)にエネ投資タイブレーク+可変ダメ線ブースト(スプラッシュ側と同一意味論)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -2246,16 +2295,18 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "EnergyDigPreempted": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "エネ掘りリーリエを_play_scoreに昇格(70)+生きたヒール条件成立時は譲る",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -2264,16 +2315,18 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "SnipeDeadLineSuppress": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "_spread_keyのスナイプ閾値を「現存候補中の最大脅威線」に(歴史的_opp_main_lineは死線を含む)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -2282,16 +2335,18 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "NominalAttackerBlock": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "前進ゲートの「既に攻撃役が前」判定を「前が今ターン攻撃できる」に(名目攻撃役=払えない壁を除外)",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
@@ -2300,20 +2355,95 @@
    "frequency": 1,
    "confirmed": 1,
    "rejected": 0
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "EmergencyWallyGap": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(18巡目・6戦全決定精読で発見)",
   "match": "-",
   "fix": "緊急リーリエの「Wallyに譲る」条件をWally自身の発火条件(重傷150+)と同一化",
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0
   ],
   "regressions": 0,
   "cause": "ダメージ130が両ゲートの隙間に落ち、単騎×被KOでどちらも不発=サポ権未使用(lucario-5 T7)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  },
+  "graduated": "2026-07-06"
+ },
+ "SwitchPreservesEnergy": {
+  "status": "Fix Applied",
+  "detector": "(19巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "温存パスの「常設エネ投資あり」ブロック撤去(Switchはエネを付けたまま交代=退却意味論の誤流用)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "W1枚を理由に温存拒否→110のMegaで殴り3枚献上(arch T11敗着)。Switch→330の体から同じNebula 210が撃てた",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "RagingHammerBlind": {
+  "status": "Fix Applied",
+  "detector": "(19巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "_effect_move_damageに「ダメカン×N」パターン+preEvolutionスタック技+ベンチ装填銃(現エネで即撃てるベンチ)を脅威評価に編入(bot3箇所+reviewer)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "エンジン実測: Archaludon exがDuraludonのRaging Hammer(80+ダメカン×10)を使用可能=瀕死のケープ持ちが420点砲。満タンMega330が一撃死(arch T18)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "SplashWinBlind": {
+  "status": "Fix Applied",
+  "detector": "(19巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "_attack_prizes_now(active KO+スプラッシュKOの合算サイド)をwins_now判定に使用",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "残1でJettingスプラッシュ50=Abra50 KO=勝利が見えず退避(alakazam T13の勝ち逃し→残1-1まで縺れた)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "HandGrowthProjection": {
+  "status": "Fix Applied",
+  "detector": "(19巡目・新規6戦全決定精読)",
+  "match": "-",
+  "fix": "可変ダメ(手札×20)の次ターンprojectionを+1→+4(Alakazamドローエンジン実測+5/ターン)。bot+reviewer統一",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "+1(素引きのみ)では~100点の過小評価→生存圏の誤認で退却先を焼く(alakazam T9: 330>320判定→実際420で死亡)",
   "evidence": {
    "frequency": 1,
    "confirmed": 1,

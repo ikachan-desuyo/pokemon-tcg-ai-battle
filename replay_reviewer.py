@@ -717,7 +717,7 @@ def _incoming(a, oa, opp_owner_hand_count=None):
         for m in oc.moves:
             m2 = re.search(r"lace (\d+) damage counters? on your opponent[’\']s Active Pokémon for each card in your hand", m.effect or "")
             if m2:
-                t = max(t, 10 * int(m2.group(1)) * (opp_owner_hand_count + 1))
+                t = max(t, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
     if cc and oc and cc.weakness and oc.type == cc.weakness:
         t *= 2
     return t
@@ -994,7 +994,7 @@ def det_doomed_no_retreat(g, sig):
                 continue
             bi = C.get(b.get("id"))
             if (bi and not bi.is_basic and (line_threat(b.get("id")) or 0) >= 180
-                    and (b.get("hp") or 0) > _incoming(b, oa, opp.get("handCount"))
+                    and (b.get("hp") or 0) > _incoming_next(b, oa, None, opp.get("handCount"))
                     and ((b.get("energyCards") or []) or can_pay)):
                 sig(f"DoomedNoRetreat|被KO確定×不利トレードで{nm(a.get('id'))}が残留",
                     g["ep"], cur.get("turn"))
@@ -1106,6 +1106,10 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None):
     e = len(oa.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
     oi = C.get(oa.get("id"))
     moves = list(oi.moves) if oi else []
+    for pe in (oa.get("preEvolution") or []):
+        pi_ = C.get((pe or {}).get("id"))
+        if pi_:
+            moves += list(pi_.moves)   # 進化前スタックの技も使える(エンジン実測: Raging Hammer)
     for did, di in C.items():
         if (oi and di.previous_stage == oi.name and di.is_pokemon
                 and (opp_seen is None or did in opp_seen)):
@@ -1122,13 +1126,17 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None):
         if hc is not None:
             m2 = re.search(r"lace (\d+) damage counters? on your opponent[’']s Active Pokémon for each card in your hand", eff)
             if m2:
-                dm = max(dm, 10 * int(m2.group(1)) * (hc + 1))
+                dm = max(dm, 10 * int(m2.group(1)) * (hc + 4))
             m2 = re.search(r"does (\d+) (?:more )?damage for each card in your hand", eff)
             if m2:
-                dm = max(dm, dm + int(m2.group(1)) * (hc + 1))
+                dm = max(dm, dm + int(m2.group(1)) * (hc + 4))
         m2 = re.search(r"does (\d+) more damage for each Energy attached to your opponent[’']s Active", eff)
         if m2:
             dm = max(dm, dm + int(m2.group(1)) * len(a.get("energyCards") or []))
+        m2 = re.search(r"does (\d+) more damage for each damage counter on this", eff)
+        if m2:
+            cnt = max(0, ((oa.get("maxHp") or 0) - (oa.get("hp") or 0)) // 10)
+            dm = max(dm, dm + int(m2.group(1)) * cnt)
         best = max(best, dm)
     cc = C.get(a.get("id"))
     if cc and oi and cc.weakness and oi.type == cc.weakness:
