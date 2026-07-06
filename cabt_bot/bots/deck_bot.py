@@ -77,6 +77,7 @@ class DeckPlan:
                                               # =前提条件Gateファミリ(boss/recover/switchと同じ責務)。QA: 無価値セイジ11件の修正
     smart_take: bool = False                  # サーチ/ポケギア取得時、状況依存サポを今役立つ時だけ優先
     strict_lillie_guard: bool = False         # True=手札にキーがあれば常にリーリエ抑制(コンボ系向け)。既定はこの番に展開できるキーのみ抑制
+    dup_play_caps: dict = field(default_factory=dict)  # {card_id: n}: 場に同名n体以上いる時の追加展開/取得価値を30へ(条件系特性の2体目渋滞防止)
     setup_wall: tuple[int, ...] = ()          # 開幕バトル場に優先したい高HP壁(例:エースバーン)。先攻はT1攻撃不可なので壁を前に
     energy_supporters: tuple[int, ...] = ()   # エネ補給サポ(例:トウコ)。進化アタッカーが居てエネ切れ＝攻撃不可の時に優先して打つ
     eager_reposition: bool = False            # 壁→攻撃役の前進を「エネ付けの前」に行い、手札のエネ(イグニ等)で前進後に殴る
@@ -250,11 +251,50 @@ class DeckBot(Bot):
             if cid in self.plan.sacrifice_abilities:
                 deferred.append((i, cid))
                 continue
+            if self._ability_discards_needed_energy(cid):
+                continue  # 特性コストが「技に必要な最後の手札エネ」を食う=攻撃優先(Benchmark Phase:
+                          # ルナサイクルがWild Press用の最後のFを捨ててEND、を汎用ガード)
             return i  # 非自滅特性(ドロー等)は即使用
         for i, cid in deferred:
             if self._sacrifice_worth_it(cid):
                 return i
         return None  # 使うべき特性なし → 次フェーズへ
+
+    def _ability_discards_needed_energy(self, cid) -> bool:
+        """特性のコストが『手札のエネルギーを捨てる』型で、かつそのエネを捨てると
+        バトル場アタッカーが今ターン払えたはずの技が払えなくなるなら True(=使用を見送る)。
+        例: ルナサイクル(手札のFを捨てて3ドロー)がWild Press{F}{F}{F}用の最後のFを食う。"""
+        import re
+        info = self._cardinfo.get(cid)
+        if not info:
+            return False
+        text = " ".join((m.effect or "") for m in info.moves if (m.name or "").startswith("[Ability]"))
+        m = re.search(r"discard (?:a|1) Basic \{([A-Z])\} Energy card from your hand", text)
+        if not m:
+            return False
+        sym = m.group(1)
+        me = self._me() or {}
+        hand = me.get("hand") or []
+        hand_syms = []
+        for c in hand:
+            if self._is_energy(c.get("id")):
+                hand_syms += self._energy_provides_syms(c.get("id"))
+        if hand_syms.count(sym) >= 2:
+            return False                      # 余剰あり=捨てても攻撃に響かない
+        act = (me.get("active") or [None])[0]
+        if not act:
+            return False
+        # 「捨てない場合に払える最大技」が「捨てた場合」より強いなら見送り
+        cur = self._cur or {}
+        if cur.get("energyAttached"):
+            return False                      # 手貼り済み=このターンの攻撃はもう手札エネに依存しない
+        base = self._attack_prizes_now(no_attach=True)
+        with_attach = self._attack_prizes_now()
+        if with_attach > base:
+            return True                       # 手貼りでKO/サイドが増える=そのエネを特性で捨てない
+        dmg_no, _ = self._active_attack_potential(assume_hand_attach=False)
+        dmg_with, _ = self._active_attack_potential(assume_hand_attach=True)
+        return dmg_with > dmg_no              # 手貼りで打点が上がる=エネ温存を優先
 
     def _sacrifice_worth_it(self, src_cid) -> bool:
         """自滅特性: ①ベンチに後続が居る(展開済み) ②与ダメージで相手をKOできる 時のみ。"""
@@ -401,6 +441,16 @@ class DeckBot(Bot):
         # 対象ゼロでの使用はサポ権の浪費(QAゲート: 無価値セイジ11件/30試合)。
         if cid in self.plan.evolve_supporters:
             return 58 if self._has_evolution_target() else None
+        # 同名重複の限界価値: 場に既定数以上いる同名ポケモンの追加展開は価値を落とす
+        # (Benchmark Phase: lucario botがSolrock×3でベンチ渋滞→ML2体目の再建枠を喪失。
+        # 条件系特性(ルナサイクル=Solrock1体で充足等)は2体目以降の価値がほぼゼロ)
+        if cid in self.plan.dup_play_caps and ci0 and ci0.is_pokemon:
+            me_d = self._me() or {}
+            n_play = sum(1 for sp in [(me_d.get("active") or [None])[0]] + list(me_d.get("bench") or [])
+                         if sp and self._cardinfo.get(sp.get("id"))
+                         and self._cardinfo[sp.get("id")].name == ci0.name)
+            if n_play >= self.plan.dup_play_caps[cid]:
+                return 30
         if cid in self.plan.play_priority:
             return self.plan.play_priority[cid]
         if ci0 and not ci0.is_pokemon and "Stadium" in (ci0.stage or ""):
@@ -3106,6 +3156,15 @@ class DeckBot(Bot):
                 if ci2:
                     names.add(ci2.name)
             if c.previous_stage not in names:
+                return 30
+        # 同名重複の限界価値(取得側): 場に既定数以上の同名ポケモンをサーチで重ねない
+        if (cid in self.plan.dup_play_caps and c and c.is_pokemon
+                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)):
+            me_d = self._me() or {}
+            n_play = sum(1 for sp in [(me_d.get("active") or [None])[0]] + list(me_d.get("bench") or [])
+                         if sp and self._cardinfo.get(sp.get("id"))
+                         and self._cardinfo[sp.get("id")].name == c.name)
+            if n_play >= self.plan.dup_play_caps[cid]:
                 return 30
         if cid in self.plan.card_values:
             return self.plan.card_values[cid]
