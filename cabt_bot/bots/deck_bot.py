@@ -1863,12 +1863,11 @@ class DeckBot(Bot):
                 sp = (spots[op.index] if op.index is not None and 0 <= op.index < len(spots) else None)
                 if not sp:
                     continue
-                th = self._incoming_threat(sp)
-                pr = self.analyze_prize()
-                loses_game = (self._prize_value(sp.get("id")) >= (pr.get("opp_prizes") or 6)
-                              and (sp.get("hp") or 0) <= th)
-                if loses_game and self._spot_kos_opp_active(sp):
-                    loses_game = False   # 前に出て今KOできるなら脅威側が消える(ベイト扱いしない)
+                # 現実評価(進化前スタックRH=Memory Dive・可変ダメ込み)も見る。_incoming_threat
+                # 単独だとRH470をライン静的220と誤認しMega330を「耐える」と昇格→3枚献上
+                # (最終セッション arch-2 T11: 正解は前進計画どおりMega110e1=KO後に銃が乾く)
+                th = max(self._incoming_threat(sp), self._incoming_next_turn(sp))
+                loses_game = self._is_loss_bait(sp)   # KO後残存脅威込みの統一判定
                 info_p = self._cardinfo.get(sp.get("id"))
                 base_sac = (info_p is not None and info_p.is_basic
                             and self._is_evolving_base(sp.get("id"))
@@ -2871,21 +2870,20 @@ class DeckBot(Bot):
         return False
 
     def _boss_wins_game(self) -> bool:
-        """ボスで引き出せるベンチKOのサイドが残り必要数以上=このボスで勝ち切れるか。"""
+        """ボスで引き出して攻撃(スプラッシュKO込み)すると残り必要数を取り切れるか。
+        単独KO評価だと「引き出しKO+撒きKOの合算勝ち」が見えない(勝ち監査2 mirror-4 T15:
+        残6でBoss→Mega100+Jetting KO=3+撒き50=Mega50 KO=3の6枚=即勝ちを3<6でFalse
+        →Wally90がサポ権を先取りしBossが打てず敗北)。"""
         cur = self._cur
         if not cur:
-            return False
-        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
-        if dmg <= 0:
             return False
         me = cur["players"][cur["yourIndex"]]
         opp = cur["players"][1 - cur["yourIndex"]]
         need = len(me.get("prize") or []) or 6
-        best = 0
-        for sp in opp.get("bench") or []:
-            if sp and self._eff_dmg(dmg, ign, sp.get("id")) >= (sp.get("hp") or 9999):
-                best = max(best, self._prize_value(sp.get("id")))
-        return best >= need
+        for bi, sp in enumerate(opp.get("bench") or []):
+            if sp and self._dragged_attack_prizes(bi) >= need:
+                return True
+        return False
 
     def _dragged_attack_prizes(self, bench_i) -> int:
         """相手ベンチbench_iを前に引きずり出した仮想盤面での、今ターン攻撃で取れるサイド数

@@ -1390,6 +1390,19 @@ def det_gust_target_skew(g, sig):
         if not opts or not all(o.get("playerIndex") == 1 - g["my"] for o in opts):
             continue                                    # 相手対象(ボス)のみ。自分側(退避先)は対象外
         a = (me.get("active") or [None])[0]
+        # 勝ち例外(bot勝ちターゲット優先と同一意味論): 選んだ対象を引き出すと攻撃(スプラッシュ
+        # 込み)で残りサイドを取り切れるなら、サイド価値の大小に関係なく正着
+        chosen_o = opts[act[0]] if act and act[0] < len(opts) else None
+        if chosen_o and chosen_o.get("area") == 5 and chosen_o.get("index") is not None and a:
+            bench_w = [b for b in (opp.get("bench") or [])]
+            bi_w = chosen_o["index"]
+            if 0 <= bi_w < len(bench_w) and bench_w[bi_w]:
+                oa_w = (opp.get("active") or [None])[0]
+                opp_w = dict(opp)
+                opp_w["active"] = [bench_w[bi_w]]
+                opp_w["bench"] = [x for j, x in enumerate(bench_w) if j != bi_w] + ([oa_w] if oa_w else [])
+                if _attack_prizes(cur, me, opp_w, a) >= (len(me.get("prize") or []) or 6):
+                    continue
         # 火力は手貼り込み(botのassume_hand_attachと同義): ボス直後に貼って殴るのが通常の並び
         ci_a = C.get((a or {}).get("id"))
         evolved_a = bool(ci_a) and not getattr(ci_a, "is_basic", True)
