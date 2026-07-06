@@ -727,6 +727,37 @@ def det_volatile_over_permanent(g, sig):
             sig("VolatileOverPermanent|基本エネで恒久3枚完成なのにイグニ貼付", g["ep"], cur.get("turn"))
 
 
+def det_volatile_retreat_fuel(g, sig):
+    """VolatileRetreatFuel: イグニをactiveへ貼った同一ターン内にそのactiveが退却=イグニは
+    退却コスト(または番末)で消えるだけで攻撃に使われない。基本エネ1枚で退却コストが
+    賄えた(既存ユニット+1≥コスト。イグニは進化ポケ上で3ユニット=エンジン実測: e0のMegaが
+    イグニ1枚でコスト2を支払い)場合のみ違反(人間レビュー14巡目 mirror T13: Basic{W}在手
+    なのにIgnition→act→前逃げコストで即捨て。W1枚で不足の局面のイグニ燃料は唯一の脱出=正着)。"""
+    ign_turn = None
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        turn = cur.get("turn")
+        if ch.get("type") == ATTACH and ch.get("inPlayArea") == 4:
+            h = hand_ids(me)
+            idx = ch.get("index")
+            if idx is None or idx >= len(h) or h[idx] != IGN or WATER not in h:
+                continue
+            a = (me.get("active") or [None])[0]
+            ci = C.get(a.get("id")) if a else None
+            cost = int(getattr(ci, "retreat", 0) or 0)
+            evolved = bool(ci) and not ci.is_basic
+            units = sum(3 if (e.get("id") == IGN and evolved) else 1
+                        for e in (a.get("energyCards") or [])) if a else 0
+            if units + 1 >= cost:    # 基本エネ1枚でも脱出できた時だけイグニ燃料は無駄
+                ign_turn = turn
+        elif ch.get("type") == RETREAT and turn == ign_turn:
+            sig("VolatileRetreatFuel|基本エネ在手なのにイグニを退却燃料化", g["ep"], turn)
+            ign_turn = None
+
+
 WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
@@ -2089,7 +2120,8 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_basic_unbenched, det_evolve_trigger_before_develop,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
-             det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss]
+             det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss,
+             det_volatile_retreat_fuel]
 
 
 # ============ Layer 2: Aggregator ============

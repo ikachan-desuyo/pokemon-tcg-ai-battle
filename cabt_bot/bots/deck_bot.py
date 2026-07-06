@@ -568,6 +568,32 @@ class DeckBot(Bot):
                 win_opts.append((1 if energy in self.plan.volatile_energies else 0, i))
         if win_opts:
             return min(win_opts)[1]    # 勝ちエネ複数なら非揮発(基本エネ)優先=イグニ温存
+        # 死亡確定前逃げの燃料貼り: 前逃げしたい(_should_retreat_doomed)が退却コストが
+        # ちょうど1枚不足なら、エネをactiveへ貼って脱出を成立させる(エネ1枚<Mega3枚)。
+        # 非揮発優先=イグニは退却コストで即捨てになるため基本エネで賄う(人間レビュー14巡目
+        # mirror T13: Basic{W}在手なのにIgnition→act→前逃げコストで即捨て。さらに素の
+        # 貼りスコアはavoid_overstackで死にゆくactiveを避けW→ベンチ=脱出資金が付かない)。
+        # ※_should_retreat_doomedは手貼り込みKO可否/勝ち切りを内包=殴る方が良い局面はFalse。
+        if self._should_retreat_doomed(me, hand):
+            act_f = (me.get("active") or [None])[0]
+            info_f = self._cardinfo.get(act_f.get("id")) if act_f else None
+            cost_f = int(getattr(info_f, "retreat", 0) or 0)
+            evolved_f = bool(info_f) and not info_f.is_basic
+            units_f = sum(3 if (e.get("id") in self.plan.volatile_energies and evolved_f) else 1
+                          for e in (act_f.get("energyCards") or [])) if act_f else 0
+            if units_f < cost_f:
+                fuel = []
+                for j in idxs:
+                    if options[j].in_play_area != AreaType.ACTIVE:
+                        continue
+                    e_j = self._hand_id(hand, options[j].index)
+                    if not self._is_energy(e_j):
+                        continue
+                    vol_j = e_j in self.plan.volatile_energies
+                    if units_f + (3 if (vol_j and evolved_f) else 1) >= cost_f:
+                        fuel.append((1 if vol_j else 0, j))
+                if fuel:
+                    return min(fuel)[1]
         best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
@@ -1802,6 +1828,26 @@ class DeckBot(Bot):
                     best_key, best_i = key, i
             if best_i is not None:
                 return [best_i]
+        # 自分の場のエネ破棄(退却コスト等): 揮発エネ(イグニ)を先に捨てる。イグニはどうせ
+        # 番末に消える+エンジンは累積ユニット(イグニ=3)≥コストで停止するため、イグニ先捨て
+        # なら基本エネが盤面に残る(人間レビュー14巡目 mirror T13: W→イグニの順で2枚捨て。
+        # イグニ先ならコスト2を1枚で充足しWが退却後のMegaに残った)。
+        if (isinstance(ctx, SelectContext)
+                and ctx in (SelectContext.DISCARD_ENERGY, SelectContext.DISCARD_ENERGY_CARD)
+                and all(o.player_index in (None, (self._cur or {}).get("yourIndex"))
+                        for o in sel.options)):
+            me_e = self._me() or {}
+            def _e_id(o):
+                spots_e = (me_e.get("active") if o.area == AreaType.ACTIVE else me_e.get("bench")) or []
+                sp_e = (spots_e[o.index]
+                        if o.index is not None and 0 <= o.index < len(spots_e) else None)
+                ecs = (sp_e or {}).get("energyCards") or []
+                return (ecs[o.energy_index].get("id")
+                        if o.energy_index is not None and 0 <= o.energy_index < len(ecs) else None)
+            vol_e = [i for i, o in enumerate(sel.options)
+                     if _e_id(o) in self.plan.volatile_energies]
+            if vol_e:
+                return [vol_e[0]]
         give = isinstance(ctx, SelectContext) and ctx in _GENERIC_GIVE
         take = isinstance(ctx, SelectContext) and ctx in _GENERIC_TAKE
         if give:
