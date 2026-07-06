@@ -773,6 +773,34 @@ class DeckBot(Bot):
             best_total = max(best_total, total)
         return best_total
 
+    def _attack_prizes_of(self, op) -> int:
+        """この攻撃optionが今取るサイド数(相手active KO+スプラッシュKO)。エンジンが提示した
+        option=支払可能を前提に技単位で数える(_attack_prizes_nowと同一意味論。R37 grimmsnarl
+        T13: 残1でJetting+スプラッシュ50=Imp20 KO=勝利なのに、lethalがactive KO評価のみで
+        Noneとなり最大ダメのNebula 210→230残20を選んだ敗着の修正)。"""
+        import re
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        if not oa or op.attack_id is None:
+            return 0
+        text = self._atk_texts().get(op.attack_id, "")
+        total = 0
+        dmg = self._dmg(op)
+        ign_w = "affected by Weakness" in text
+        if dmg and self._eff_dmg(dmg, ign_w, oa.get("id")) >= (oa.get("hp") or 9999):
+            total += self._prize_value(oa.get("id"))
+        sp_mt = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", text)
+        if sp_mt:
+            spread = int(sp_mt.group(1))
+            bs = 0
+            for sp in opp.get("bench") or []:
+                if (sp and not self._opp_bench_spread_blocked(sp.get("id"))
+                        and (sp.get("hp") or 9999) <= spread):
+                    bs = max(bs, self._prize_value(sp.get("id")))
+            total += bs
+        return total
+
     def _opp_bench_charged(self) -> bool:
         """相手ベンチに現在の付きエネで攻撃を払える後続が居るか。居なければ相手activeの
         KOで脅威は一旦消える(=死んだら負けでも残ってKOする価値がある)。"""
@@ -1030,7 +1058,21 @@ class DeckBot(Bot):
 
     def _lethal_choice(self, idxs, options):
         """相手バトル場を倒せる技があれば選ぶ。倒せる技が複数なら、ベンチも削れる技(spread)を優先し、
-        その中で最大ダメージ＝相手バトル場を確実に倒しつつ次のKOも準備する。"""
+        その中で最大ダメージ＝相手バトル場を確実に倒しつつ次のKOも準備する。
+        勝ち切りプリパス: activeを倒せなくても「取れるサイド(スプラッシュKO込み)>=自分の残り」
+        の技があればそれが勝ち=無条件で選ぶ(R37 grimmsnarl T13の敗着: 残1でJetting+
+        スプラッシュ50=Imp20 KO=勝利をlethal(active KOのみ)が見ずNebula 210を選択)。"""
+        pr_l = self.analyze_prize()
+        my_left_l = pr_l.get("my_prizes") or 6
+        win_i, win_key = None, None
+        for i in idxs:
+            tot = self._attack_prizes_of(options[i])
+            if tot >= my_left_l:
+                key = (tot, self._dmg(options[i]))
+                if win_key is None or key > win_key:
+                    win_key, win_i = key, i
+        if win_i is not None:
+            return win_i
         hp, weak = self._opp_active_hp_weak()
         if hp is None:
             return None
@@ -2350,12 +2392,13 @@ class DeckBot(Bot):
                 pi_ = self._cardinfo.get((pe or {}).get("id"))
                 if pi_:
                     moves += list(pi_.moves)
-        for did, di in self._cardinfo.items():
-            # 進化1段先の技も想定。ただし相手の場で観測済みのカードのみ(DB全体を見ると
-            # 相手デッキに無い別進化形の技を拾い過大評価する)。
-            if (oi and di.previous_stage == oi.name and di.is_pokemon
-                    and did in self._opp_seen):
-                moves += list(di.moves)
+        if oi:
+            # 進化1段先の技も想定。同線の変種が観測済みならそれに限定(構築確定=幻の別変種を
+            # 見ない)、未観測ならDB変種全体=アーキタイプ推定(場の進化前が実在の証拠。
+            # R37 alakazam-7 T5: Kadabra在場×Alakazam未観測でPH脅威が0→Mega290e0を
+            # Switch在手なのにEND放置→T6進化+PH 3枚失点)。
+            for did in self._line_variant_ids(oi.name):
+                moves += list(self._cardinfo[did].moves)
         best = 0
         for m in moves:
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
@@ -2466,17 +2509,28 @@ class DeckBot(Bot):
             return 0
         t = _line_threat(oa.get("id")) or 0
         oc = self._cardinfo.get(oa.get("id"))
-        # 効果文の可変ダメージ(手札枚数×等)はline_threat(静的)に乗らない=実数で補完
+        # 効果文の可変ダメージ(手札枚数×等)はline_threat(静的)に乗らない=実数で補完。
+        # 進化1段先は同線観測済み変種に限定、未観測ならDB変種=アーキタイプ推定
+        # (line_threat静的値は元々未観測進化込み=可変補完だけ観測ゲートだと不整合。R37)
         moves = list(oc.moves) if oc else []
-        for did, di in self._cardinfo.items():
-            if oc and di.previous_stage == oc.name and di.is_pokemon and did in self._opp_seen:
-                moves += list(di.moves)
+        if oc:
+            for did in self._line_variant_ids(oc.name):
+                moves += list(self._cardinfo[did].moves)
         for m in moves:
             t = max(t, self._effect_move_damage(m, my_spot, oa))
         cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2
         return t
+
+    def _line_variant_ids(self, base_name):
+        """base_nameから進化するポケモンのカードid群。同線の変種が相手側で観測済みなら
+        それに限定(構築が確定=幻の別変種で過大評価しない)、未観測ならDB変種全体を返す
+        =アーキタイプ推定(場の進化前が線の実在証拠。DB実測: 進化元あたり平均1.31変種)。"""
+        ids = [did for did, di in self._cardinfo.items()
+               if di.is_pokemon and di.previous_stage == base_name]
+        seen = [did for did in ids if did in self._opp_seen]
+        return seen if seen else ids
 
     def _opp_boss_remaining(self) -> int:
         """相手のボス(引きずり出し)残数推定。見えたカードからアーキタイプを推定し、

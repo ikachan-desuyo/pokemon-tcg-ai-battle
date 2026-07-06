@@ -785,7 +785,13 @@ def _incoming(a, oa, opp_owner_hand_count=None, opp_bench=None):
     t = line_threat(oa.get("id")) or 0
     cc = C.get(a.get("id")); oc = C.get(oa.get("id"))
     if oc and opp_owner_hand_count is not None:
-        for m in oc.moves:
+        # 可変ダメ補完は進化1段先(同線変種)も見る(bot _line_variant_ids同一意味論。R37:
+        # Kadabra在場×Alakazam未観測でPH脅威が漏れた)
+        mvs = list(oc.moves)
+        for did, di in C.items():
+            if di.is_pokemon and (di.previous_stage or "") == (oc.name or ""):
+                mvs += list(di.moves)
+        for m in mvs:
             m2 = re.search(r"lace (\d+) damage counters? on your opponent[’\']s Active Pokémon for each card in your hand", m.effect or "")
             if m2:
                 t = max(t, 10 * int(m2.group(1)) * (opp_owner_hand_count + 4))
@@ -1132,6 +1138,76 @@ def _attack_prizes(cur, me, opp, a):
     return best_total
 
 
+_ATK_TBL = None
+
+
+def _atk_tbl():
+    global _ATK_TBL
+    if _ATK_TBL is None:
+        from cg.api import all_attack
+        _ATK_TBL = {a.attackId: (a.damage or 0, a.text or "") for a in all_attack()}
+    return _ATK_TBL
+
+
+def _attack_prizes_of_option(cur, me, opp, aid):
+    """攻撃id単位の取れるサイド数(bot _attack_prizes_ofと同一意味論。reviewer簡約: 弱点なし=
+    過小評価側に倒す)。スプラッシュKOのベンチ保護除外は_attack_prizesと同一。"""
+    import re
+    oa = (opp.get("active") or [None])[0]
+    if not oa or aid is None:
+        return 0
+    dmg, text = _atk_tbl().get(aid, (0, ""))
+    if "this attack does nothing" in text:
+        return 0                              # 相方依存技は勝ち候補に数えない(保守側)
+    total = 0
+    if dmg and dmg >= (oa.get("hp") or 9999):
+        total += _pv(oa.get("id"))
+    spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", text)
+    if spm:
+        spread = int(spm.group(1))
+        shield = any(
+            spg and any((mv.name or "").startswith("[Ability]")
+                        and "Prevent all damage done to your Benched" in (mv.effect or "")
+                        and "Rule Box" in (mv.effect or "")
+                        for mv in (C.get(spg.get("id")).moves if C.get(spg.get("id")) else []))
+            for spg in [oa] + list(opp.get("bench") or []))
+        bs = 0
+        for spb in (opp.get("bench") or []):
+            if not spb or (spb.get("hp") or 9999) > spread:
+                continue
+            ci_b = C.get(spb.get("id"))
+            if ci_b and any("on your Bench, prevent all damage" in (mv.effect or "")
+                            for mv in ci_b.moves):
+                continue
+            if shield and not ((ci_b.rule or "") if ci_b else ""):
+                continue
+            bs = max(bs, _pv(spb.get("id")))
+        total += bs
+    return total
+
+
+def det_attack_win_skipped(g, sig):
+    """MissedLethal|攻撃選択が勝ち切り技を外した: ATTACKしたターン、提示された別の技なら取れる
+    サイド(スプラッシュKO込み)>=自分の残り=勝ちだったのに、選んだ技のサイド数がそれ未満
+    (R37 grimmsnarl T13: 残1でJetting 120+スプラッシュ50=Imp20 KO=勝利なのにNebula 210=
+    Grimm230残20を選択→T14に3枚取られ敗北。botはlethalのactive KO限定評価が原因)。"""
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        if ch.get("type") != ATTACK or ch.get("attackId") is None:
+            continue
+        my_left = len(me.get("prize") or []) or 6
+        if _attack_prizes_of_option(cur, me, opp, ch.get("attackId")) >= my_left:
+            continue
+        best = max((_attack_prizes_of_option(cur, me, opp, o.get("attackId"))
+                    for o in (sel.get("option") or [])
+                    if o.get("type") == ATTACK and o.get("attackId") is not None), default=0)
+        if best >= my_left:
+            sig("MissedLethal|攻撃選択が勝ち切り技を外した", g["ep"], cur.get("turn"))
+
+
 def det_doomed_no_retreat(g, sig):
     """DoomedNoRetreat: 前の攻撃役(サイド2+)が次ターン被KO確定圏×不利トレード(取れるサイド<
     失うサイド)×RETREAT可×ベンチに攻撃可能な主力後続、なのに残って手番を閉じた(人間レビュー6巡目⑤)。"""
@@ -1298,10 +1374,15 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
             pi_ = C.get((pe or {}).get("id"))
             if pi_:
                 moves += list(pi_.moves)
-    for did, di in C.items():
-        if (oi and di.previous_stage == oi.name and di.is_pokemon
-                and (opp_seen is None or did in opp_seen)):
-            moves += list(di.moves)
+    if oi:
+        # 同線の変種が観測済みならそれに限定、未観測ならDB変種全体=アーキタイプ推定
+        # (bot _line_variant_ids同一意味論。R37 alakazam-7 T5: Kadabra在場×Alakazam
+        # 未観測でPH脅威0→DoomedNoSwitch敗着)
+        ids_v = [did for did, di in C.items()
+                 if di.is_pokemon and di.previous_stage == oi.name]
+        seen_v = [d for d in ids_v if opp_seen is not None and d in opp_seen]
+        for did in (seen_v or ids_v):
+            moves += list(C[did].moves)
     hc = opp_owner_hand_count
     best = 0
     for m in moves:
@@ -2121,7 +2202,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_spread_into_immune, det_bench_heal_missed, det_energy_type_skew,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
              det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss,
-             det_volatile_retreat_fuel]
+             det_volatile_retreat_fuel, det_attack_win_skipped]
 
 
 # ============ Layer 2: Aggregator ============
