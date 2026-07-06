@@ -1,0 +1,255 @@
+
+========================================================================
+GAME 1   自分=Archaludon(ブリジュラスex)   相手=MegaStarmie
+========================================================================
+
+[自分のターン 0]
+ 自: バトル場[なし] ベンチ[] サイド残0
+ 敵: バトル場[なし] ベンチ[] サイド残0
+
+[自分のターン 1]
+ 自: バトル場[Duraludon HP130/130 エネ0(鋼0)] ベンチ[] サイド残6
+ 敵: バトル場[Cinderace HP160/160 エネ0(鋼0)] ベンチ['Staryu(エネ0)'] サイド残6
+    [ATTACH] Basic {M} Energy
+      >> 敵 が Water Gun で攻撃
+
+[自分のターン 3]
+ 自: バトル場[Duraludon HP110/130 エネ1(鋼1) 被ダメ20] ベンチ[] サイド残6
+ 敵: バトル場[Staryu HP70/70 エネ1(鋼0)] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)'] サイド残6
+    [PLAY] Drayton
+    [PLAY] Relicanth
+    [PLAY] Duraludon
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+      >> 敵 が Nebula Beam で攻撃
+
+[自分のターン 5]
+ 自: バトル場[Archaludon ex HP70/300 エネ2(鋼2) 被ダメ230] ベンチ['Relicanth(エネ0)', 'Duraludon(エネ0)'] サイド残6
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Mega Starmie ex(エネ0)'] サイド残6
+    [PLAY] Drayton
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Raging Hammer 実ダメージ310 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Raging Hammer で攻撃
+      >> 敵 が Nebula Beam で攻撃
+
+[自分のターン 6]
+ 自: バトル場[なし] ベンチ['Relicanth(エネ0)', 'Archaludon ex(エネ0)'] サイド残3
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ1(鋼0)] ベンチ['Cinderace(エネ0)'] サイド残4
+
+[自分のターン 7]
+ 自: バトル場[Archaludon ex HP300/300 エネ0(鋼0)] ベンチ['Relicanth(エネ0)'] サイド残3
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ0(鋼0)] ベンチ['Cinderace(エネ0)'] サイド残4
+    [PLAY] Duraludon
+    [PLAY] Poké Pad
+    [PLAY] Drayton
+    [PLAY] Pokégear 3.0
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 9]
+ 自: バトル場[Archaludon ex HP180/300 エネ1(鋼1) 被ダメ120] ベンチ['Relicanth(エネ0)', 'Duraludon(エネ0)'] サイド残3
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)', 'Staryu(エネ0)'] サイド残4
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [PLAY] Boss’s Orders
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Metal Defender で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 11]
+ 自: バトル場[Archaludon ex HP60/300 エネ3(鋼3) 被ダメ240] ベンチ['Archaludon ex(エネ0)'] サイド残2
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Mega Starmie ex(エネ0)'] サイド残3
+    [PLAY] Relicanth
+    [PLAY] Poké Pad
+    [PLAY] Duraludon
+    [PLAY] Full Metal Lab
+    [PLAY] Lillie's Determination
+    [PLAY] Ultra Ball
+    [PLAY] Pokégear 3.0
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Raging Hammer 実ダメージ320 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+
+>>> 結果: ★自分(Archaludon)の勝ち
+
+========================================================================
+GAME 2   自分=Archaludon(ブリジュラスex)   相手=MegaStarmie
+========================================================================
+
+[自分のターン 0]
+ 自: バトル場[なし] ベンチ[] サイド残0
+ 敵: バトル場[なし] ベンチ[] サイド残0
+
+[自分のターン 1]
+ 自: バトル場[Relicanth HP100/100 エネ0(鋼0)] ベンチ['Duraludon(エネ0)'] サイド残6
+ 敵: バトル場[Cinderace HP160/160 エネ0(鋼0)] ベンチ['Staryu(エネ0)'] サイド残6
+    [PLAY] Poké Pad
+    [PLAY] Full Metal Lab
+    [ATTACH] Basic {M} Energy
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 2]
+ 自: バトル場[なし] ベンチ['Duraludon(エネ1)'] サイド残6
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ1(鋼0)] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)'] サイド残5
+
+[自分のターン 3]
+ 自: バトル場[Duraludon HP110/130 エネ1(鋼1) 被ダメ20] ベンチ[] サイド残6
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ1(鋼0)] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)'] サイド残5
+    [PLAY] Relicanth
+    [PLAY] Drayton
+    [PLAY] Duraludon
+    [EVOLVE] Archaludon ex
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 4]
+ 自: バトル場[なし] ベンチ['Archaludon ex(エネ1)', 'Duraludon(エネ0)'] サイド残6
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)'] サイド残4
+
+[自分のターン 5]
+ 自: バトル場[Archaludon ex HP260/300 エネ1(鋼1) 被ダメ40] ベンチ['Duraludon(エネ0)'] サイド残6
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Staryu(エネ0)'] サイド残4
+    [EVOLVE] Archaludon ex
+    [PLAY] Lillie's Determination
+    [PLAY] Ultra Ball
+    [PLAY] Duraludon
+    [PLAY] Poké Pad
+    [ATTACH] Basic {M} Energy
+      >> 敵 が Nebula Beam で攻撃
+
+[自分のターン 7]
+ 自: バトル場[Archaludon ex HP50/300 エネ2(鋼2) 被ダメ250] ベンチ['Archaludon ex(エネ0)', 'Duraludon(エネ0)'] サイド残6
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ1(鋼0) 被ダメ30] ベンチ['Cinderace(エネ0)', 'Mega Starmie ex(エネ0)'] サイド残4
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [PLAY] Boss’s Orders
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender'])
+      >> 自 が Metal Defender で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 8]
+ 自: バトル場[なし] ベンチ['Archaludon ex(エネ0)', 'Archaludon ex(エネ0)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ2(鋼0) 被ダメ30] ベンチ['Mega Starmie ex(エネ0)', 'Staryu(エネ0)'] サイド残2
+
+[自分のターン 9]
+ 自: バトル場[Archaludon ex HP300/300 エネ0(鋼0)] ベンチ['Archaludon ex(エネ0)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP300/330 エネ2(鋼0) 被ダメ30] ベンチ['Mega Starmie ex(エネ0)', 'Staryu(エネ0)'] サイド残2
+    [PLAY] Pokégear 3.0
+    [PLAY] Pokégear 3.0
+    [PLAY] Night Stretcher
+    [PLAY] Lillie's Determination
+    [PLAY] Night Stretcher
+    [PLAY] Relicanth
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+      >> 敵 が Nebula Beam で攻撃
+
+[自分のターン 11]
+ 自: バトル場[Archaludon ex HP90/300 エネ1(鋼1) 被ダメ210] ベンチ['Archaludon ex(エネ0)', 'Relicanth(エネ0)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP270/330 エネ2(鋼0) 被ダメ60] ベンチ['Mega Starmie ex(エネ0)', 'Mega Starmie ex(エネ0)'] サイド残2
+    [PLAY] Night Stretcher
+    [ATTACH] Basic {M} Energy
+    [PLAY] Lillie's Determination
+    [PLAY] Poké Pad
+    [PLAY] Pokégear 3.0
+    [ATTACH] Hero’s Cape
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+
+>>> 結果: ×相手(MegaStarmie)の勝ち
+
+========================================================================
+GAME 3   自分=Archaludon(ブリジュラスex)   相手=MegaStarmie
+========================================================================
+
+[自分のターン 0]
+ 自: バトル場[なし] ベンチ[] サイド残0
+ 敵: バトル場[なし] ベンチ[] サイド残0
+
+[自分のターン 1]
+ 自: バトル場[Duraludon HP130/130 エネ0(鋼0)] ベンチ['Relicanth(エネ0)', 'Relicanth(エネ0)'] サイド残6
+ 敵: バトル場[Staryu HP70/70 エネ0(鋼0)] ベンチ[] サイド残6
+    [PLAY] Ultra Ball
+    [PLAY] Night Stretcher
+    [ATTACH] Basic {M} Energy
+
+[自分のターン 3]
+ 自: バトル場[Duraludon HP130/130 エネ1(鋼1)] ベンチ['Relicanth(エネ0)', 'Relicanth(エネ0)'] サイド残6
+ 敵: バトル場[Staryu HP170/170 エネ0(鋼0)] ベンチ['Staryu(エネ0)', 'Staryu(エネ0)'] サイド残6
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Metal Defender で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 5]
+ 自: バトル場[Archaludon ex HP180/300 エネ3(鋼3) 被ダメ120] ベンチ['Relicanth(エネ0)', 'Relicanth(エネ0)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ1(鋼0)] ベンチ['Staryu(エネ0)'] サイド残6
+    [PLAY] Ultra Ball
+    [PLAY] Ultra Ball
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Metal Defender で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 6]
+ 自: バトル場[なし] ベンチ['Relicanth(エネ0)', 'Archaludon ex(エネ3)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP110/330 エネ1(鋼0) 被ダメ220] ベンチ['Staryu(エネ0)'] サイド残5
+
+[自分のターン 7]
+ 自: バトル場[Archaludon ex HP180/300 エネ3(鋼3) 被ダメ120] ベンチ['Relicanth(エネ0)'] サイド残5
+ 敵: バトル場[Mega Starmie ex HP110/330 エネ1(鋼0) 被ダメ220] ベンチ['Staryu(エネ0)'] サイド残5
+    [PLAY] Lillie's Determination
+    [PLAY] Pokégear 3.0
+    [PLAY] Night Stretcher
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Metal Defender で攻撃
+
+[自分のターン 9]
+ 自: バトル場[Archaludon ex HP180/300 エネ4(鋼4) 被ダメ120] ベンチ['Relicanth(エネ0)'] サイド残2
+ 敵: バトル場[Mega Starmie ex HP330/330 エネ0(鋼0)] ベンチ[] サイド残5
+    [PLAY] Drayton
+    [PLAY] Pokégear 3.0
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender', 'Hammer In', 'Raging Hammer'])
+      >> 自 が Metal Defender で攻撃
+      >> 敵 が Nebula Beam で攻撃
+
+[自分のターン 10]
+ 自: バトル場[なし] ベンチ['Relicanth(エネ0)'] サイド残2
+ 敵: バトル場[Mega Starmie ex HP110/330 エネ1(鋼0) 被ダメ220] ベンチ[] サイド残3
+
+[自分のターン 11]
+ 自: バトル場[Relicanth HP50/100 エネ0(鋼0) 被ダメ50] ベンチ[] サイド残2
+ 敵: バトル場[Mega Starmie ex HP110/330 エネ0(鋼0) 被ダメ220] ベンチ[] サイド残3
+    [PLAY] Drayton
+    [PLAY] Poké Pad
+    [PLAY] Duraludon
+    [PLAY] Switch
+    [PLAY] Pokégear 3.0
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Hammer In 実ダメージ30 (選べた技:['Hammer In'])
+      >> 自 が Hammer In で攻撃
+      >> 敵 が Jetting Blow で攻撃
+
+[自分のターン 12]
+ 自: バトル場[なし] ベンチ['Duraludon(エネ1)'] サイド残2
+ 敵: バトル場[Mega Starmie ex HP80/330 エネ1(鋼0) 被ダメ250] ベンチ[] サイド残2
+
+[自分のターン 13]
+ 自: バトル場[Duraludon HP80/130 エネ1(鋼1) 被ダメ50] ベンチ[] サイド残2
+ 敵: バトル場[Mega Starmie ex HP80/330 エネ1(鋼0) 被ダメ250] ベンチ[] サイド残2
+    [PLAY] Drayton
+    [PLAY] Poké Pad
+    [PLAY] Duraludon
+    [EVOLVE] Archaludon ex
+    [ATTACH] Basic {M} Energy
+    [ATTACK] Metal Defender 実ダメージ220 (選べた技:['Metal Defender'])
+
+>>> 結果: ★自分(Archaludon)の勝ち

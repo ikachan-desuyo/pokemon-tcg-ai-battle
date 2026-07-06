@@ -19,12 +19,9 @@ from .scrafty_bot import ScraftyBot
 from .universal_bot import universal_for
 
 
-def _deck_bot(deck_key: str, fallback_stem: str | None = None) -> type:
-    """cabt_bot/decks/<deck_key>.py のPLAN版botを引数なし生成可能な形で返す(Benchmark Phase)。
-    デッキcsv不在の実行環境(Kaggle提出tar)ではUniversal版へフォールバック(起動クラッシュ防止)。"""
+def _deck_bot(deck_key: str) -> type:
+    """cabt_bot/decks/<deck_key>.py のPLAN版botを引数なし生成可能な形で返す(Benchmark Phase)。"""
     from ..decks import DECKS
-    if deck_key not in DECKS:
-        return universal_for(fallback_stem or deck_key)
     mod = DECKS[deck_key]
     path = mod.DECK_CSV
 
@@ -140,8 +137,8 @@ DECK_BOTS: dict[str, type] = {
     # ローカル旧ベンチ(megaruka 87%/archaludon 70%勝ち)が実ラダー(同アーキ30%)を再現できない問題への回答。
     # Benchmark Phase(2026-07-06): 相手をPLAN版(cabt_bot/decks/=デッキ知識モジュール)へ強化。
     # Identity(らしさ)とH2H(対Universal同デッキ)で検収済み。Universal版はuniversal_forで残置(A/B用)。
-    "ladder_lucario": _deck_bot("lucario", "ladder_lucario"),                  # 実メタ最多(33戦)のMega Lucario ex
-    "ladder_archaludon": _deck_bot("archaludon", "ladder_archaludon"),            # 実ラダーのArchaludon(Judge/Carmine型)
+    "ladder_lucario": _deck_bot("lucario"),                  # 実メタ最多(33戦)のMega Lucario ex
+    "ladder_archaludon": _deck_bot("archaludon"),            # 実ラダーのArchaludon(Judge/Carmine型)
     "dragapult": _deck_bot("dragapult"),                     # ドラパルトex(ダメカン撒き)
-    "grimmsnarl": _deck_bot("grimmsnarl", "meta_grimmsnarl"),                   # マリィのオーロンゲex(悪コントロール)
+    "grimmsnarl": _deck_bot("grimmsnarl"),                   # マリィのオーロンゲex(悪コントロール)
 }

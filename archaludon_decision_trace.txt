@@ -1,0 +1,400 @@
+
+========================================================================
+GAME 1  自=Archaludon vs 敵=MegaStarmie
+========================================================================
+
+── 自T0 | 自場:-(エネ0) | 敵場:なし 敵ベンチ:[]
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [1]  ★選択
+  [3]  ★選択
+  [0]  ★選択
+  [3]  ★選択
+
+── 自T1 | 自場:Duraludon(エネ0) | 敵場:Cinderace(HP160) 敵ベンチ:['Staryu(HP70)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [プレイ候補] (0/0)
+      Ultra Ball: score=115 ★選択
+      Poké Pad: score=78
+      Poké Pad: score=78
+      Full Metal Lab: score=40
+      Pokégear 3.0: score=55
+      Ultra Ball: score=115
+      Poké Pad: score=78
+  [3]  ★選択
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Full Metal Lab: score=40
+      Pokégear 3.0: score=55
+      Ultra Ball: score=82 ★選択
+      Poké Pad: score=78
+  [3]  ★選択
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Poké Pad: score=78 ★選択
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+
+── 自T3 | 自場:Duraludon(エネ1) | 敵場:Cinderace(HP160) 敵ベンチ:['Staryu(HP170)', 'Staryu(HP70)', 'Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Lillie's Determination: 却下(None)
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Lillie's Determination: 却下(None)
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Lillie's Determination: 却下(None) ★選択
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Duraludon: score=84 ★選択
+      Poké Pad: score=78
+      Pokégear 3.0: score=55
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Poké Pad: score=78 ★選択
+      Pokégear 3.0: score=55
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Pokégear 3.0: score=55 ★選択
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=160
+      Hammer In: ダメージ30 ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+
+── 自T5 | 自場:Archaludon ex(エネ2) | 敵場:Cinderace(HP130) 敵ベンチ:['Mega Starmie ex(HP430)', 'Staryu(HP70)', 'Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=130
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Drayton: score=40 ★選択
+      Boss’s Orders: 却下(None)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+  [3]  ★選択
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=130
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=130
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=130
+      Metal Defender: ダメージ220 [KO可] ★選択
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [3]  ★選択
+
+── 自T7 | 自場:Archaludon ex(エネ3) | 敵場:Mega Starmie ex(HP430) 敵ベンチ:['Staryu(HP70)', 'Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Boss’s Orders: score=62 ★選択
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+      Drayton: score=40
+      Drayton: score=40
+      Switch: 却下(None)
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=70
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80 [KO可]
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+  [攻撃選択] 相手バトル場HP=70
+      Metal Defender: ダメージ220 [KO可] ★選択
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80 [KO可]
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+  [3]  ★選択
+
+── 自T8 | 自場:-(エネ0) | 敵場:Mega Starmie ex(HP430) 敵ベンチ:['Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [3]  ★選択
+
+── 自T9 | 自場:Archaludon ex(エネ3) | 敵場:Mega Starmie ex(HP430) 敵ベンチ:['Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: score=87 ★選択
+      Relicanth: score=87
+      Drayton: score=75
+      Drayton: score=75
+      Switch: 却下(None)
+      Duraludon: score=84
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Drayton: score=40
+      Drayton: score=40
+      Switch: 却下(None)
+      Duraludon: score=84 ★選択
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Drayton: score=40 ★選択
+      Drayton: score=40
+      Switch: 却下(None)
+  [3]  ★選択
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+      Duraludon: score=84 ★選択
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220 ★選択
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+
+── 自T11 | 自場:Archaludon ex(エネ3) | 敵場:Mega Starmie ex(HP210) 敵ベンチ:['Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=True
+  [攻撃選択] 相手バトル場HP=210
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ290 [KO可]
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Drayton: score=40 ★選択
+      Switch: 却下(None)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=210
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ290 [KO可] ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+  [3]  ★選択
+
+── 自T13 | 自場:Archaludon ex(エネ3) | 敵場:Staryu(HP70) 敵ベンチ:['Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=70
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ310 [KO可]
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Judge: 却下(None)
+  [攻撃選択] 相手バトル場HP=70
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ310 [KO可]
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Judge: 却下(None)
+  [攻撃選択] 相手バトル場HP=70
+      Metal Defender: ダメージ220 [KO可]
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ310 [KO可] ★選択
+  [プレイ候補] (0/0)
+      Judge: 却下(None)
+      Relicanth: 却下(None)
+      Switch: 却下(None)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Judge: 却下(None)
+  [3]  ★選択
+
+>>> 結果: 自勝ち
+
+========================================================================
+GAME 2  自=Archaludon vs 敵=MegaStarmie
+========================================================================
+
+── 自T0 | 自場:-(エネ0) | 敵場:なし 敵ベンチ:[]
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [1]  ★選択
+  [3]  ★選択
+  [0]  ★選択
+  [3]  ★選択
+
+── 自T1 | 自場:Duraludon(エネ0) | 敵場:Staryu(HP70) 敵ベンチ:[]
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [プレイ候補] (0/0)
+      Poké Pad: score=78 ★選択
+      Poké Pad: score=78
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Poké Pad: score=78 ★選択
+      Relicanth: 却下(None)
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+
+── 自T3 | 自場:Duraludon(エネ1) | 敵場:Staryu(HP170) 敵ベンチ:['Staryu(HP70)', 'Staryu(HP70)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=170
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [攻撃選択] 相手バトル場HP=170
+      Hammer In: ダメージ30 ★選択
+  [プレイ候補] (0/0)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+
+── 自T4 | 自場:-(エネ0) | 敵場:Mega Starmie ex(HP400) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [3]  ★選択
+
+── 自T5 | 自場:Relicanth(エネ0) | 敵場:Mega Starmie ex(HP400) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Staryu(HP70)']
+   [Boss判定] 手札にボス=True / _should_play_boss=False
+  [プレイ候補] (0/0)
+      Boss’s Orders: 却下(None)
+      Lillie's Determination: 却下(None)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+      Ultra Ball: score=120 ★選択
+  [3]  ★選択
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+      Duraludon: score=84 ★選択
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+  [プレイ候補] (0/0)
+      Relicanth: 却下(None)
+      Relicanth: 却下(None)
+
+── 自T6 | 自場:-(エネ0) | 敵場:Mega Starmie ex(HP400) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [3]  ★選択
+
+── 自T7 | 自場:Duraludon(エネ1) | 敵場:Mega Starmie ex(HP400) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=400
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Relicanth: score=87
+      Relicanth: score=87
+      Ultra Ball: score=115 ★選択
+  [3]  ★選択
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=400
+      Hammer In: ダメージ30
+  [プレイ候補] (0/0)
+      Relicanth: score=87 ★選択
+  [攻撃選択] 相手バトル場HP=400
+      Hammer In: ダメージ30
+  [1]  ★選択
+  [3]  ★選択
+  [3]  ★選択
+  [攻撃選択] 相手バトル場HP=400
+      Hammer In: ダメージ30
+  [攻撃選択] 相手バトル場HP=400
+      Metal Defender: ダメージ220 ★選択
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ80
+
+── 自T9 | 自場:Archaludon ex(エネ3) | 敵場:Mega Starmie ex(HP430) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ200
+  [攻撃選択] 相手バトル場HP=430
+      Metal Defender: ダメージ220 ★選択
+      Hammer In: ダメージ30
+      Raging Hammer: ダメージ200
+
+── 自T10 | 自場:-(エネ0) | 敵場:Mega Starmie ex(HP210) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [3]  ★選択
+
+── 自T11 | 自場:Relicanth(エネ0) | 敵場:Mega Starmie ex(HP210) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [プレイ候補] (0/0)
+      Poké Pad: score=78 ★選択
+  [3]  ★選択
+  [プレイ候補] (0/0)
+      Duraludon: score=84 ★選択
+  [END]  ★選択
+
+── 自T12 | 自場:-(エネ0) | 敵場:Mega Starmie ex(HP210) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [3]  ★選択
+
+── 自T13 | 自場:Duraludon(エネ0) | 敵場:Mega Starmie ex(HP210) 敵ベンチ:['Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)', 'Mega Starmie ex(HP330)']
+   [Boss判定] 手札にボス=False / _should_play_boss=False
+  [ATTACH] Basic {M} Energy ★選択
+  [攻撃選択] 相手バトル場HP=210
+      Hammer In: ダメージ30 ★選択
+
+>>> 結果: 敵勝ち

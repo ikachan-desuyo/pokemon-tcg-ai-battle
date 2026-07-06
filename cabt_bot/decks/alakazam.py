@@ -28,8 +28,7 @@ import dataclasses as _dc
 
 from ..bots.universal_bot import infer_plan as _infer
 
-from pathlib import Path as _P
-_deck = [int(x) for x in (_P(__file__).resolve().parents[2] / DECK_CSV).read_text().split() if x.strip()]
+_deck = [int(x) for x in open(DECK_CSV).read().split() if x.strip()]
 _base = _infer(_deck)
 PLAN = _dc.replace(
     _base,

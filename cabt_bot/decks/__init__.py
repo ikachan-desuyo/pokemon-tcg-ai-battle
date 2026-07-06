@@ -12,12 +12,12 @@
 """
 from __future__ import annotations
 
-# 縮退インポート: デッキcsvはローカル研究用で提出tarに含まれない。Kaggle実行環境では
-# モジュールを読み飛ばし、deck_registry側がUniversalへフォールバックする(提出プリフライトで
-# import時クラッシュを検出した修正。Phase8: 実ラダーとの差=デプロイ事故の根絶)
-DECKS = {}
-for _name in ("lucario", "alakazam", "dragapult", "archaludon", "grimmsnarl"):
-    try:
-        DECKS[_name] = __import__(f"{__name__}.{_name}", fromlist=[_name])
-    except (FileNotFoundError, OSError):
-        pass
+from . import alakazam, archaludon, dragapult, grimmsnarl, lucario
+
+DECKS = {
+    "lucario": lucario,
+    "alakazam": alakazam,
+    "dragapult": dragapult,
+    "archaludon": archaludon,
+    "grimmsnarl": grimmsnarl,
+}
