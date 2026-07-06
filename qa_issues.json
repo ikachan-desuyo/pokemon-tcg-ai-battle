@@ -4794,5 +4794,21 @@
   "fix": "①_boss_wins_game=_dragged_attack_prizes(スプラッシュ込み)へ置換(Boss 96点>Wally 90点が成立) ②昇格キーのth=max(_incoming_threat,_incoming_next_turn)+loses_game=_is_loss_bait(統一判定・KO後脅威込み)",
   "match": "mirror",
   "status": "Fixed"
+ },
+ "DoomedActiveEnergyFeed": {
+  "cause": "(人間レビュー指摘) 次ターン確殺のactiveへのエネ付け。既存のavoid_overstack/_low_future_valueには「このターン攻撃を解放するなら注いで良い」例外があり、17巡目のcomp格上げ(殴れる貼り=最優先)がこの例外をさらに広げた。登録リプレイ実測: arch-7 T5=act Mega110(W1・Arch ex 220圏=確殺)へIgnition→Nebula 210チップ→T6戦死で3枚献上。Ignitionは番末消滅なので単体では無駄でないが、「210チップの価値 vs Mega3枚温存(退避してベンチのMega330にエネを繋ぐ)」のレース算術が無い。RaceAwareTradeCandidateと同根",
+  "cycles": [
+   0
+  ],
+  "detector": "未実装(次: attach-to-doomed×successor-carriable の検出器+レース算術)",
+  "evidence": {
+   "confirmed": 1,
+   "frequency": 1,
+   "rejected": 0
+  },
+  "first_seen": "2026-07-07",
+  "fix": "未実装。方針: activeが確殺圏×攻撃してもKO/勝ちに届かない場合、(a)恒久エネは後続へ (b)チップ価値(次ターンの後続KO装填)とprize損失(pv×)の比較 (c)退避可能なら退避を優先。17巡目comp格上げに「act非確殺」条件の追加を検討(壁ケースの再検証必須)",
+  "match": "arch",
+  "status": "Open"
  }
 }
