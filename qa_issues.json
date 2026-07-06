@@ -3904,5 +3904,31 @@
    "confirmed": 0,
    "rejected": 0
   }
+ },
+ "GunLoadingDoomedBypass": {
+  "status": "Fixed",
+  "detector": "手動精読(R32)",
+  "match": "arch",
+  "fix": "_filter_gun_loadingに「actが相手の既存攻撃(_incoming_next_turn)で既に確殺圏なら素通し」を追加",
+  "first_seen": "2026-07-06",
+  "cause": "MD220で確殺のMega110が「チップするとRHが致死圏」を理由にJetting120を撃たずEND(既に死んでいる者に装填の心配は無意味)。R32 arch T11=END→修正後ATTACK。対arch 86→90%(N=50)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "WallRetreatRareResidual": {
+  "status": "Watching",
+  "detector": "WallRetreat",
+  "match": "alakazam",
+  "fix": "未再現(QA1回のみ、追試80戦+QA2回で0件)。次回出現時にリプレイ精査",
+  "first_seen": "2026-07-06",
+  "cause": "不明(逃げ0壁Cinderaceから交代し攻撃なし)。Memory Dive/装填ガード修正の副作用の可能性は追試で否定的",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 0,
+   "rejected": 0
+  }
  }
 }

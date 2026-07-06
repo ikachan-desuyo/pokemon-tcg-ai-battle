@@ -954,6 +954,10 @@ class DeckBot(Bot):
         pre_th = base + per * max(0, (max_o - hp_o) // 10)
         if pre_th >= act_hp:
             return idxs                    # 既に圏内=装填の概念なし(退避系ゲートの領分)
+        if self._incoming_next_turn(act) >= act_hp:
+            return idxs                    # 既に相手の既存攻撃(MD等)で確殺圏=装填を恐れる意味がない
+                                           # (精読R32 arch T11: MD220確殺のMega110がRH装填を恐れ
+                                           # Jetting 120を撃たずEND=タダのチップ放棄)
         out = []
         for i in idxs:
             dmg = self._dmg(options[i]) or 0
