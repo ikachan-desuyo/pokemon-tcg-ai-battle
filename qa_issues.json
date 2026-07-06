@@ -3930,5 +3930,18 @@
    "confirmed": 0,
    "rejected": 0
   }
+ },
+ "FlowerCurtainSpreadBlind": {
+  "status": "Fixed",
+  "detector": "手動精読(R33)",
+  "match": "alakazam",
+  "fix": "_opp_bench_spread_blocked新設(①Tera型自前免疫 ②フラワーカーテン型在場×非ルールボックス)を撒き対象選択と_attack_prizes_nowスプラッシュKO判定に配線。reviewer _attack_prizesも同一意味論",
+  "first_seen": "2026-07-06",
+  "cause": "シェイミ(Flower Curtain)在場時、保護されたAbraへJetting撒き50を毎ターン無効打ち(盤面不変を実測)。スプラッシュKO計算も同盲点=幻の勝ち切り判定の芽。修正後の撒き先=Fez ex(ルールボックス=保護対象外)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
  }
 }

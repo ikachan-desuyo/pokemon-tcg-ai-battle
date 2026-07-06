@@ -740,7 +740,7 @@ class DeckBot(Bot):
             if spread:
                 bs = 0
                 for sp in opp.get("bench") or []:
-                    if (sp and not self._bench_damage_immune(sp.get("id"))
+                    if (sp and not self._opp_bench_spread_blocked(sp.get("id"))
                             and (sp.get("hp") or 9999) <= spread):
                         bs = max(bs, self._prize_value(sp.get("id")))
                 total += bs
@@ -2220,6 +2220,29 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _opp_bench_spread_blocked(self, cid) -> bool:
+        """相手ベンチのこのカードへの撒きダメージが防がれるか: ①自前のTera型特性
+        ②相手の場にフラワーカーテン型(『ルールボックスを持たないベンチへのダメージを防ぐ』)が
+        居て対象が非ルールボックス(精読R33 alakazam T9: シェイミ在場でAbraへの撒き50が無効化。
+        幻のスプラッシュKO=勝ち切り誤判定の芽)。"""
+        if self._bench_damage_immune(cid):
+            return True
+        info = self._cardinfo.get(cid)
+        if info and (info.rule or ""):
+            return False                       # ルールボックス持ちはカーテン対象外
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        for sp in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []):
+            if not sp:
+                continue
+            gi = self._cardinfo.get(sp.get("id"))
+            for m in (gi.moves if gi else []):
+                if ((m.name or "").startswith("[Ability]")
+                        and "Prevent all damage done to your Benched" in (m.effect or "")
+                        and "Rule Box" in (m.effect or "")):
+                    return True
+        return False
+
     def _effect_move_damage(self, m, my_spot, attacker_spot=None) -> int:
         """damage欄が空/固定の技でも、効果文の可変ダメージを「見えている実数」で評価する。
         Powerful Hand(ダメカン2×相手手札枚数=公開情報)で330のMegaが一撃圏なのに
@@ -2813,7 +2836,7 @@ class DeckBot(Bot):
             if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
                 sp = spots[op.index]
                 cid = sp.get("id")
-                if spread and op.area != AreaType.ACTIVE and self._bench_damage_immune(cid):
+                if spread and op.area != AreaType.ACTIVE and self._opp_bench_spread_blocked(cid):
                     continue
                 th0 = _line_threat(cid) or 0
                 if self._line_has_variable_damage(cid):

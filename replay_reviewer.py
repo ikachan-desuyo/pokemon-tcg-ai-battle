@@ -1077,10 +1077,25 @@ def _attack_prizes(cur, me, opp, a):
             spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
             if spm:
                 spread = int(spm.group(1))
+                # ベンチ保護: Tera型(自前)とフラワーカーテン型(在場×非ルールボックス)は
+                # 撒きKOに数えない(bot _opp_bench_spread_blocked同一意味論。精読R33)
+                shield = any(
+                    spg and any((mv.name or "").startswith("[Ability]")
+                                and "Prevent all damage done to your Benched" in (mv.effect or "")
+                                and "Rule Box" in (mv.effect or "")
+                                for mv in (C.get(spg.get("id")).moves if C.get(spg.get("id")) else []))
+                    for spg in [oa] + list(opp.get("bench") or []))
                 bs = 0
                 for spb in (opp.get("bench") or []):
-                    if spb and (spb.get("hp") or 9999) <= spread:
-                        bs = max(bs, _pv(spb.get("id")))
+                    if not spb or (spb.get("hp") or 9999) > spread:
+                        continue
+                    ci_b = C.get(spb.get("id"))
+                    if ci_b and any("on your Bench, prevent all damage" in (mv.effect or "")
+                                    for mv in ci_b.moves):
+                        continue
+                    if shield and not ((ci_b.rule or "") if ci_b else ""):
+                        continue
+                    bs = max(bs, _pv(spb.get("id")))
                 total += bs
             best_total = max(best_total, total)
     return best_total
