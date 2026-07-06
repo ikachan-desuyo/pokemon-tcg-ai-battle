@@ -4828,18 +4828,18 @@
   "status": "Open"
  },
  "HyperBallWastefulCost": {
-  "cause": "(人間レビュー指摘・相手arch bot側) ハイパーボールのコスト/価値評価の欠如: ①ベンチにDuraludonが不在=サーチしたArchaludon(ブリジュラス)を置く先が無い(進化元不在でDeadEvolutionPickと同根)のに使用 ②コストでHero's Cape(ヒーローマント=耐久+100の生存反転ツール)とArchaludon本体をトラッシュし、同名のArchaludonを手札に加える=净損失(Cape喪失+同名入替)。Capeを貼って耐久を上げる方が明確に優位な場面だった。登録リプレイのarch対面(arch-7/arch-9)で観測",
+  "cause": "(人間レビュー指摘・相手arch bot側) ハイパーボールのコスト/価値評価の欠如: ①ベンチにDuraludonが不在=サーチしたArchaludon(ブリジュラス)を置く先が無い(進化元不在でDeadEvolutionPickと同根)のに使用 ②コストでHero's Cape(ヒーローマント=耐久+100の生存反転ツール)とArchaludon本体をトラッシュし、同名のArchaludonを手札に加える=净損失(Cape喪失+同名入替)。Capeを貼って耐久を上げる方が明確に優位な場面だった。登録リプレイのarch対面(arch-7/arch-9)で観測。追加指摘: 同様にコストで「ふしぎなあめ」(Stage2進化の必須素材)をトラッシュ=進化線自体を破壊",
   "cycles": [
    0
   ],
   "detector": "未実装(候補: HyperBallNetLoss=サーチ結果が「捨てた札の価値合計」を下回る/進化元不在サーチ)",
   "evidence": {
    "confirmed": 1,
-   "frequency": 1,
+   "frequency": 2,
    "rejected": 0
   },
   "first_seen": "2026-07-07",
-  "fix": "未実装(次セッション): ①ハイパーボール使用ゲート=「サーチ対象が今/次ターンに置ける・進化できる」(進化元の在場確認=DeadEvolutionPickの意味論を使用側に適用) ②捨て札選択=生存反転ツール(Cape)と主役実物を最後尾に(価値順) ③「捨てる2枚の価値>得る1枚」なら不使用。ベンチマークbot健全性案件",
+  "fix": "未実装(次セッション): ①ハイパーボール使用ゲート=「サーチ対象が今/次ターンに置ける・進化できる」(進化元の在場確認=DeadEvolutionPickの意味論を使用側に適用) ②捨て札選択=生存反転ツール(Cape)と主役実物・コンボ必須素材(ふしぎなあめ=strict_lillie_guardと同じ「アメ+Stage2」保持意味論)を最後尾に(価値順) ③「捨てる2枚の価値>得る1枚」なら不使用。ベンチマークbot健全性案件",
   "match": "arch",
   "status": "Open"
  }
