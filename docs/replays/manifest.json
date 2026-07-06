@@ -1,44 +1,36 @@
 {
  "replays": [
   {
-   "file": "grimmsnarl-1 勝ち.json",
-   "label": "grimmsnarl-1 勝ち"
+   "file": "mirror-R29 負け(Boss+Nebula両取り).json",
+   "label": "mirror-R29 負け(Boss+Nebula両取り)"
   },
   {
-   "file": "alakazam-0 勝ち.json",
-   "label": "alakazam-0 勝ち"
+   "file": "dragapult-R28 負け(PD2枚+Munkidori特性).json",
+   "label": "dragapult-R28 負け(PD2枚+Munkidori特性)"
   },
   {
-   "file": "dragapult-0 勝ち.json",
-   "label": "dragapult-0 勝ち"
+   "file": "grimmsnarl-R30 T15勝ち.json",
+   "label": "grimmsnarl-R30 T15勝ち"
   },
   {
-   "file": "arch-0 勝ち.json",
-   "label": "arch-0 勝ち"
+   "file": "alakazam-R30 T9勝ち.json",
+   "label": "alakazam-R30 T9勝ち"
   },
   {
-   "file": "lucario-2 勝ち.json",
-   "label": "lucario-2 勝ち"
+   "file": "dragapult-R30 接戦T13勝ち(1-2).json",
+   "label": "dragapult-R30 接戦T13勝ち(1-2)"
   },
   {
-   "file": "mirror-0 ミラー.json",
-   "label": "mirror-0 ミラー"
+   "file": "arch-R30 T11ベンチアウト勝ち.json",
+   "label": "arch-R30 T11ベンチアウト勝ち"
   },
   {
-   "file": "alakazam-3 接戦負け(1-0).json",
-   "label": "alakazam-3 接戦負け(1-0)"
+   "file": "lucario-R30 対WメガルカリオT13勝ち.json",
+   "label": "lucario-R30 対WメガルカリオT13勝ち"
   },
   {
-   "file": "grimmsnarl-4 長期戦負け(2-0).json",
-   "label": "grimmsnarl-4 長期戦負け(2-0)"
-  },
-  {
-   "file": "dragapult-2 エネ枯渇負け(4-0).json",
-   "label": "dragapult-2 エネ枯渇負け(4-0)"
-  },
-  {
-   "file": "lucario-0 引き事故負けT2(たね1枚).json",
-   "label": "lucario-0 引き事故負けT2(たね1枚)"
+   "file": "mirror-R30 3T即勝ち.json",
+   "label": "mirror-R30 3T即勝ち"
   }
  ]
 }
