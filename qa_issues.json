@@ -4810,5 +4810,21 @@
   "fix": "未実装。方針: activeが確殺圏×攻撃してもKO/勝ちに届かない場合、(a)恒久エネは後続へ (b)チップ価値(次ターンの後続KO装填)とprize損失(pv×)の比較 (c)退避可能なら退避を優先。17巡目comp格上げに「act非確殺」条件の追加を検討(壁ケースの再検証必須)",
   "match": "arch",
   "status": "Open"
+ },
+ "SwitchAdvanceUnpayableMain": {
+  "cause": "(人間レビュー指摘・相手lucario bot側) 攻撃コストを払えない主力を Switch で前進させ被弾させる。登録リプレイ実測2件: lucario-3 T4(act Lunatone110e0でSwitch→Mega Lucario 340e0=エネ0が前進→被弾)、lucario-7 T6(act Solrock110e0でSwitch→ML340e0前進→被弾)。_should_switchの前進パスの「前進すれば殴れる」検証が甘い疑い(手貼り1枚でML(コスト2+)は払えないのに前進、または昇格選択がエネ0のMLを選ぶ)。SwitchWaste修正(retreat系)と同じゲートがSwitch前進パスに未適用の可能性",
+  "cycles": [
+   0
+  ],
+  "detector": "SwitchWaste(既存)が拾えていない=検出器の穴でもある",
+  "evidence": {
+   "confirmed": 2,
+   "frequency": 2,
+   "rejected": 0
+  },
+  "first_seen": "2026-07-07",
+  "fix": "未実装(次セッション): ①_should_switch前進パスに_move_payable(後続, 手札エネ込み・全コスト充足)検証 ②昇格選択で「殴れない主力を確殺圏に出さない」 ③ベンチマークbot健全性の観点(memory: benchmark-health-first)でも優先",
+  "match": "lucario",
+  "status": "Open"
  }
 }
