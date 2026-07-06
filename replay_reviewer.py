@@ -1266,6 +1266,54 @@ def det_attack_win_skipped(g, sig):
             sig("MissedLethal|攻撃選択が勝ち切り技を外した", g["ep"], cur.get("turn"))
 
 
+def det_boss_win_skipped(g, sig):
+    """MissedLethal|Boss勝ち筋逃し: サポ権のBossが打てて「引きずり出し→攻撃(スプラッシュ込み)で
+    残りサイド取り切り」が立つのに、そのターンBossを打たなかった(勝ち監査 R42 grimmsnarl T11:
+    Boss→Munkidori110+Jetting KO+撒き50=Snorunt20 KO=1ターン2枚=勝ちをKO回数算術が却下)。
+    ※素の攻撃で勝てるターンは対象外(det_attack_win_skippedの領分)。"""
+    boss_turns = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        h = hand_ids(me)
+        if (ch.get("type") == PLAY and ch.get("index") is not None
+                and ch["index"] < len(h) and h[ch["index"]] == BOSS):
+            boss_turns.add(cur.get("turn"))
+    hit = set()
+    for t, ob, act in g["decisions"]:
+        cur, me, opp = my_view(ob, g["my"])
+        sel, ch = chosen(ob, act)
+        if not ch or cur.get("yourIndex") != g["my"] or (sel or {}).get("type") != MAIN:
+            continue
+        tn = cur.get("turn")
+        if tn in boss_turns or tn in hit:
+            continue
+        h = hand_ids(me)
+        boss_playable = any(o.get("type") == PLAY and o.get("index") is not None
+                            and o["index"] < len(h) and h[o["index"]] == BOSS
+                            for o in (sel.get("option") or []))
+        if not boss_playable:
+            continue
+        a = (me.get("active") or [None])[0]
+        oa = (opp.get("active") or [None])[0]
+        if not a or not oa:
+            continue
+        my_left = len(me.get("prize") or []) or 6
+        if _attack_prizes(cur, me, opp, a) >= my_left:
+            continue
+        bench = [b for b in (opp.get("bench") or []) if b]
+        for bi, b in enumerate(bench):
+            opp2 = dict(opp)
+            opp2["active"] = [b]
+            opp2["bench"] = [x for j, x in enumerate(bench) if j != bi] + [oa]
+            if _attack_prizes(cur, me, opp2, a) >= my_left:
+                hit.add(tn)
+                sig("MissedLethal|Boss勝ち筋逃し(引き出し勝ち)", g["ep"], tn)
+                break
+
+
 def det_doomed_no_retreat(g, sig):
     """DoomedNoRetreat: 前の攻撃役(サイド2+)が次ターン被KO確定圏×不利トレード(取れるサイド<
     失うサイド)×RETREAT可×ベンチに攻撃可能な主力後続、なのに残って手番を閉じた(人間レビュー6巡目⑤)。"""
@@ -2261,7 +2309,7 @@ DETECTORS = [det_fetch_skew, det_unused_supporter, det_missed_lethal,
              det_doomed_game_loss, det_switch_waste, det_bench_bait_loss,
              det_base_line_sacrifice, det_evolve_into_loss, det_switch_into_loss,
              det_volatile_retreat_fuel, det_attack_win_skipped,
-             det_attach_idle_active]
+             det_attach_idle_active, det_boss_win_skipped]
 
 
 # ============ Layer 2: Aggregator ============

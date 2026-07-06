@@ -4579,5 +4579,22 @@
   "fix": "①_is_loss_bait: KO免除に「KO後残存脅威<自HP」を追加(全前進経路の共通判定) ②_should_switch: wins_now(勝ち切り/KO後安全)ならreturn False=温存パスに落とさない ③det_doomed_no_switch: 同例外を追加(擬陽性除去)",
   "match": "mirror",
   "status": "Fixed"
+ },
+ "BossSplashWinBlind": {
+  "cause": "勝ち監査(勝ち試合の全ターンに勝ち筋があったか逆走査)で発見。①_should_play_bossのKO回数算術が「Boss+攻撃(スプラッシュ込み)=1ターン2枚」を数えられずBoss勝ちを却下(R42 grimmsnarl T11: Boss→Munkidori110+Jetting KO+撒き50=Snorunt20 KO=2枚=勝ち→Nebula 230残20=0枚を選択、勝利T13へ遅延) ②逆に素の攻撃で勝てる盤面でBossを打ち自分で勝ち盤面を破壊(R35 dragapult T17: Jetting=Munkidori KO+撒きDreepy20=2枚=勝ちなのにBossでDreepyを引き出し撒き先を消して1枚=勝利T21へ遅延)。③R43-arch T17は監査側の擬陽性(reviewer簡易計算が抵抗-30を無視。botのBossが正着)と判別済み",
+  "cycles": [
+   0
+  ],
+  "detector": "MissedLethal|Boss勝ち筋逃し(新設BLOCKING。9ラウンド×両サイド=108件で該当1件のみ・誤爆0)",
+  "evidence": {
+   "confirmed": 2,
+   "frequency": 2,
+   "rejected": 1,
+   "ab": "対フィールドN=300: 82%で健全。QA PASS"
+  },
+  "first_seen": "2026-07-07",
+  "fix": "①_dragged_attack_prizes新設(ベンチを引き出した仮想盤面で_attack_prizes_nowを再利用=手貼り/イグニ/スプラッシュ/シールド/抵抗すべて本物の意味論) ②_should_play_boss冒頭: 素の攻撃で勝ち切れる→Bossを打たない/引き出しで勝ち切れる→算術に関係なく打つ ③_ko_gust_pickに勝ちターゲット最優先キー(Munkidori=2枚とSnorunt=1枚を区別)",
+  "match": "grimmsnarl",
+  "status": "Fixed"
  }
 }

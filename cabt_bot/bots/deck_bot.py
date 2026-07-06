@@ -2887,6 +2887,32 @@ class DeckBot(Bot):
                 best = max(best, self._prize_value(sp.get("id")))
         return best >= need
 
+    def _dragged_attack_prizes(self, bench_i) -> int:
+        """相手ベンチbench_iを前に引きずり出した仮想盤面での、今ターン攻撃で取れるサイド数
+        (手貼り込み・スプラッシュKO込み=_attack_prizes_nowをスワップ盤面で再利用)。"""
+        cur = self._cur
+        if not cur:
+            return 0
+        oi_ = 1 - cur["yourIndex"]
+        opp = cur["players"][oi_]
+        oa = (opp.get("active") or [None])[0]
+        bench = list(opp.get("bench") or [])
+        if not (0 <= bench_i < len(bench)) or not bench[bench_i]:
+            return 0
+        opp2 = dict(opp)
+        opp2["active"] = [bench[bench_i]]
+        opp2["bench"] = [x for j, x in enumerate(bench) if j != bench_i] + ([oa] if oa else [])
+        cur2 = dict(cur)
+        players2 = list(cur["players"])
+        players2[oi_] = opp2
+        cur2["players"] = players2
+        saved = self._cur
+        self._cur = cur2
+        try:
+            return self._attack_prizes_now()
+        finally:
+            self._cur = saved
+
     def _should_play_boss(self) -> bool:
         """ボスは『前を倒せない×ベンチにKO可能あり』または『より大きなサイドを取れる』時のみ。"""
         cur = self._cur
@@ -2899,6 +2925,20 @@ class DeckBot(Bot):
         act = (opp.get("active") or [None])[0]
         if not act:
             return False
+        # ボス勝ち切り: 引きずり出し→攻撃(スプラッシュ込み)で残りサイドを取り切れるなら
+        # KO回数算術に関係なく打つ(勝ち監査 R42 grimmsnarl T11: Boss→Munkidori110+Jetting
+        # +撒き50=Snorunt20 KO=1ターン2枚=勝ちを「ボス経路はKO回数が増える」算術が却下し
+        # Nebula 210→Grimm230残20=0枚を選択、勝利がT13に遅延)
+        pr_bw = self.analyze_prize()
+        my_left_bw = pr_bw.get("my_prizes") or 6
+        if self._attack_prizes_now() >= my_left_bw:
+            # 素の攻撃(スプラッシュ込み)で既に勝ち切れる=ボスは盤面を壊すだけ(勝ち監査
+            # R35 dragapult T17: Jetting=Munkidori KO+撒きDreepy20 KO=2枚=勝ちなのに
+            # BossでDreepyを引きずり出し撒き先を消して1枚=勝利がT21に遅延)
+            return False
+        for bi, spb in enumerate(opp.get("bench") or []):
+            if spb and self._dragged_attack_prizes(bi) >= my_left_bw:
+                return True
         can_ko_active = self._eff_dmg(dmg, ign, act.get("id")) >= (act.get("hp") or 9999)
         active_val = self._prize_value(act.get("id"))
         best_bench = 0
@@ -2981,10 +3021,18 @@ class DeckBot(Bot):
                     cand.append(self._spread_key(sp, cid, hp, threat, spread, dmg, cand_max_th) + (i,))
                 else:
                     koable = 1 if self._eff_dmg(dmg, ign, cid) >= hp else 0
+                    # 勝ちターゲット最優先: この個体を引きずり出すと攻撃(スプラッシュ込み)で
+                    # 勝ち切れる(R42 grimmsnarl T11: Munkidori=KO+撒きSnorunt=2枚。Snorunt
+                    # を釣ると撒き先Munkidori110は落ちず1枚止まり=選択順が勝敗を分ける)
+                    win_t = 0
+                    if op.area != AreaType.ACTIVE and op.index is not None:
+                        my_left_g = self.analyze_prize().get("my_prizes") or 6
+                        if self._dragged_attack_prizes(op.index) >= my_left_g:
+                            win_t = 1
                     # 同点(同KO/同サイド)ならエネ投資が多い個体を釣る=投資破壊+進化して戻るのを防ぐ
                     # (人間レビュー18巡目 dragapult T5: Dreepy-e0を釣りe1が生存→Drakloakに進化)
                     e_inv = len(sp.get("energyCards") or [])
-                    cand.append((koable, self._prize_value(cid), threat, e_inv, -hp, i))
+                    cand.append((win_t, koable, self._prize_value(cid), threat, e_inv, -hp, i))
         if not cand:
             return None
         return max(cand)[-1]
