@@ -469,7 +469,8 @@ class DeckBot(Bot):
                     continue
                 mt = re.match(r"(\d+)", str(m.damage or ""))
                 if mt:
-                    best_dmg = max(best_dmg, self._eff_dmg(int(mt.group(1)), False, oa.get("id")))
+                    best_dmg = max(best_dmg, self._eff_dmg(
+                        int(mt.group(1)), "affected by Weakness" in (m.effect or ""), oa.get("id")))
         return best_dmg < (oa.get("hp") or 9999)
 
     def _pick_attach(self, idxs, options, hand, me):
@@ -666,7 +667,8 @@ class DeckBot(Bot):
             if not payable:
                 continue
             total = 0
-            if self._eff_dmg(int(mt.group(1)), False, oa.get("id")) >= (oa.get("hp") or 9999):
+            if self._eff_dmg(int(mt.group(1)), "affected by Weakness" in (m.effect or ""),
+                             oa.get("id")) >= (oa.get("hp") or 9999):
                 total += self._prize_value(oa.get("id"))
             sp_mt = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
             spread = int(sp_mt.group(1)) if sp_mt else 0
@@ -728,7 +730,8 @@ class DeckBot(Bot):
                 continue
             mt = re.match(r"(\d+)", str(m.damage or ""))
             if mt:
-                best = max(best, self._eff_dmg(int(mt.group(1)), False, oa.get("id")))
+                best = max(best, self._eff_dmg(
+                    int(mt.group(1)), "affected by Weakness" in (m.effect or ""), oa.get("id")))
         return best >= (oa.get("hp") or 9999)
 
     def _move_payable(self, sp, extra_energy_id=None) -> bool:
@@ -888,7 +891,8 @@ class DeckBot(Bot):
         out = []
         for i in idxs:
             dmg = self._dmg(options[i]) or 0
-            eff = self._eff_dmg(dmg, False, oa.get("id"))
+            ign_i = "affected by Weakness" in self._atk_texts().get(options[i].attack_id, "")
+            eff = self._eff_dmg(dmg, ign_i, oa.get("id"))
             if eff >= hp_o:
                 out.append(i)              # KO=装填ごと除去
                 continue
