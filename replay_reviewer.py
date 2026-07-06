@@ -1302,6 +1302,12 @@ def det_bench_heal_missed(g, sig):
         h = hand_ids(me)
         if WALLY not in h:
             continue
+        # 選択肢実在: PLAY Wallyがエンジンの選択肢に無ければ対象外(Wallyの対象=Mega限定=
+        # Cinderace等の壁が重傷でも打てない。mirror-6 T7: 手札在中だけ見て発火した偽陽性)
+        if not any(o.get("type") == PLAY and o.get("index") is not None
+                   and o["index"] < len(h) and h[o["index"]] == WALLY
+                   for o in (sel.get("option") or [])):
+            continue
         target = any(sp and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
                      and not (sp.get("energyCards") or [])
                      and (C.get(sp.get("id")) and not C[sp.get("id")].is_basic)

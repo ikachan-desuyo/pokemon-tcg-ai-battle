@@ -303,6 +303,11 @@ class DeckBot(Bot):
             # 山にたね/ポフィン7枚=引ければ生存できた)。通常時は従来通り_main後段で判断。
             if self._lillie_emergency():
                 return 95
+            # エネ掘り(勝ち筋直結)も_play_scoreに昇格: 手札エネ0×攻撃役が技を払えない×p_draw高
+            # の時、軽微ヒール(50)等がサポ権を先に消費するのを防ぐ(人間レビュー18巡目 mirror T11:
+            # 相手Mega残20=エネ1枚で即勝ちの局面でWally50が先取り→勝利がT13に遅延)
+            if self._lillie_energy_dig():
+                return 70
             return None
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
@@ -1669,6 +1674,11 @@ class DeckBot(Bot):
         # 前進パス: retreat版(_should_reposition)と同じ検証に委譲=先攻T1ガード+
         # 「前進先が今ターン実際に殴れる」を要求(自己レビューarch-5 T1: 攻撃不可ターンに
         # Switchを消費して進化土台を前進=退避資源の浪費+土台の露出)。
+        # 無料退却(逃げ0)で同じ前進ができるならSwitch札は温存(人間レビュー18巡目 dragapult T3:
+        # Cinderace逃げ0なのにSwitch消費=終盤の退避切符を無償の手段があるのに浪費)
+        info_a = self._cardinfo.get(act.get("id"))
+        if info_a is not None and int(info_a.retreat or 0) == 0:
+            return False
         return self._should_reposition(me)
 
     def _take_rank(self, op: Option) -> int:
@@ -1720,7 +1730,12 @@ class DeckBot(Bot):
         if not act or not act[0]:
             return False
         if act[0].get("id") in self.plan.attackers:
-            return False  # 既に攻撃役が前
+            cur_r = self._cur or {}
+            act_can = self._move_payable(act[0]) or (not cur_r.get("energyAttached") and any(
+                self._is_energy(c.get("id")) and self._move_payable(act[0], c.get("id"))
+                for c in (me.get("hand") or [])))
+            if act_can:
+                return False  # 既に「攻撃できる」攻撃役が前(名目だけの攻撃役=払えないなら前進検討)
         for sp in me.get("bench") or []:
             if not sp or sp.get("id") not in self.plan.attackers:
                 continue
@@ -1758,9 +1773,18 @@ class DeckBot(Bot):
         if cur.get("turn") == 1 and cur.get("yourIndex") == cur.get("firstPlayer"):
             return False
         act = (me.get("active") or [None])[0]
-        if not act or act.get("id") in self.plan.attackers:
+        if not act:
             return False
         not_attached = not cur.get("energyAttached")
+        if act.get("id") in self.plan.attackers:
+            # 前が攻撃役でも「今ターン攻撃できない」(払えず手貼りでも立たない)なら前進検討を継続
+            # (人間レビュー18巡目 alakazam相手bot T4: e0のDunsparce=名目攻撃役が前で、
+            #  e1で払えるKadabraがベンチに居るのにEND)
+            act_can = self._move_payable(act) or (not_attached and any(
+                self._is_energy(c.get("id")) and self._move_payable(act, c.get("id"))
+                for c in (hand or [])))
+            if act_can:
+                return False
         have_energy = any(self._is_energy(c.get("id")) for c in (hand or []))
         for sp in me.get("bench") or []:
             if not sp or sp.get("id") not in self.plan.attackers:
@@ -2198,10 +2222,56 @@ class DeckBot(Bot):
             oa0 = (opp0.get("active") or [None])[0]
             oi0 = self._cardinfo.get((oa0 or {}).get("id"))
             variable = any("for each" in (m.effect or "") for m in (oi0.moves if oi0 else []))
+            # 譲る条件はWally自身の発火条件(重傷150+)と揃える: 150未満だとWallyは打たれず
+            # 「どちらも発火しない=サポ権未使用」の隙間に落ちる(人間レビュー18巡目 lucario-5 T7:
+            # 単騎×被KO×ダメージ130でリーリエもWallyも不発)
             if (not variable and act
+                    and (act.get("maxHp") or 0) - (act.get("hp") or 0) >= 150
                     and (act.get("maxHp") or 0) > self._incoming_threat(act)):
                 return False
         return True
+
+    def _lillie_energy_dig(self) -> bool:
+        """エネ掘りリーリエの成立条件(手札エネ0×場の攻撃役が最大技/どの技も払えない×p_draw>=0.55)。
+        _should_use_lillieのエネ掘り条項と同一意味論(こちらは_play_scoreの優先度付けに使う)。"""
+        me = self._me()
+        if not me or not self.deck_counts:
+            return False
+        hand = me.get("hand") or []
+        if any(self._is_energy(cd.get("id")) for cd in hand):
+            return False
+        # 生きた状況札(Wally等)の温存: 重傷×反転可のヒール条件が成立しているなら回復が先
+        # (エネ掘り70が正当なヒール60を先取りした60戦退行: mirror-4 T9/mirror-6 T7)
+        if any(c.get("id") in self.plan.heal_return_cards for c in hand):
+            act_h = (me.get("active") or [None])[0]
+            if (self._attacker_damaged(150) and act_h
+                    and (act_h.get("maxHp") or 0) > self._incoming_threat(act_h)):
+                return False
+            for sp in me.get("bench") or []:
+                if (sp and sp.get("id") in self.plan.attackers
+                        and (sp.get("maxHp") or 0) - (sp.get("hp") or 0) >= 150
+                        and not (sp.get("energyCards") or [])):
+                    return False
+        prizes_left = len(me.get("prize") or [])
+        draw_n = 8 if prizes_left >= 6 else 6
+        act0 = (me.get("active") or [None])[0]
+        if act0 and act0.get("id") in self.plan.attackers:
+            dmg_now, _ = self._active_attack_potential()
+            info0 = self._cardinfo.get(act0.get("id"))
+            import re as _re
+            full = 0
+            for m in (info0.moves if info0 else []):
+                mt = _re.match(r"(\d+)", m.damage or "")
+                if mt:
+                    full = max(full, int(mt.group(1)))
+            if dmg_now < full and self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55:
+                return True
+        for sp in [act0] + list(me.get("bench") or []):
+            if (sp and sp.get("id") in self.plan.attackers
+                    and not self._move_payable(sp)
+                    and self._p_draw(self._energy_ids, draw_n, include_hand=True) >= 0.55):
+                return True
+        return False
 
     def _should_use_lillie(self) -> bool:
         """リーリエの決心: 手札を山に戻して6枚(早期=サイド6なら8枚)引く。
@@ -2370,6 +2440,7 @@ class DeckBot(Bot):
                     spread = int(mt.group(1))
                     break
         cand = []
+        pre = []
         for i, op in enumerate(sel.options):
             if op.player_index != opp_idx:
                 continue
@@ -2377,17 +2448,25 @@ class DeckBot(Bot):
             if op.index is not None and 0 <= op.index < len(spots) and spots[op.index]:
                 sp = spots[op.index]
                 cid = sp.get("id")
-                # ベンチ被ダメ無効(Dragapult exのTera等)は撒き対象から除外=ダメージが入らない
-                # (AI自己レビュー: dragapult-3 T9/T11で撒き50を2回無駄にした)
                 if spread and op.area != AreaType.ACTIVE and self._bench_damage_immune(cid):
                     continue
+                th0 = _line_threat(cid) or 0
+                if self._line_has_variable_damage(cid):
+                    th0 = max(th0, 400)
+                pre.append((i, op, sp, cid, th0))
+        cand_max_th = max((t for *_, t in pre), default=0)
+        for i, op, sp, cid, th0 in pre:
+            if True:
                 hp = sp.get("hp", 9999)
-                threat = _line_threat(cid)   # 進化ライン脅威度(例:リオル=メガルカリオ線)
+                threat = th0                 # 進化ライン脅威度(例:リオル=メガルカリオ線)
                 if spread:
-                    cand.append(self._spread_key(sp, cid, hp, threat, spread, dmg) + (i,))
+                    cand.append(self._spread_key(sp, cid, hp, threat, spread, dmg, cand_max_th) + (i,))
                 else:
                     koable = 1 if self._eff_dmg(dmg, ign, cid) >= hp else 0
-                    cand.append((koable, self._prize_value(cid), threat, -hp, i))
+                    # 同点(同KO/同サイド)ならエネ投資が多い個体を釣る=投資破壊+進化して戻るのを防ぐ
+                    # (人間レビュー18巡目 dragapult T5: Dreepy-e0を釣りe1が生存→Drakloakに進化)
+                    e_inv = len(sp.get("energyCards") or [])
+                    cand.append((koable, self._prize_value(cid), threat, e_inv, -hp, i))
         if not cand:
             return None
         return max(cand)[-1]
@@ -2431,7 +2510,7 @@ class DeckBot(Bot):
         self._varline_cache[cid] = out
         return out
 
-    def _spread_key(self, sp, cid, hp, threat, spread, our_dmg):
+    def _spread_key(self, sp, cid, hp, threat, spread, our_dmg, cand_max_th=None):
         """ベンチ撒き(Jetting Blow等)の対象優先度テーブル＝ベース×相手デッキ(self._matchup)×局面。
         ダメージは進化で引き継ぐので『将来この火力枠が前に出た時、今の撒きでKO攻撃回数を減らせるか』を予測する。
           - 序盤: 発展中の主力ライン(進化前=最大脅威の線)を優先的に削り、将来の脅威の芽を先に摘む。
@@ -2446,8 +2525,11 @@ class DeckBot(Bot):
         ci = self._cardinfo.get(cid)
         if self._line_has_variable_damage(cid):
             threat = max(threat, 400)            # 可変ダメ線(Powerful Hand等)=実質最大脅威
+        # スナイプ閾値は「現存候補中の最大脅威線」(歴史的_opp_main_lineだと既に全滅した線=
+        # 例: 死んだLucario線270が、現役のMakuhita線210のスナイプを永遠に抑制する)
+        top_th = cand_max_th if cand_max_th is not None else (self._opp_main_line or 0)
         snipe = 1 if (ci and ci.is_basic and threat >= 180
-                      and threat >= (self._opp_main_line or 0)
+                      and threat >= top_th
                       and 2 * spread >= hp and fhp > hp) else 0
         maxhp = sp.get("maxHp") or fhp or hp
         cur_dmg = max(0, maxhp - hp) if sp.get("maxHp") else 0

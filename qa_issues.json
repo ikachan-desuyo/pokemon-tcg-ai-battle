@@ -52,6 +52,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -112,9 +115,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 4,
+  "regressions": 5,
   "cause": "緊急時Gate欠如",
   "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
@@ -167,6 +173,9 @@
    0,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -233,6 +242,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -248,6 +260,9 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -350,6 +365,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -405,7 +423,10 @@
    117,
    129,
    135,
-   120
+   120,
+   113,
+   107,
+   103
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -460,7 +481,10 @@
    23,
    24,
    24,
-   19
+   19,
+   26,
+   17,
+   25
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -519,7 +543,10 @@
    28,
    28,
    29,
-   25
+   25,
+   30,
+   28,
+   28
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -578,7 +605,10 @@
    20,
    26,
    21,
-   23
+   23,
+   17,
+   22,
+   18
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -636,6 +666,9 @@
    0,
    0,
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 4,
@@ -695,9 +728,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1
+  "regressions": 2
  },
  "FetchIgnition(1エネ圏)": {
   "status": "Graduated",
@@ -750,9 +786,12 @@
    0,
    0,
    0,
+   0,
+   0,
+   1,
    0
   ],
-  "regressions": 4
+  "regressions": 5
  },
  "BossNoPathGain": {
   "status": "Graduated",
@@ -805,6 +844,9 @@
    0,
    1,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -820,6 +862,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -912,6 +957,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 5,
@@ -963,9 +1011,12 @@
    0,
    0,
    1,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 3
+  "regressions": 4
  },
  "CapeSkew": {
   "status": "Graduated",
@@ -977,6 +1028,9 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1062,6 +1116,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1086,6 +1143,9 @@
    2,
    0,
    3,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1160,9 +1220,12 @@
    0,
    0,
    0,
+   0,
+   2,
+   0,
    0
   ],
-  "regressions": 2
+  "regressions": 3
  },
  "DoomedNoRetreat": {
   "status": "Graduated",
@@ -1209,6 +1272,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1226,6 +1292,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1305,6 +1374,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1
@@ -1353,6 +1425,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2
@@ -1371,6 +1446,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1442,6 +1520,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0
@@ -1483,6 +1564,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1495,7 +1579,7 @@
   "cause": "ミツルのlethal_nowゲートが過剰(エネ0ベンチ回復は攻撃と両立するのに封印→多面KO負け)",
   "fix": "エネ0×重傷150+のベンチ攻撃役が居ればlethalでも回復60。検出器はサポ権未使用ケース限定",
   "first_seen": "2026-07-05",
-  "graduated": "2026-07-05",
+  "graduated": "2026-07-06",
   "cycles": [
    1,
    0,
@@ -1525,9 +1609,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 0,
+  "regressions": 1,
   "note": "AI自己レビュー(1処理ずつ全可視情報+カード効果で検証)による発見"
  },
  "AttackPotentialPlanBlind": {
@@ -1540,6 +1627,9 @@
   "graduated": "2026-07-05",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1580,6 +1670,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1648,9 +1741,12 @@
    0,
    0,
    0,
+   0,
+   1,
+   0,
    0
   ],
-  "regressions": 1,
+  "regressions": 2,
   "cause": "存在しないフィールド名('energies')参照=条件が常に偽の休眠バグ(3箇所)。検出器側も「エネ1枚=攻撃可」の緩い意味論で不一致",
   "evidence": {
    "frequency": 2,
@@ -1680,6 +1776,9 @@
    0,
    0,
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1729,6 +1828,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 1,
@@ -1768,6 +1870,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1788,6 +1893,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1840,6 +1948,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 2,
@@ -1874,6 +1985,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 3,
@@ -1894,6 +2008,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1936,6 +2053,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1956,6 +2076,9 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0,
    0,
    0,
@@ -1982,6 +2105,9 @@
    0,
    0,
    0,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -1995,13 +2121,16 @@
   "graduated": "2026-07-06"
  },
  "KoRemovesThreatBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "DoomedGameLoss(退避側の過剰発火として顕在化)",
   "match": "DoomedGameLoss",
   "fix": "死んだら負けゲート(retreat_doomed/switch)に「KOで脅威源が消える(相手ベンチに現エネで攻撃可能な後続なし=_opp_bench_charged偽)なら残って殴る」例外。検出器にも同一意味論",
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2011,16 +2140,20 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "人間レビュー16巡目"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "PreserveGatePlanOnly": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "DoomedNoSwitch",
   "match": "DoomedNoSwitch",
   "fix": "温存パスの対象を「plan.attackers またはライン180+」に一般化(planに列挙されない主役級=Hariyama等)",
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2030,16 +2163,20 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "人間レビュー16巡目 lucario相手bot T8/T10"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "T1DoomedActiveAttach": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(人間式1処理精読で発見。検出器なし=低頻度・低実害)",
   "match": "-",
   "fix": "_pick_attachキーに「先攻T1(攻撃不可)×activeが次ターン確殺圏→ベンチ同候補を優先」",
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2049,16 +2186,20 @@
    "confirmed": 1,
    "rejected": 0,
    "note": "17巡目=ツール非依存の全決定精読(勝ち試合含む)1本目で発見。arch-0の同型局面(脅威30=生存圏)ではactive貼りが正当と対比確認"
-  }
+  },
+  "graduated": "2026-07-06"
  },
  "SpreadLineBlind": {
-  "status": "Fix Applied",
+  "status": "Graduated",
   "detector": "(人間式1処理精読で発見)",
   "match": "-",
   "fix": "_spread_keyに可変ダメ線判定(_line_has_variable_damage: 進化2段の効果文走査→threat=max(400))+エネ投資タイブレーク(e_inv)",
   "first_seen": "2026-07-06",
   "cycles": [
    2,
+   0,
+   0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2068,6 +2209,115 @@
    "confirmed": 2,
    "rejected": 0,
    "note": "17巡目精読3本目(alakazam-0勝ち)。T5: Dunsparce10よりAbra50(e1)/T7: Abra-e0よりAbra-e1。修正後両局面でAbra(e1)選択を確認"
+  },
+  "graduated": "2026-07-06"
+ },
+ "SwitchOverFreeRetreat": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "_should_switch前進パス: activeが逃げ0なら入替札を温存(無料退却が同効果)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "PLAYフェーズが退却検討より先に走り、無料の手段があるのにSwitch札を消費(dragapult T3)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "GustEnergyTiebreak": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "_ko_gust_pick(ボス/釣り)にエネ投資タイブレーク+可変ダメ線ブースト(スプラッシュ側と同一意味論)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "同KO同サイドの2択でエネ付き個体を残す→進化して戻る(dragapult T5: Dreepy-e1生存→Drakloak)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "EnergyDigPreempted": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "エネ掘りリーリエを_play_scoreに昇格(70)+生きたヒール条件成立時は譲る",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "エネ1枚で即勝ちの局面でWally50が先にサポ権を消費し勝利が2ターン遅延(mirror T11)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "SnipeDeadLineSuppress": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "_spread_keyのスナイプ閾値を「現存候補中の最大脅威線」に(歴史的_opp_main_lineは死線を含む)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "全滅済みのLucario線270が現役Makuhita線210のスナイプを永遠に抑制",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "NominalAttackerBlock": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "前進ゲートの「既に攻撃役が前」判定を「前が今ターン攻撃できる」に(名目攻撃役=払えない壁を除外)",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "10点技持ちの壁Dunsparceがattackers扱い→e1で払えるKadabraの前進を永遠にブロック(alakazam相手bot)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
+  }
+ },
+ "EmergencyWallyGap": {
+  "status": "Fix Applied",
+  "detector": "(18巡目・6戦全決定精読で発見)",
+  "match": "-",
+  "fix": "緊急リーリエの「Wallyに譲る」条件をWally自身の発火条件(重傷150+)と同一化",
+  "first_seen": "2026-07-07",
+  "cycles": [
+   1,
+   0
+  ],
+  "regressions": 0,
+  "cause": "ダメージ130が両ゲートの隙間に落ち、単騎×被KOでどちらも不発=サポ権未使用(lucario-5 T7)",
+  "evidence": {
+   "frequency": 1,
+   "confirmed": 1,
+   "rejected": 0
   }
  }
 }
