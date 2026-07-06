@@ -616,10 +616,19 @@ def det_doomed_no_switch(g, sig):
         # 現実的評価(相手の現エネ+1で払える技)。bot側温存パスと同一意味論
         # (ライン最大基準だとbotが退避しない局面を検出=不整合)
         dmg_in = _incoming_next(a, oa, None, opp.get("handCount"), opp.get("bench"))
+        _op_p0 = opp.get("prize")
+        opp_left0 = len(_op_p0) if _op_p0 is not None else 6
+        death_loses = _pv(a.get("id")) >= opp_left0
+        ko_now = attack_dmg(a, cur, oa.get("id")) >= (oa.get("hp") or 9999)
+        if death_loses and ko_now:
+            # このターンKOする=装填銃の昇格を強制。死んだら負けの被KO圏判定はKO後脅威込み
+            # (bot _should_switch同一意味論。R38 arch T15: RH320昇格の見落とし)
+            dmg_in = max(dmg_in, _post_ko_next(a, None, opp.get("bench"), opp.get("handCount")))
         if dmg_in <= 0 or (a.get("hp") or 999) > dmg_in:
             continue                                    # 被KO圏でない
-        if any(e.get("id") != IGN for e in (a.get("energyCards") or [])):
-            continue                                    # 常設エネ投資あり=退くと損失(温存対象外)
+        if (not death_loses
+                and any(e.get("id") != IGN for e in (a.get("energyCards") or []))):
+            continue    # 常設エネ投資あり=退くと損失(温存対象外)。ただし死んだら負けなら投資無関係
         if cur.get("energyAttached"):
             continue                                    # 手貼り済み=温存の判断窓は閉じた後(交代は攻撃を失う)
         h = me.get("hand") or []

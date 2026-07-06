@@ -4424,5 +4424,22 @@
   "fix": "_line_variant_ids新設: 同線の変種が観測済みならそれに限定(幻の別変種を見ない)、未観測ならDB変種全体=アーキタイプ推定(場の進化前が実在証拠。DB実測: 進化元あたり平均1.31変種)。reviewer _incoming/_incoming_nextも同一意味論",
   "match": "alakazam",
   "status": "Fixed"
+ },
+ "SwitchPostKoThreatBlind": {
+  "cause": "_should_switchの被KO圏判定が「相手の現activeが生きている前提の脅威」のみ=自分のKOが装填銃の昇格を強制するケースが見えない。R38 arch T15: 現行脅威30<300で安全判定→Jetting KO→Arch80(maxHp300・カウンタ22)が昇格しRH320でMega300一撃=3枚献上の敗着。Switch在手でMega330を前に出せば同じKOを取りRH320を10残しで耐えた(SwitchPreservesEnergyと同型の残差)",
+  "cycles": [
+   0
+  ],
+  "detector": "DoomedNoSwitch(KO後脅威込みへ拡張。死んだら負けでは投資スキップ無効化)",
+  "evidence": {
+   "confirmed": 1,
+   "frequency": 1,
+   "rejected": 0,
+   "ab": "対フィールドN=300: 79%(前82%=ノイズ域)・grimm追試N=100: 83%で健全確認"
+  },
+  "first_seen": "2026-07-07",
+  "fix": "_should_switch: death_loses×ko_nowなら被KO圏判定にth=max(th,_post_ko_threat)。退避先の生存判定も同様にKO後脅威込み。retreat系は「退けばKOしない=昇格しない」ため変更なし(意味論の非対称が正しい)",
+  "match": "arch",
+  "status": "Fixed"
  }
 }
