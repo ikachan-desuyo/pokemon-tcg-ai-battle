@@ -376,7 +376,8 @@ class DeckBot(Bot):
                 return 86
             if oh >= 5:
                 return 68
-            return None
+            return None  # 薄い手札(<5)へは温存(A/B: 使い切り42はgrimm対mega 26→18/100で悪化。
+                         # サポ権腐り(Petrel未使用5件/巡)の解は別途=Grimm主役化ループで再検討)
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
