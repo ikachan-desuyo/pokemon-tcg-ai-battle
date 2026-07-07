@@ -738,6 +738,19 @@ class DeckBot(Bot):
             if mt and (best is None or int(mt.group(1)) > best[0]):
                 best = (int(mt.group(1)), m.cost or "")
         if not best:
+            # damage欄空の可変ダメ技(Powerful Hand等)しか無いポケモン: 効果文にダメージが
+            # ある技を主技とみなす(alakazam救済R1: PHが見えずcomp常に0→conserve_handが
+            # rule対象(Alakazam/Kadabra)への貼りを全部弾きShaymin/Dunsparceへエネ散逸)
+            best_n = -1
+            for m in info.moves:
+                if (m.name or "").startswith("[Ability]") or m.cost is None:
+                    continue
+                if "damage" in (m.effect or ""):
+                    n_cost = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                    if n_cost > best_n:
+                        best_n = n_cost
+                        best = (0, m.cost or "")
+        if not best:
             return 0
         need_spec = re.findall(r"\{([A-Z])\}", best[1])
         n_any = best[1].count("●")
@@ -1025,6 +1038,23 @@ class DeckBot(Bot):
         for k, (eid, tid) in enumerate(rules):
             if (eid is None or energy == eid) and target == tid:
                 return len(rules) - k
+        # rule対象の進化前も同格: エネは進化で持ち越される=Kadabraへの{P}は次ターンの
+        # Alakazamの{P}(alakazam救済R1: 主役死後の再建でrule外扱いのKadabraがcomp=2の
+        # Dudunsparce(弱攻撃完成)に負けエネ散逸→2ターン無攻撃)
+        ti = self._cardinfo.get(target)
+        t_name = (ti.name or "") if ti else ""
+        if t_name:
+            for k, (eid, tid) in enumerate(rules):
+                if eid is not None and energy != eid:
+                    continue
+                ri = self._cardinfo.get(tid)
+                seen_names = set()
+                while ri and ri.previous_stage and ri.previous_stage not in seen_names:
+                    seen_names.add(ri.previous_stage)
+                    if ri.previous_stage == t_name:
+                        return len(rules) - k
+                    ri = next((x for x in self._cardinfo.values()
+                               if x.name == ri.previous_stage and x.is_pokemon), None)
         return 0
 
     # ===== 攻撃 =====
