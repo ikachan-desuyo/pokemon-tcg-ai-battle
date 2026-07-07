@@ -617,6 +617,34 @@ class DeckBot(Bot):
                         fuel.append((1 if vol_j else 0, j))
                 if fuel:
                     return min(fuel)[1]
+        # 前進燃料: 前が壁で前進したい(_should_reposition)が退却コスト不足なら、最小価値エネを
+        # 前に貼って退却を成立させる(v9ラダー蒸留: ローカルbotの初攻撃T5.9-8.1 vs 実プレイヤー
+        # T2.0-3.4の主因=壁固着。arch: Relicanth前のままT7まで攻撃ゼロ/kanga: Crustle固着/
+        # alakazam: Fez固着と同族)。ベンチ主役が「手貼りなしで既に払える」時のみ
+        # (手貼り依存なら燃料に回すと主役の攻撃が立たない)。
+        if self._should_reposition(me):
+            act_r = (me.get("active") or [None])[0]
+            info_r = self._cardinfo.get((act_r or {}).get("id")) if act_r else None
+            cost_r = int(getattr(info_r, "retreat", 0) or 0)
+            evolved_r = bool(info_r) and not info_r.is_basic
+            units_r = sum(3 if (e.get("id") in self.plan.volatile_energies and evolved_r) else 1
+                          for e in (act_r.get("energyCards") or [])) if act_r else 0
+            bench_ready = any(
+                sp and sp.get("id") in self.plan.attackers and self._move_payable(sp)
+                for sp in me.get("bench") or [])
+            if units_r < cost_r and bench_ready:
+                fuel = []
+                for j in idxs:
+                    if options[j].in_play_area != AreaType.ACTIVE:
+                        continue
+                    e_j = self._hand_id(hand, options[j].index)
+                    if not self._is_energy(e_j):
+                        continue
+                    vol_j = e_j in self.plan.volatile_energies
+                    if units_r + (3 if (vol_j and evolved_r) else 1) >= cost_r:
+                        fuel.append((1 if vol_j else 0, j))
+                if fuel:
+                    return min(fuel)[1]
         best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
