@@ -39,6 +39,9 @@ _GENERIC_TAKE = {
     SelectContext.SETUP_BENCH_POKEMON, SelectContext.EVOLVES_FROM,
     SelectContext.EVOLVES_TO, SelectContext.TO_HAND_ENERGY,
     SelectContext.HEAL, SelectContext.REMOVE_DAMAGE_COUNTER,
+    SelectContext.ATTACH_TO,  # 自己加速のエネ選択(Punk Up=山からD最大5等)。未登録だと
+                              # デフォルトmin数=0で空選択→ハーネスのor[0]で偶然1枚のみ
+                              # (Grimm主役化R2: 中核加速が1/5枚に縮み9Tまで攻撃0の敗着)
 }
 _GENERIC_GIVE = {
     SelectContext.DISCARD, SelectContext.TO_DECK, SelectContext.TO_DECK_BOTTOM,
@@ -1918,6 +1921,27 @@ class DeckBot(Bot):
                     best_key, best_i = key, i
             if best_i is not None:
                 return [best_i]
+        # 自己加速の付け先(ATTACH_FROM=Punk Up等): コスト未充足の攻撃役を優先し、充足済みには
+        # 重ねない(Grimm主役化R2: 5枚全部を単体Grimmsnarlへe6=SB{D}{D}=2の3倍過剰投資
+        # +Adrena燃料のMunkidoriが素寒。1体が飽和したら次の未充足へ回る配分)。
+        if isinstance(ctx, SelectContext) and ctx == SelectContext.ATTACH_FROM:
+            best_i, best_key = None, None
+            me_af = self._me() or {}
+            for i, op in enumerate(sel.options):
+                spots_af = (me_af.get("active") if op.area == AreaType.ACTIVE else me_af.get("bench")) or []
+                sp = (spots_af[op.index]
+                      if op.index is not None and 0 <= op.index < len(spots_af) else None)
+                if not sp:
+                    continue
+                sat = self._completes_cost(None, sp.get("id"), sp) == 2   # 最大技が既に払える=飽和
+                key = (0 if sat else 1,
+                       1 if sp.get("id") in self.plan.attackers else 0,
+                       -(len(sp.get("energyCards") or [])),
+                       sp.get("hp") or 0)
+                if best_key is None or key > best_key:
+                    best_key, best_i = key, i
+            if best_i is not None:
+                return [best_i]
         # 自分の場のエネ破棄(退却コスト等): 揮発エネ(イグニ)を先に捨てる。イグニはどうせ
         # 番末に消える+エンジンは累積ユニット(イグニ=3)≥コストで停止するため、イグニ先捨て
         # なら基本エネが盤面に残る(人間レビュー14巡目 mirror T13: W→イグニの順で2枚捨て。
@@ -2288,6 +2312,9 @@ class DeckBot(Bot):
         c = self._cardinfo.get(target_id)
         weak = c.weakness if c else None
         out = base * 2 if (weak and my_type and weak == my_type and not ign) else base
+        # 抵抗力-30(エンジン実測: Jetting 120→Archaludon ex(抵抗{W})=90。効果無視技は据置)
+        if not ign and out > 0 and c and my_type and (c.resistance or "") == my_type:
+            out = max(0, out - 30)
         # Full Metal Lab: {M}ポケモンへの技ダメージ-30(エンジン実測: FML下のJetting=90/Nebula=210
         # =効果無視技は素通し。人間レビュー20巡目: Jetting120≥100の偽リーサル予測でRH砲を装填し敗着)
         if not ign and out > 0 and c and (c.type or "") == "{M}":
@@ -2805,12 +2832,24 @@ class DeckBot(Bot):
             return False
         th = self.analyze_threat()
         if not th.get("can_ko_me"):
-            # 可変ダメージ技(手札×20のPowerful Hand等)はline_threat=0に静落ちして
-            # can_ko_meが偽陰性になる→単騎では脅威扱い(alakazam-0 T5=ベンチアウト負けの真因)
+            # 単騎の脅威は相手の「盤面全体」のライン最大で見る: ベンチの進化線+Switch/昇格で
+            # どこからでも刺さり、単騎はKO=即敗北(Grimm主役化R2 mega T1: 相手ベンチStaryu線
+            # =Mega 210がT2成立、act線(Cinderace壁)だけ見てcan_ko_me偽陰性→リーリエ2枚
+            # 温存のままEND→T2ベンチアウト負け)。
+            # 可変ダメージ技(手札×のPowerful Hand等)はline_threat静落ち→従来通り脅威扱い。
             opp0 = self._cur["players"][1 - self._cur["yourIndex"]]
-            oa0 = (opp0.get("active") or [None])[0]
-            oi0 = self._cardinfo.get((oa0 or {}).get("id"))
-            if not (oi0 and any("for each" in (m.effect or "") for m in oi0.moves)):
+            act0 = (me.get("active") or [None])[0]
+            hp0 = (act0.get("hp") or 0) if act0 else 0
+            board_th = 0
+            var0 = False
+            for sp0 in [(opp0.get("active") or [None])[0]] + list(opp0.get("bench") or []):
+                if not sp0:
+                    continue
+                board_th = max(board_th, _line_threat(sp0.get("id")) or 0)
+                ci0 = self._cardinfo.get(sp0.get("id"))
+                if ci0 and any("for each" in (m.effect or "") for m in ci0.moves):
+                    var0 = True
+            if board_th < hp0 and not var0:
                 return False
         hand = me.get("hand") or []
         has_basic = any(

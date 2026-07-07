@@ -4842,5 +4842,22 @@
   "fix": "_opt_valueに手札破棄(GIVE)保護序列: hp_boostツール(ケープ)=88・ふしぎなあめ(山にStage2線がある時)=85(HAND areaのみ=取得側の歪みなし)。使用ゲート(サーチ対象が置けるか)は取得側の死進化30点が既に抑制",
   "match": "arch",
   "status": "Fixed"
+ },
+ "AttachToSelectDefaultMin": {
+  "cause": "Grimm主役化R2(mirror精読): SelectContext.ATTACH_TO(自己加速のエネ選択=Punk Up「山からD最大5枚」等)が_GENERIC_TAKE未登録→デフォルトmin数=0で空選択→ハーネスのor[0]で偶然1枚のみ。Grimmの中核加速が1/5枚に縮み、9Tまで攻撃0の大敗を再現的に生んでいた。加えて付け先(ATTACH_FROM)が無配分=5枚全部を単体Grimmsnarlへe6(SB{D}{D}=2の3倍過剰+Adrena燃料のMunkidori素寒)",
+  "cycles": [
+   0
+  ],
+  "detector": "手動精読(Grimm主役化R2)。PromotionSkew/MissedLethal検出器のex遮断・抵抗-30・可変ダメ擬陽性も同時に解消",
+  "evidence": {
+   "confirmed": 1,
+   "frequency": 1,
+   "rejected": 0,
+   "ab": "grimm対mega 26%→48%(+22pt)・対lucario 70%・対kanga 55/100(維持)。QA PASS"
+  },
+  "first_seen": "2026-07-07",
+  "fix": "①ATTACH_TOを_GENERIC_TAKE登録(take_max=最大枚数取得) ②_cardsにATTACH_FROM配分ポリシー(コスト未充足の攻撃役優先・飽和(comp=2)したら次へ) ③bot _eff_dmg+reviewer計算に抵抗-30(エンジン実測) ④reviewer _incoming_nextにex遮断パリティ ⑤_lillie_emergencyの単騎脅威を相手盤面全体のライン最大へ拡張",
+  "match": "grimmsnarl",
+  "status": "Fixed"
  }
 }

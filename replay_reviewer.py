@@ -780,6 +780,24 @@ def det_volatile_retreat_fuel(g, sig):
 WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
+def _ex_shield_blocks_rv(defender, owner_ci, m):
+    """defenderの「Pokémon {ex}からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか
+    (bot _ex_shield_blocks同一意味論。エンジン実測: Jetting(ex)→Crustle 0/Nebula(効果無視)貫通)。"""
+    if not defender or owner_ci is None:
+        return False
+    if "ex" not in (owner_ci.rule or "").lower():
+        return False
+    if "effects on your opponent" in (m.effect or ""):
+        return False
+    ci = C.get(defender.get("id"))
+    for ab in (ci.moves if ci else []):
+        if ((ab.name or "").startswith("[Ability]")
+                and "Prevent all damage" in (ab.effect or "")
+                and "Pokémon {ex}" in (ab.effect or "")):
+            return True
+    return False
+
+
 def _pre_evo_ok(oa, opp_bench):
     """相手の進化ポケが進化前の技を使えるか=Memory Dive型特性の在場(bot同一意味論、エンジン実測:
     Relicanth在場36/36で進化前技が候補/不在31/31で不出=完全分離)。"""
@@ -1222,7 +1240,18 @@ def _attack_prizes_of_option(cur, me, opp, aid):
     if "this attack does nothing" in text:
         return 0                              # 相方依存技は勝ち候補に数えない(保守側)
     total = 0
-    if dmg and dmg >= (oa.get("hp") or 9999):
+    # 弱点/抵抗(bot _eff_dmg同一意味論・効果無視技は据置。抵抗-30を無視すると
+    # 「Jetting 120でarch ex(抵抗W)100を倒せた」等の擬陽性=QA arch T22)
+    a2 = (me.get("active") or [None])[0]
+    ci_a2 = C.get((a2 or {}).get("id"))
+    ci_o2 = C.get(oa.get("id"))
+    eff_d = dmg
+    if dmg and "affected by Weakness" not in text and ci_a2 and ci_o2:
+        if (ci_o2.weakness or "") == (ci_a2.type or ""):
+            eff_d *= 2
+        if (ci_o2.resistance or "") == (ci_a2.type or ""):
+            eff_d = max(0, eff_d - 30)
+    if eff_d and eff_d >= (oa.get("hp") or 9999):
         total += _pv(oa.get("id"))
     spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", text)
     if spm:
@@ -1490,13 +1519,13 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
         return 0
     e = len(oa.get("energyCards") or []) + (3 if (opp_seen is not None and IGN in opp_seen) else 1)
     oi = C.get(oa.get("id"))
-    moves = list(oi.moves) if oi else []
+    movs = [(m, oi) for m in (oi.moves if oi else [])]
     _pre_ok = _pre_evo_ok(oa, opp_bench)
     if _pre_ok:                        # 進化前スタックの技はMemory Dive型在場時のみ(エンジン実測)
         for pe in (oa.get("preEvolution") or []):
             pi_ = C.get((pe or {}).get("id"))
             if pi_:
-                moves += list(pi_.moves)
+                movs += [(m, pi_) for m in pi_.moves]
     if oi:
         # 同線の変種が観測済みならそれに限定、未観測ならDB変種全体=アーキタイプ推定
         # (bot _line_variant_ids同一意味論。R37 alakazam-7 T5: Kadabra在場×Alakazam
@@ -1505,10 +1534,12 @@ def _incoming_next(a, oa, opp_seen=None, opp_owner_hand_count=None, opp_bench=No
                  if di.is_pokemon and di.previous_stage == oi.name]
         seen_v = [d for d in ids_v if opp_seen is not None and d in opp_seen]
         for did in (seen_v or ids_v):
-            moves += list(C[did].moves)
+            movs += [(m, C[did]) for m in C[did].moves]
     hc = opp_owner_hand_count
     best = 0
-    for m in moves:
+    for m, owner_ in movs:
+        if _ex_shield_blocks_rv(a, owner_, m):
+            continue    # ex遮断特性(Rock Inn型)持ちの防御側へは非貫通技0(bot同一意味論)
         need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
         if need > e:
             continue
