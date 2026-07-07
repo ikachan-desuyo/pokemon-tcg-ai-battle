@@ -3504,8 +3504,7 @@ class DeckBot(Bot):
         #   全候補が30に潰れて先頭選びに退化する(人間レビュー7巡目で発覚したバグ)。
         c = self._cardinfo.get(cid)
         if (c and c.is_pokemon and not c.is_basic and c.previous_stage
-                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)
-                and not any(cd.get("id") == RARE_CANDY for cd in (self._me() or {}).get("hand") or [])):
+                and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)):
             me = self._me() or {}
             names = set()
             for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
@@ -3517,8 +3516,26 @@ class DeckBot(Bot):
                 ci2 = self._cardinfo.get(cd.get("id"))
                 if ci2:
                     names.add(ci2.name)
-            if c.previous_stage not in names:
+            placeable = c.previous_stage in names
+            if not placeable and "Stage 2" in (c.stage or "") and any(
+                    cd.get("id") == RARE_CANDY for cd in me.get("hand") or []):
+                # アメ免除はStage2×土台(前の前=たね)が場/手札に居る時だけ。旧実装は
+                # 「アメ在手なら無条件スキップ」でMorgrem(Stage1)や土台不在のGrimmsnarlまで
+                # 素通し(Grimm主役化R3 dragapult T1-T3: 単騎でPoké Padが置けない進化を
+                # 2連続サーチ→ベンチ0のままT6ベンチアウト負け)
+                base_name = next((ci3.previous_stage for ci3 in self._cardinfo.values()
+                                  if ci3.name == c.previous_stage and ci3.previous_stage), None)
+                placeable = bool(base_name) and base_name in names
+            if not placeable:
                 return 30
+        # 単騎×手札にたねゼロの取得: たねポケ最優先(ベンチアウト保険。_play_scoreの96点
+        # ルールの取得側=Grimm主役化R3の同型対策)
+        if c and c.is_pokemon and c.is_basic and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD):
+            me_b = self._me() or {}
+            if not any(b for b in (me_b.get("bench") or []) if b) and not any(
+                    (cd.get("id") in self._cardinfo and self._cardinfo[cd.get("id")].is_pokemon
+                     and self._cardinfo[cd.get("id")].is_basic) for cd in me_b.get("hand") or []):
+                return 96
         # 同名重複の限界価値(取得側): 場に既定数以上の同名ポケモンをサーチで重ねない
         if (cid in self.plan.dup_play_caps and c and c.is_pokemon
                 and op.area in (AreaType.DECK, AreaType.LOOKING, AreaType.DISCARD)):
