@@ -35,9 +35,10 @@ PLAN = _dc.replace(
     # Kangaskhan単独に寄せる場合の補正)。カード価値はinfer準拠。
     attackers=tuple(sorted(set(_base.attackers) | {MEGA_KANGA, CRUSTLE})),
     # Dwebble/Crustle線は3枚: 壁の回転を想定しcapは設けない(exデッキ相手は複数壁が正)
-    # 妨害パッケージ(Petrel/Eri/Xerosic): 相手手札が肥えた時に打つ(タイミング価値のみ、
-    # 効果はエンジン実行。Mega 88%調査: 3戦でPetrel1回=妨害不在の根対策)
-    disruption_supporters=(1219, 1186, 1197),
+    # 妨害(Eri/Xerosic)=相手手札が肥えた時。Petrel(1219)は実測=山サーチ(妨害ではない)
+    # →常用80点(Mega 88%調査の当初分類を実測で訂正)
+    disruption_supporters=(1186, 1197),
+    play_priority={**_base.play_priority, 1219: 80},
 )
 
 
