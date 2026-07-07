@@ -144,4 +144,10 @@ DECK_BOTS: dict[str, type] = {
     "ladder_archaludon": _deck_bot("archaludon", "ladder_archaludon"),            # 実ラダーのArchaludon(Judge/Carmine型)
     "dragapult": _deck_bot("dragapult"),                     # ドラパルトex(ダメカン撒き)
     "grimmsnarl": _deck_bot("grimmsnarl", "meta_grimmsnarl"),                   # マリィのオーロンゲex(悪コントロール)
+    # 上位ラダー抽出(2026-07-07, 上位12エピソードの分布: Grimm8/Kangaskhan5/Alakazam5/MegaStarmie2。
+    # 上位Grimmはmeta_grimmsnarlと60枚完全一致を確認済み):
+    # Mega Kangaskhan ex+Crustle=妨害・耐久型(特殊エネ12枚・Petrel/Eri/Xerosic)。上位2番手の新型
+    "kangaskhan": universal_for("kangaskhan"),
+    # 単発観測の上位デッキ(将来のベンチ候補): raging_bolt/cynthia_garchomp/rocket_spidops/beartic
+    "raging_bolt": universal_for("raging_bolt"),
 }
