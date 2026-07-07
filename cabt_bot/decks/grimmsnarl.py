@@ -37,6 +37,8 @@ PLAN = _dc.replace(
     # 差分①(一般化候補): フロスラスは静的特性(Freezing Shroud)=1体で充足(静的特性cap未導出)。
     # 差分②(一般化候補): マシマシラ(燃料ポケ)は2体まで
     dup_play_caps={**_base.dup_play_caps, 104: 1, 112: 2},
+    # 差分③: Petrel×4=手札破壊。相手手札が肥えた時に打つ(Mega 88%調査: 妨害不在の根対策)
+    disruption_supporters=(1219,),
 )
 
 

@@ -69,6 +69,8 @@ class DeckPlan:
     volatile_energies: tuple[int, ...] = ()   # 番末トラッシュ系エネ(例:イグニ)。規則の付け先かつ「攻撃できる番の場(active,turn>1)」のみ付与
     conserve_volatile: bool = False           # 今のエネで相手バトル場をKOできるなら volatile(イグニ)を温存（番末トラッシュの無駄回避）
     hp_boost_tools: dict = field(default_factory=dict)  # HP増加ツール{id:+HP}(例:ケープ100)。activeの被KO圏→生存圏の反転を最優先
+    disruption_supporters: tuple = ()  # 手札破壊系サポ(Eri/Petrel/Xerosic等)。相手手札が肥えている時に打つ
+                                       # (Mega 88%調査: 妨害の価値モデル不在=kanga botが3戦でPetrel1回の根対策)
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
@@ -359,6 +361,21 @@ class DeckBot(Bot):
             # 相手Mega残20=エネ1枚で即勝ちの局面でWally50が先取り→勝利がT13に遅延)
             if self._lillie_energy_dig():
                 return 70
+            return None
+        # 手札破壊系サポ: 相手の手札が肥えている時ほど価値が高い(公開情報handCount)。
+        # 肥えていない時はNone=汎用40点(ドロー/展開サポに権利を譲る)。タイミング価値のみを
+        # モデル化し効果解決はエンジンに委ねる(Mega 88%調査の妨害不在対策)。
+        if cid in (self.plan.disruption_supporters or ()):
+            cur_d = self._cur or {}
+            opp_d = cur_d.get("players", [{}, {}])[1 - cur_d.get("yourIndex", 0)]
+            oh = opp_d.get("handCount")
+            if oh is None:
+                h_d = opp_d.get("hand")
+                oh = len(h_d) if isinstance(h_d, list) else 0
+            if oh >= 7:
+                return 86
+            if oh >= 5:
+                return 68
             return None
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
