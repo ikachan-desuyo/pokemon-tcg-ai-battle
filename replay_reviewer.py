@@ -1147,8 +1147,8 @@ def _attack_prizes(cur, me, opp, a):
                 continue
             total = 0
             dmg_ap = int(mt.group(1))
-            # 弱点/抵抗(bot _eff_dmg同一意味論・効果無視技は据置)。抵抗-30を無視すると
-            # 「Jetting 120で抵抗{W}のArch ex(hp<=120)をBossで釣って勝てた」等の擬陽性
+            # 弱点/抵抗/FML(bot _eff_dmg同一意味論・効果無視技は据置)。抵抗-30やFML-30を
+            # 無視すると「Jetting 120で釣って勝てた」等の擬陽性(QA arch: FML下で90<100)
             if "affected by Weakness" not in (m.effect or ""):
                 ci_a3 = C.get((a or {}).get("id"))
                 ci_o3 = C.get(oa.get("id"))
@@ -1156,6 +1156,11 @@ def _attack_prizes(cur, me, opp, a):
                     if (ci_o3.weakness or "") == (ci_a3.type or ""):
                         dmg_ap *= 2
                     if (ci_o3.resistance or "") == (ci_a3.type or ""):
+                        dmg_ap = max(0, dmg_ap - 30)
+                if ci_o3 and (ci_o3.type or "") == "{M}":
+                    stad = cur.get("stadium")
+                    sids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
+                    if 1244 in sids:
                         dmg_ap = max(0, dmg_ap - 30)
             if dmg_ap >= (oa.get("hp") or 9999):
                 total += _pv(oa.get("id"))
@@ -1268,6 +1273,11 @@ def _attack_prizes_of_option(cur, me, opp, aid):
             eff_d *= 2
         if (ci_o2.resistance or "") == (ci_a2.type or ""):
             eff_d = max(0, eff_d - 30)
+        if (ci_o2.type or "") == "{M}":
+            stad = cur.get("stadium")
+            sids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
+            if 1244 in sids:
+                eff_d = max(0, eff_d - 30)
     if eff_d and eff_d >= (oa.get("hp") or 9999):
         total += _pv(oa.get("id"))
     spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", text)

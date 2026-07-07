@@ -1161,6 +1161,15 @@ class DeckBot(Bot):
             s = self._setup_attack_choice(idxs, options)
             if s is not None:
                 return s
+        # RaceAwareTrade(チップ不毛ゲート): 相手に回復残×actを今KOできない時、act本体への
+        # 大技チップは帳消しにされる=スプラッシュ変換(撒きKO/ベンチ削り)を持つ技を優先
+        # (v9蒸留 ML戦: Nebula 210チップ×5がWally×2+交代で全消し=2枚/13T。Jetting120+撒き50
+        # なら単価獲物6体=6枚の勝ち筋が立った)
+        if self._chip_futile():
+            spread_ids = {self._attack_name_ids().get(n) for n in self.plan.spread_attacks}
+            sp_is = [i for i in idxs if options[i].attack_id in spread_ids]
+            if sp_is:
+                return max(sp_is, key=lambda i: self._dmg(options[i]))
         for nm in self.plan.preferred_attacks:
             aid = self._attack_name_ids().get(nm)
             for i in idxs:
@@ -2809,6 +2818,37 @@ class DeckBot(Bot):
                    if "Boss" in ((self._cardinfo.get(c.get("id")).name or "")
                                  if c.get("id") in self._cardinfo else ""))
         return max(0, est - used)
+
+    def _opp_heal_remaining(self) -> int:
+        """相手の回復(Wally系=全回復/大回復)残数推定。アーキタイプ推定−トラッシュ観測使用分
+        (ボス残数と同方式)。RaceAwareTrade: 回復残がある間、KOに至らないact本体チップは
+        帳消しにされる=価値0(v9蒸留: ML戦でWally×2+交代にチップ340点分を消され2枚/13T)。"""
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        est = 2   # 既定: Wally級2枚
+        seen = " ".join((self._cardinfo.get(x).name or "") for x in self._opp_seen if x in self._cardinfo)
+        for key, n in (("Kangaskhan", 4), ("Lucario", 3), ("Archaludon", 4)):
+            if key in seen:   # kanga=Jumbo Ice Cream×4 / ML v2=Wally系3 / arch v2=Jumbo×4
+                est = n
+                break
+        heal_names = ("Wally", "Jumbo Ice Cream", "Potion")
+        used = sum(1 for c in (opp.get("discard") or [])
+                   if any(h in ((self._cardinfo.get(c.get("id")).name or "")
+                                if c.get("id") in self._cardinfo else "") for h in heal_names))
+        return max(0, est - used)
+
+    def _chip_futile(self) -> bool:
+        """相手act本体へのチップが無価値か: ①回復残量あり ②手貼り込みでもactを今KOできない。
+        成立時は攻撃選択をスプラッシュ変換(撒きKO/ベンチ削り)優先へ切替(RaceAwareTrade)。"""
+        if self._opp_heal_remaining() <= 0:
+            return False
+        cur = self._cur or {}
+        opp = cur.get("players", [{}, {}])[1 - cur.get("yourIndex", 0)]
+        oa = (opp.get("active") or [None])[0]
+        if not oa:
+            return False
+        dmg, ign = self._active_attack_potential(assume_hand_attach=True)
+        return not (dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999))
 
     def _prize_value(self, cid) -> int:
         """KOされた時に相手が取るサイド枚数。メガex=3, ex=2, それ以外=1。"""
