@@ -2155,6 +2155,10 @@ class DeckBot(Bot):
         - その他ドロー/展開サポ(トウコ/セイジ): アタッカー未起動なら最優先（展開加速）、起動後は安定札として中位。
         """
         cid = self._opt_card_id(op)
+        # エネ枯渇×場の攻撃役が払えない: 取得はエネ最優先(kanga主役化R1: T4-T9手札エネ0の間
+        # Petrel×4が全部サポをサーチし13Tまで攻撃ゼロ=ドローサポ170がエネ82に常勝する序列の穴)
+        if self._is_energy(cid) and self._lillie_energy_dig():
+            return 175
         if cid in self.plan.boss_cards:
             return 200 if self._should_play_boss() else 40
         if cid in self.plan.heal_return_cards:
