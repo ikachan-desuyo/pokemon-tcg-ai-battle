@@ -938,8 +938,12 @@ class DeckBot(Bot):
         if extra_energy_id is not None:
             att += self._energy_provides_syms(extra_energy_id)
         for m in info.moves:
-            if not m.damage:
-                continue
+            if not m.damage and not (
+                    not (m.name or "").startswith("[Ability]")
+                    and m.cost is not None and "damage" in (m.effect or "")):
+                continue    # damage欄空でも効果ダメ技(PH=Place N damage counters, cost {P})は
+                            # 「殴れる」(alakazam救済R1: PH永久スキップ→全前進ゲートが
+                            # Alakazam e1を攻撃不能と誤認=攻撃飢餓1-4回/13Tの根)
             need = re.findall(r"\{([A-Z])\}", m.cost or "")
             n_any = (m.cost or "").count("●")
             pool = list(att)
@@ -1251,9 +1255,11 @@ class DeckBot(Bot):
         if not text or not cur or not cur.get("players"):
             return None
         m = re.search(r"(\d+)\s*(more\s+)?damage\s+for each", text)
-        if not m:
+        mc = re.search(r"lace (\d+) damage counters?[^.]*?for each", text)
+        if not m and not mc:
             return None
-        per = int(m.group(1)); low = text.lower()
+        per = int(m.group(1)) if m else 10 * int(mc.group(1))   # ダメカン=×10(PH型)
+        low = text.lower()
         me = cur["players"][cur.get("yourIndex", 0)]
         opp = cur["players"][1 - cur.get("yourIndex", 0)]
         cnt = None

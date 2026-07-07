@@ -1146,7 +1146,18 @@ def _attack_prizes(cur, me, opp, a):
             if need > ee:
                 continue
             total = 0
-            if int(mt.group(1)) >= (oa.get("hp") or 9999):
+            dmg_ap = int(mt.group(1))
+            # 弱点/抵抗(bot _eff_dmg同一意味論・効果無視技は据置)。抵抗-30を無視すると
+            # 「Jetting 120で抵抗{W}のArch ex(hp<=120)をBossで釣って勝てた」等の擬陽性
+            if "affected by Weakness" not in (m.effect or ""):
+                ci_a3 = C.get((a or {}).get("id"))
+                ci_o3 = C.get(oa.get("id"))
+                if ci_a3 and ci_o3:
+                    if (ci_o3.weakness or "") == (ci_a3.type or ""):
+                        dmg_ap *= 2
+                    if (ci_o3.resistance or "") == (ci_a3.type or ""):
+                        dmg_ap = max(0, dmg_ap - 30)
+            if dmg_ap >= (oa.get("hp") or 9999):
                 total += _pv(oa.get("id"))
             spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", m.effect or "")
             if spm:
