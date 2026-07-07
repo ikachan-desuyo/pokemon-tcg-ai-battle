@@ -1,40 +1,44 @@
 {
  "replays": [
   {
-   "file": "v9 mirror-5 勝ち(11T).json",
-   "label": "v9 mirror-5 勝ち(11T)"
+   "file": "v10候補 mirror-9 勝ち(11T).json",
+   "label": "v10候補 mirror-9 勝ち(11T)"
   },
   {
-   "file": "v9 lucario-7 勝ち(9T 3-6).json",
-   "label": "v9 lucario-7 勝ち(9T 3-6)"
+   "file": "v10候補 lucario-0 勝ち(11T).json",
+   "label": "v10候補 lucario-0 勝ち(11T)"
   },
   {
-   "file": "v9 arch-9 勝ち(27T 2-5).json",
-   "label": "v9 arch-9 勝ち(27T 2-5)"
+   "file": "v10候補 arch-6 勝ち(20T).json",
+   "label": "v10候補 arch-6 勝ち(20T)"
   },
   {
-   "file": "v9 dragapult-4 勝ち(7T 2-6).json",
-   "label": "v9 dragapult-4 勝ち(7T 2-6)"
+   "file": "v10候補 dragapult-7 勝ち(9T).json",
+   "label": "v10候補 dragapult-7 勝ち(9T)"
   },
   {
-   "file": "v9 alakazam-3 勝ち(5T 2-6).json",
-   "label": "v9 alakazam-3 勝ち(5T 2-6)"
+   "file": "v10候補 alakazam-2 勝ち(11T).json",
+   "label": "v10候補 alakazam-2 勝ち(11T)"
   },
   {
-   "file": "v9 grimmsnarl-4 勝ち(11T 1-6).json",
-   "label": "v9 grimmsnarl-4 勝ち(11T 1-6)"
+   "file": "v10候補 grimmsnarl-3 勝ち(11T).json",
+   "label": "v10候補 grimmsnarl-3 勝ち(11T)"
   },
   {
-   "file": "v9 lucario-3 負け(10T 2-2).json",
-   "label": "v9 lucario-3 負け(10T 2-2)"
+   "file": "v10候補 kangaskhan-7 勝ち(9T).json",
+   "label": "v10候補 kangaskhan-7 勝ち(9T)"
   },
   {
-   "file": "v9 arch-7 負け(12T 2-3).json",
-   "label": "v9 arch-7 負け(12T 2-3)"
+   "file": "v10候補 lucario-4 負け(10T).json",
+   "label": "v10候補 lucario-4 負け(10T)"
   },
   {
-   "file": "v9 mirror-1 負け(14T 6-2).json",
-   "label": "v9 mirror-1 負け(14T 6-2)"
+   "file": "v10候補 mirror-0 負け(16T).json",
+   "label": "v10候補 mirror-0 負け(16T)"
+  },
+  {
+   "file": "v10候補 kangaskhan-9 負け(26T).json",
+   "label": "v10候補 kangaskhan-9 負け(26T)"
   }
  ]
 }
