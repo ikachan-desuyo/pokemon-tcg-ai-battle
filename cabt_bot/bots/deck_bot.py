@@ -671,6 +671,13 @@ class DeckBot(Bot):
             if self.plan.conserve_hand and self._is_energy(energy) and comp == 0:
                 continue    # 手札温存デッキ: コストを進めないエネ貼りは手札の切り売り
                             # (PH=手札×20点。勝ちエネ/ケープ反転の前段パスは対象外のまま)
+            # 無価値貼りの温存(Grimm主役化R5): 「rule外×非攻撃役×コスト進行なし」への貼りは
+            # エネの散逸。主役線(攻撃役/rule対象)が場か手札に居るなら貼らず持ち越して再建線へ
+            # (対kanga 18T 0枚取り: 確殺圏actガードの受け皿がSnorunt e2に落ちDが枯れた)
+            if (self._is_energy(energy) and comp == 0
+                    and (rule == 0 and target not in self.plan.attackers)
+                    and self._line_target_near(me, hand)):
+                continue
             # 規則(plan)適合を最上位に、その中でコスト充足を優先。compを全体最優先にすると
             # 脇役の1エネ技「完成」(comp=2)が計画の主役育成(水→メガ, rule>0)を上書きして
             # WallRetreat再発(QA 2件)。逆にruleを最上位にすると同一対象のR+R重ね(rule大)が
@@ -2669,6 +2676,31 @@ class DeckBot(Bot):
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2
         return t
+
+    def _line_target_near(self, me, hand) -> bool:
+        """主役線のエネ付け先候補(攻撃役/rule対象、またはその進化元)が場か手札に居るか。
+        居る=無価値な対象への貼りを見送りエネを持ち越す価値がある(Grimm主役化R5)。"""
+        rule_targets = {t for _, t in (self.plan.energy_rules or ())}
+        good = set(self.plan.attackers) | rule_targets
+        base_names = set()
+        for gid in good:
+            gi = self._cardinfo.get(gid)
+            if gi and gi.previous_stage:
+                base_names.add(gi.previous_stage)
+                pi = next((x for x in self._cardinfo.values() if x.name == gi.previous_stage), None)
+                if pi and pi.previous_stage:
+                    base_names.add(pi.previous_stage)
+        for src in ([(me.get("active") or [None])[0]] + list(me.get("bench") or [])
+                    + list(hand or [])):
+            if not src:
+                continue
+            cid = src.get("id")
+            if cid in good:
+                return True
+            ci = self._cardinfo.get(cid)
+            if ci and ci.is_pokemon and (ci.name or "") in base_names:
+                return True
+        return False
 
     def _line_variant_ids(self, base_name):
         """base_nameから進化するポケモンのカードid群。同線の変種が相手側で観測済みなら

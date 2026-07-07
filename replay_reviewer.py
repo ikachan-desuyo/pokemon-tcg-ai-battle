@@ -1530,6 +1530,15 @@ def det_promotion_skew(g, sig):
             return (line_threat(sp.get("id")) or 0) >= 180
         if survives(pick) and is_main(pick):
             continue                                    # 耐える主力を選んだ=正当
+        # ex遮断壁(Rock Inn型)の前出しは対ex戦術として正当(bot _ex_shield_blocks同一意味論。
+        # QA: kanga botのCrustle壁=Jetting 0/Nebulaのみ被弾を「非主力の前出し」と誤検出)
+        ci_p = C.get(pick.get("id"))
+        oa_ci = C.get((oa or {}).get("id"))
+        if (ci_p and oa_ci and "ex" in (oa_ci.rule or "").lower()
+                and any((mv.name or "").startswith("[Ability]")
+                        and "Prevent all damage" in (mv.effect or "")
+                        and "Pokémon {ex}" in (mv.effect or "") for mv in ci_p.moves)):
+            continue
         better = any(sp and survives(sp) and is_main(sp)
                      for sp in (_spot_of(cur, g["my"], o) for o in opts))
         if better:
