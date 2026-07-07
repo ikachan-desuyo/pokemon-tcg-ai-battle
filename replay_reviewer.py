@@ -286,6 +286,36 @@ def det_wall_retreat(g, sig):
                 attacked = True
                 break
         if not attacked:
+            # 装填免除(bot _filter_gun_loading同一意味論): 攻撃チップが相手のダメカン×N技
+            # (Raging Hammer型・Memory Dive込み)を自分の昇格先の致死圏まで装填するなら
+            # 「攻撃なし」が正着(QA裁定: arch-2 T11=Jettingを撃つとRH 80+250=330で
+            # Mega330一撃死。フィルタが正しく抑止した局面の誤検出)
+            import re as _re
+            oa_w = (opp.get("active") or [None])[0]
+            if oa_w:
+                movs_w = list((C.get(oa_w.get("id")).moves if C.get(oa_w.get("id")) else []))
+                if _pre_evo_ok(oa_w, opp.get("bench")):
+                    for pe in (oa_w.get("preEvolution") or []):
+                        pi_ = C.get((pe or {}).get("id"))
+                        if pi_:
+                            movs_w += list(pi_.moves)
+                loaded = False
+                for m_w in movs_w:
+                    mt_w = _re.search(r"does (\d+) more damage for each damage counter on this", m_w.effect or "")
+                    if not mt_w:
+                        continue
+                    base_w = _re.match(r"(\d+)", str(m_w.damage or ""))
+                    base_v = int(base_w.group(1)) if base_w else 0
+                    per_v = int(mt_w.group(1))
+                    # 自分側の最大打点(~210)チップ後のRH到達値が、自分の最大HP級(330)に届くか
+                    hp_w = oa_w.get("hp") or 0
+                    max_w = oa_w.get("maxHp") or 0
+                    post_w = base_v + per_v * max(0, (max_w - max(0, hp_w - 210)) // 10)
+                    if post_w >= 300:
+                        loaded = True
+                        break
+                if loaded:
+                    continue
             sig(f"WallRetreat|逃げ0壁から交代し攻撃なし|{nm(a.get('id'))}", g["ep"], turn)
 
 
@@ -689,6 +719,21 @@ def det_boss_no_path_gain(g, sig):
             continue
         a = (me.get("active") or [None])[0]
         oa = (opp.get("active") or [None])[0]
+        # 勝ち切りボスの免除: 引きずり出し→攻撃(スプラッシュ込み)で残りを取り切れるボスは
+        # KO回数算術の対象外(bot _should_play_bossの勝ち切りプリパスと同一意味論。
+        # QA: grimmsnarl-0/1 T11=Boss+Jetting+撒き=残2取り切り勝ちを2件とも誤検出)
+        my_left_bg = len(me.get("prize") or []) or 6
+        bench_bg = [b for b in (opp.get("bench") or []) if b]
+        win_bg = False
+        for bi, b in enumerate(bench_bg):
+            opp2 = dict(opp)
+            opp2["active"] = [b]
+            opp2["bench"] = [x for j, x in enumerate(bench_bg) if j != bi] + ([oa] if oa else [])
+            if _attack_prizes(cur, me, opp2, a) >= my_left_bg:
+                win_bg = True
+                break
+        if win_bg:
+            continue
         # 火力はこのターンの手貼りを含めて評価(botのassume_hand_attachと同じ意味論。
         # arch-17:T11=水を貼って210でex200を引っ張った正当ボスを偽陽性にしない)
         ci = C.get((a or {}).get("id"))

@@ -83,6 +83,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -174,6 +175,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 7,
@@ -181,7 +183,7 @@
   "note": "2026-07-04 人間レビュー8巡目で実質再発(lucario-10: 単騎×リーリエ2枚在手でヒルダ2回→敗北)。真因=緊急リーリエが後段委譲でエネ補給サポ83にサポ権を先取りされる→_play_scoreで緊急時95に。副作用2件(生きたミツルを差し置く)も生存手段条件に回復を追加して解消。検出器はターン単位評価(選択肢実在の教訓5回目)+致死スキップを勝ち切る場合のみに限定"
  },
  "WallRetreat": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "WallRetreat",
   "match": "WallRetreat",
   "fix": "後段_should_repositionに先攻T1ガード",
@@ -265,9 +267,10 @@
    1,
    0,
    0,
-   0
+   0,
+   1
   ],
-  "regressions": 6,
+  "regressions": 7,
   "cause": "Playability Gate欠如(前提条件の未確認)",
   "note": "2026-07-06 未コミット修正(completes全体最優先キー)の副作用で一時再発2件→キー再設計(rule有無→充足)で0件。コミット前捕捉"
  },
@@ -357,6 +360,7 @@
    2,
    0,
    2,
+   0,
    0
   ],
   "regressions": 4,
@@ -372,6 +376,7 @@
   "graduated": "2026-07-03",
   "cycles": [
    16,
+   0,
    0,
    0,
    0,
@@ -536,6 +541,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -622,7 +628,8 @@
    126,
    122,
    152,
-   134
+   134,
+   160
   ],
   "regressions": 0,
   "note": "観測カウンタ(トウコのエネ選択を○×問わず全記録)=違反件数でない。Fetch Future Value(凍結中)の素材",
@@ -708,7 +715,8 @@
    17,
    13,
    21,
-   17
+   17,
+   16
   ],
   "regressions": 0,
   "cause": "大半がH2:選択肢なし(リーリエ無し=bot裁量外)",
@@ -798,7 +806,8 @@
    26,
    35,
    54,
-   43
+   43,
+   60
   ],
   "regressions": 0,
   "cause": "Support Value(サポ権の価値比較)・大半は相手bot側",
@@ -888,7 +897,8 @@
    30,
    21,
    22,
-   8
+   8,
+   14
   ],
   "regressions": 0,
   "cause": "Attach Future Value欠如(Episode5凍結中)",
@@ -977,6 +987,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 5,
@@ -1038,6 +1049,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1153,12 +1165,13 @@
    0,
    0,
    0,
-   3
+   3,
+   7
   ],
   "regressions": 9
  },
  "BossNoPathGain": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "BossNoPathGain",
   "match": "BossNoPathGain",
   "cause": "サイド算術の欠如(1枚取りが必要KO回数を増やすかを見ない)",
@@ -1239,9 +1252,10 @@
    0,
    0,
    0,
-   0
+   0,
+   2
   ],
-  "regressions": 2,
+  "regressions": 3,
   "note": "cycles[1]の1件(arch-17)は検出器偽陽性(手貼り火力を見ず)と判定済み"
  },
  "VolatileOverPermanent": {
@@ -1254,6 +1268,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    9,
+   0,
    0,
    0,
    0,
@@ -1408,6 +1423,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 6,
@@ -1479,6 +1495,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1571,6 +1588,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -1585,6 +1603,7 @@
   "graduated": "2026-07-04",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -1731,6 +1750,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -1800,6 +1820,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -1891,6 +1912,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -1908,6 +1930,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2049,6 +2072,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3
@@ -2128,6 +2152,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2
@@ -2146,6 +2171,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2279,6 +2305,7 @@
    1,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1
@@ -2293,6 +2320,7 @@
   "graduated": "2026-07-05",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -2424,6 +2452,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2497,6 +2526,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -2510,6 +2540,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -2640,6 +2671,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -2696,6 +2728,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2783,6 +2816,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 3,
@@ -2796,7 +2830,7 @@
   "graduated": "2026-07-06"
  },
  "EagerRetreatIncoherence": {
-  "status": "Graduated",
+  "status": "Regressed",
   "detector": "WallRetreat",
   "match": "WallRetreat",
   "fix": "eager退却②に「エネ規則がその攻撃役に付く」条件(付け先がベンチ主役に流れて攻撃不発=退却権浪費を防ぐ)。昇格の負けベイト回避キーに「今KOできるなら免除」",
@@ -2853,9 +2887,10 @@
    1,
    0,
    0,
-   0
+   0,
+   1
   ],
-  "regressions": 4,
+  "regressions": 5,
   "cause": "ゲート間不整合: eager退却は「前進後に貼って殴る」前提だが、attachのルールキーがベンチの主役を選ぶ=前提が満たされない",
   "evidence": {
    "frequency": 2,
@@ -2909,6 +2944,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -2987,6 +3023,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 4,
@@ -3052,6 +3089,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 5,
@@ -3072,6 +3110,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3176,6 +3215,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 2,
@@ -3196,6 +3236,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3284,6 +3325,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -3318,6 +3360,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -3386,6 +3429,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 1,
@@ -3406,6 +3450,7 @@
   "first_seen": "2026-07-06",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3488,6 +3533,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3508,6 +3554,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3583,6 +3630,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3602,6 +3650,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3677,6 +3726,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3696,6 +3746,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3771,6 +3822,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3790,6 +3842,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3863,6 +3916,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3882,6 +3936,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -3955,6 +4010,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -3974,6 +4030,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -4043,6 +4100,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -4062,6 +4120,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    1,
+   0,
    0,
    0,
    0,
@@ -4129,6 +4188,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -4158,6 +4218,7 @@
    0,
    0,
    1,
+   0,
    0,
    0,
    0,
@@ -4210,6 +4271,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "regressions": 0,
@@ -4229,6 +4291,7 @@
   "first_seen": "2026-07-07",
   "cycles": [
    2,
+   0,
    0,
    0,
    0,
@@ -4289,6 +4352,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4305,6 +4369,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4353,6 +4418,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4369,6 +4435,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4417,6 +4484,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4433,6 +4501,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4475,6 +4544,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4491,6 +4561,7 @@
    "rejected": 1
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4531,6 +4602,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4547,6 +4619,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4581,6 +4654,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4597,6 +4671,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4631,6 +4706,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4647,6 +4723,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4681,6 +4758,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4697,6 +4775,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4731,6 +4810,7 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
@@ -4747,6 +4827,7 @@
    "rejected": 0
   },
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4781,12 +4862,14 @@
    0,
    0,
    0,
+   0,
    0
   ]
  },
  "VolatileRetreatFuelWaste": {
   "cause": "前逃げ(_should_retreat_doomed)待機中=退却コスト未充足でRETREAT選択肢が無い間に、attachのrule順位がIgnition→actを選び、エネ充足でRETREAT出現→前逃げ発火→貼ったばかりのIgnitionを退却コストで即捨て(R35 mirror T13: Basic{W}在手)。加えて退却コスト破棄選択が低価値順=W先捨てでIgnitionも追加破棄(エンジン実測: 累積ユニット≥コストで停止、進化ポケ上のIgnition=3ユニット=1枚でコスト2充足)",
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4815,6 +4898,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "detector": "MissedLethal|攻撃選択が勝ち切り技を外した(新設・BLOCKING)",
@@ -4831,6 +4915,7 @@
  "LineEvolutionThreatBlind": {
   "cause": "_incoming_next_turn/_incoming_threatの進化1段先読みが「観測済みカードのみ」ゲート=相手の場に進化前(Kadabra)が居ても進化先(Alakazam)未観測なら脅威0。R37セッション alakazam-7 T5:PH300圏のMega290e0をSwitch在手なのにEND放置→T6進化+PHで3枚失点(DoomedNoSwitch再発の根因)",
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4858,6 +4943,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "detector": "DoomedNoSwitch(KO後脅威込みへ拡張。死んだら負けでは投資スキップ無効化)",
@@ -4875,6 +4961,7 @@
  "AttachMaxMoveOnlyCompletion": {
   "cause": "_pick_attachのcomp(コスト充足)が最大ダメージ技(Nebula)基準のみ=act e0へのW(Jetting{W}即完成)がcomp=1に留まり、ベンチの将来完成(comp=2)に負ける。R39 dragapult T13: W→ベンチMega90(PD60+Munkidori30でちょうど死ぬ3枚ベイト)へ貼りact Mega330を2ターン無攻撃で放置=敗着圏。R39 lucario T5でも同型(W→actならJetting+撒き50=Riolu30 KO+ML線否定を放棄しEND)",
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4902,6 +4989,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "detector": "手動精読(R41)",
@@ -4918,6 +5006,7 @@
  "LossBaitKoExemptionShallow": {
   "cause": "_is_loss_baitの免除「今KOできればベイト扱いしない」がKO後の残存脅威を見ない=攻撃すれば即負けの個体を前進させる。R42セッション mirror-0 T9: reposition がMega120(Mega90 KO可だがKO後にMega230+イグニのNebula210が確殺=残3充足)を前進→直後に_should_switchが正しく退避=Switch1枚を無駄往復で焼いた(WallRetreat/SwitchWaste再発の根因)。加えて_should_switchの敗北回避ブロックが「残って殴る」(wins_now)結論をreturnせず温存パスへ落とす経路も同時に確認",
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4943,6 +5032,7 @@
    0,
    0,
    0,
+   0,
    0
   ],
   "detector": "MissedLethal|Boss勝ち筋逃し(新設BLOCKING。9ラウンド×両サイド=108件で該当1件のみ・誤爆0)",
@@ -4960,6 +5050,7 @@
  "BossWinSplashArithmetic2": {
   "cause": "勝ち監査2(60戦セッション): ①_boss_wins_gameが単独KO評価のみ=「引き出しKO+撒きKOの合算勝ち」が見えずBoss=62点<Wally=90点でサポ権を先取りされ即勝ち(残6でMega100+Mega50の6枚)を逃す(mirror-4 T15) ②昇格選択(TO_ACTIVE/SWITCH)の脅威が_incoming_threat単独=Memory DiveのRH470をライン静的220と誤認しMega330を「耐える」と昇格→3枚献上(arch-2 T11。正解=前進計画どおりMega110e1=KO後に銃が乾く)",
   "cycles": [
+   0,
    0,
    0,
    0,
@@ -4982,6 +5073,7 @@
   "cycles": [
    0,
    0,
+   0,
    0
   ],
   "detector": "未実装(次: attach-to-doomed×successor-carriable の検出器+レース算術)",
@@ -4998,6 +5090,7 @@
  "SwitchAdvanceUnpayableMain": {
   "cause": "(人間レビュー指摘・相手lucario bot側) 攻撃コストを払えない主力を Switch で前進させ被弾させる。登録リプレイ実測2件: lucario-3 T4(act Lunatone110e0でSwitch→Mega Lucario 340e0=エネ0が前進→被弾)、lucario-7 T6(act Solrock110e0でSwitch→ML340e0前進→被弾)。_should_switchの前進パスの「前進すれば殴れる」検証が甘い疑い(手貼り1枚でML(コスト2+)は払えないのに前進、または昇格選択がエネ0のMLを選ぶ)。SwitchWaste修正(retreat系)と同じゲートがSwitch前進パスに未適用の可能性",
   "cycles": [
+   0,
    0,
    0,
    0
@@ -5018,6 +5111,7 @@
   "cycles": [
    0,
    0,
+   0,
    0
   ],
   "detector": "未実装(候補: HyperBallNetLoss=サーチ結果が「捨てた札の価値合計」を下回る/進化元不在サーチ)",
@@ -5034,6 +5128,7 @@
  "AttachToSelectDefaultMin": {
   "cause": "Grimm主役化R2(mirror精読): SelectContext.ATTACH_TO(自己加速のエネ選択=Punk Up「山からD最大5枚」等)が_GENERIC_TAKE未登録→デフォルトmin数=0で空選択→ハーネスのor[0]で偶然1枚のみ。Grimmの中核加速が1/5枚に縮み、9Tまで攻撃0の大敗を再現的に生んでいた。加えて付け先(ATTACH_FROM)が無配分=5枚全部を単体Grimmsnarlへe6(SB{D}{D}=2の3倍過剰+Adrena燃料のMunkidori素寒)",
   "cycles": [
+   0,
    0,
    0,
    0
@@ -5057,13 +5152,15 @@
   "first_seen": "2026-07-07",
   "cycles": [
    4,
-   3
+   3,
+   4
   ],
   "regressions": 0
  },
  "DeadEvolutionCandyBypass": {
   "cause": "Grimm主役化R3(dragapult 6Tベンチアウト負け): 死進化ガードのアメ免除が「アメ在手なら無条件スキップ」=Morgrem(Stage1=アメ無関係)や土台不在のGrimmsnarlまで素通し。単騎でPoké Padが置けない進化を2連続サーチ→ベンチ0のままT6死。加えて取得側に単騎×手札たねゼロのたね最優先が無かった",
   "cycles": [
+   0,
    0,
    0
   ],
@@ -5082,6 +5179,7 @@
  "TurboFlareIntegration": {
   "cause": "v9ラダー蒸留: 実ArchプレイヤーはT2にCinderace「Turbo Flare」(●1・50ダメ+山から基本エネ最大3枚をベンチへ加速)を使用。我々のmegaデッキも同カードを積むが純壁扱い=加速エンジンが完全に眠っている。統合試行2案とも不発: ①attackers追加=ゲート全体が歪み対フィールド83→79%(lucario 80→63%) ②energy_rules最下位追加=T1確殺圏ガード(act貼り回避)が先に効きTurbo Flare発動0回",
   "cycles": [
+   0,
    0
   ],
   "detector": "手動(v9ラダー行動統計)",
