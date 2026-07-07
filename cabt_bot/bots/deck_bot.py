@@ -2105,6 +2105,11 @@ class DeckBot(Bot):
             # SwitchWaste(検出器=現実的評価)と不整合(QA lucario相手bot T12)。
             if (act.get("hp") or 0) > self._incoming_next_turn(act):
                 return False
+            # 今の攻撃(手貼り込み)でサイドが取れるなら残って殴る=温存で確定1枚を捨てない
+            # (kanga主役化R2 対grimm T12: Boss→Munkidori100を釣った直後に温存Switchが
+            #  攻撃計画を破壊(昇格先は未武装)→エネはベンチCrustleへ→攻撃消失。ゲート間不整合)
+            if self._attack_prizes_now() > 0:
+                return False
             # ※Switch札はエネを付けたまま交代する(退却と違い投資は失われない)ため
             # 「常設エネ投資あり」でブロックしない(人間レビュー19巡目 arch T11: W1枚を理由に
             # 温存拒否→330の体から同じNebulaを撃てたのに110のMegaで殴って3枚献上=敗着)
