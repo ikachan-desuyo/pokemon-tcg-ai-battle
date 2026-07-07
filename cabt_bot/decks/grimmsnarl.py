@@ -40,6 +40,9 @@ PLAN = _dc.replace(
     # 差分③: Petrel×4=山からサポ等をサーチ(エンジン実測: 使用→山24択→Lillie入手。
     # 当初「名前から妨害」と誤分類→R4 archで唯一のサポとして6ターン腐った)。常用サーチ80点
     play_priority={**_base.play_priority, 1219: 80},
+    # 差分④: Unfair Stamp(1080)=相手の手札を2枚にする(エンジン実測: 16→2/9→2。KO直後限定)。
+    # 相手手札が肥えた時に打つ(4→2の小打撃で浪費しない)
+    disruption_supporters=(1080,),
 )
 
 

@@ -375,12 +375,14 @@ class DeckBot(Bot):
             if oh is None:
                 h_d = opp_d.get("hand")
                 oh = len(h_d) if isinstance(h_d, list) else 0
-            if oh >= 7:
-                return 86
+            if oh >= 8:
+                return 90   # 大手札(リーリエ後8枚等)への一撃が最大値(実測: Stamp 16→2/Xerosic 8→3)
+            if oh >= 6:
+                return 80
             if oh >= 5:
                 return 68
-            return None  # 薄い手札(<5)へは温存(A/B: 使い切り42はgrimm対mega 26→18/100で悪化。
-                         # サポ権腐り(Petrel未使用5件/巡)の解は別途=Grimm主役化ループで再検討)
+            return None  # 薄い手札(<5)へは温存(実測: Xerosicは≤3で無効果・Stampは4→2の小打撃。
+                         # A/B: 使い切り42はgrimm対mega 26→18/100で悪化)
         # 回復+エネ手札戻し系(ミツル等): アタッカーが十分ダメージを負っている時のみ。
         # ただし今の技で相手バトル場をKOできる(lethal)なら、回復せず攻撃を優先＝ターンを無駄にしない。
         if cid in self.plan.heal_return_cards:
