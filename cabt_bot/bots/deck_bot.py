@@ -2277,6 +2277,20 @@ class DeckBot(Bot):
             ids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
             if 1244 in ids:
                 out = max(0, out - 30)
+        # 対象の「exからのダメージを全て防ぐ」型特性(Crustle=Mysterious Rock Inn等)。
+        # エンジン実測(2026-07-07): Jetting(Mega ex)→Crustle=0/Nebula(効果無視)→貫通。
+        # =効果無視技(ign)以外は、自分のactiveがex/Megaなら0
+        if not ign and out > 0 and c:
+            for m_ in c.moves:
+                if ((m_.name or "").startswith("[Ability]")
+                        and "Prevent all damage" in (m_.effect or "")
+                        and "Pokémon {ex}" in (m_.effect or "")):
+                    me_r = self._me() or {}
+                    act_r = (me_r.get("active") or [None])[0]
+                    ci_r = self._cardinfo.get((act_r or {}).get("id"))
+                    if ci_r and "ex" in (ci_r.rule or "").lower():
+                        out = 0
+                    break
         return out
 
     def _should_retreat_doomed(self, me, hand) -> bool:
@@ -2420,6 +2434,24 @@ class DeckBot(Bot):
             dmg = max(dmg, base + int(mt.group(1)) * cnt)
         return dmg
 
+    def _ex_shield_blocks(self, my_spot, owner_ci, m) -> bool:
+        """my_spotの「Pokémon {ex}からのダメージを全て防ぐ」特性(Crustle=Mysterious Rock Inn等)が
+        攻撃者owner_ciの技mを遮断するか。エンジン実測(2026-07-07): Jetting(Mega ex)→Crustle=0/
+        Nebula(相手activeの効果無視)→貫通。"""
+        if not my_spot or owner_ci is None:
+            return False
+        if "ex" not in (owner_ci.rule or "").lower():
+            return False
+        if "effects on your opponent" in (m.effect or ""):
+            return False    # 効果無視技は貫通(実測)
+        ci = self._cardinfo.get(my_spot.get("id"))
+        for ab in (ci.moves if ci else []):
+            if ((ab.name or "").startswith("[Ability]")
+                    and "Prevent all damage" in (ab.effect or "")
+                    and "Pokémon {ex}" in (ab.effect or "")):
+                return True
+        return False
+
     def _incoming_next_turn(self, my_spot) -> int:
         """次の相手ターンの現実的な最大被ダメ(弱点込み): 相手activeライン(進化1段含む)の技のうち
         「現エネ+手貼り1枚(イグニ観測済みなら+3)」で払える最大。ライン最大(line_threat)より現実的
@@ -2435,7 +2467,7 @@ class DeckBot(Bot):
         e = len(oa.get("energyCards") or []) + (3 if any(
             v in self._opp_seen for v in (17,)) else 1)
         oi = self._cardinfo.get(oa.get("id"))
-        moves = list(oi.moves) if oi else []
+        movs = [(m, oi) for m in (oi.moves if oi else [])]
         # 進化前スタックの技も使える(エンジン実測: Memory Dive型特性の在場時のみ。
         # Archaludon exがDuraludonのRaging Hammerで満タンMega330を一撃=人間レビュー19巡目 arch T18、
         # ただしRelicanth不在では候補に出ない=精読R31実測)
@@ -2444,19 +2476,21 @@ class DeckBot(Bot):
             for pe in (oa.get("preEvolution") or []):
                 pi_ = self._cardinfo.get((pe or {}).get("id"))
                 if pi_:
-                    moves += list(pi_.moves)
+                    movs += [(m, pi_) for m in pi_.moves]
         if oi:
             # 進化1段先の技も想定。同線の変種が観測済みならそれに限定(構築確定=幻の別変種を
             # 見ない)、未観測ならDB変種全体=アーキタイプ推定(場の進化前が実在の証拠。
             # R37 alakazam-7 T5: Kadabra在場×Alakazam未観測でPH脅威が0→Mega290e0を
-            # Switch在手なのにEND放置→T6進化+PH 3枚失点)。
+            # Switch在手なのにEND放置→T6進化+PHで3枚失点)。
             for did in self._line_variant_ids(oi.name):
-                moves += list(self._cardinfo[did].moves)
+                movs += [(m, self._cardinfo[did]) for m in self._cardinfo[did].moves]
         best = 0
-        for m in moves:
+        for m, owner_ in movs:
             need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
             if need > e:
                 continue
+            if self._ex_shield_blocks(my_spot, owner_, m):
+                continue    # ex遮断特性(Rock Inn型)持ちのmy_spotへは非貫通技は0(実測)
             mt = re.match(r"(\d+)", str(m.damage or ""))
             dm = int(mt.group(1)) if mt else 0
             dm = max(dm, self._effect_move_damage(m, my_spot, oa))
@@ -2475,16 +2509,18 @@ class DeckBot(Bot):
             si_ = self._cardinfo.get(sp.get("id"))
             if not si_:
                 continue
-            b_moves = list(si_.moves)
+            b_movs = [(m, si_) for m in si_.moves]
             if _pre_ok:
                 for pe in (sp.get("preEvolution") or []):
                     pi_ = self._cardinfo.get((pe or {}).get("id"))
                     if pi_:
-                        b_moves += list(pi_.moves)
+                        b_movs += [(m, pi_) for m in pi_.moves]
             be = len(sp.get("energyCards") or [])
-            for m in b_moves:
+            for m, owner_ in b_movs:
                 need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
                 if need > be:
+                    continue
+                if self._ex_shield_blocks(my_spot, owner_, m):
                     continue
                 mt = re.match(r"(\d+)", str(m.damage or ""))
                 dm = int(mt.group(1)) if mt else 0
@@ -2560,17 +2596,30 @@ class DeckBot(Bot):
         oa = (opp.get("active") or [None])[0]
         if not oa:
             return 0
-        t = _line_threat(oa.get("id")) or 0
         oc = self._cardinfo.get(oa.get("id"))
-        # 効果文の可変ダメージ(手札枚数×等)はline_threat(静的)に乗らない=実数で補完。
-        # 進化1段先は同線観測済み変種に限定、未観測ならDB変種=アーキタイプ推定
-        # (line_threat静的値は元々未観測進化込み=可変補完だけ観測ゲートだと不整合。R37)
-        moves = list(oc.moves) if oc else []
+        movs = [(m, oc) for m in (oc.moves if oc else [])]
         if oc:
             for did in self._line_variant_ids(oc.name):
-                moves += list(self._cardinfo[did].moves)
-        for m in moves:
-            t = max(t, self._effect_move_damage(m, my_spot, oa))
+                movs += [(m, self._cardinfo[did]) for m in self._cardinfo[did].moves]
+        shielded = any(self._ex_shield_blocks(my_spot, owner_, m) for m, owner_ in movs)
+        if shielded:
+            # ex遮断特性持ちのmy_spot: 静的line_threat(遮断を知らない)を使わず、
+            # 貫通技(非ex攻撃者 or 効果無視)のみのmaxで再計算(Crustle壁の成立条件)
+            t = 0
+            for m, owner_ in movs:
+                if self._ex_shield_blocks(my_spot, owner_, m):
+                    continue
+                import re as _re
+                mt = _re.match(r"(\d+)", str(m.damage or ""))
+                t = max(t, int(mt.group(1)) if mt else 0,
+                        self._effect_move_damage(m, my_spot, oa))
+        else:
+            t = _line_threat(oa.get("id")) or 0
+            # 効果文の可変ダメージ(手札枚数×等)はline_threat(静的)に乗らない=実数で補完。
+            # 進化1段先は同線観測済み変種に限定、未観測ならDB変種=アーキタイプ推定
+            # (line_threat静的値は元々未観測進化込み=可変補完だけ観測ゲートだと不整合。R37)
+            for m, owner_ in movs:
+                t = max(t, self._effect_move_damage(m, my_spot, oa))
         cc = self._cardinfo.get(my_spot.get("id"))
         if cc and oc and cc.weakness and oc.type == cc.weakness:
             t *= 2
