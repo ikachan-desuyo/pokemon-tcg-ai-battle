@@ -5189,8 +5189,8 @@
    "rejected": 2
   },
   "first_seen": "2026-07-08",
-  "fix": "未実装。必要な設計: 「setup加速技」専用経路=(a)T1のCinderaceへの1枚貼りをdoomedガードの例外にする(貼りが次ターンの加速3枚を生む=期待値で正当化) (b)eager前進がTurbo Flare未使用のCinderaceを退かさない (c)加速先の配分(ベンチMega優先)。attackers化はしない(ゲート歪み実証済み)",
+  "fix": "3案目で部分解決(2026-07-08): _act_accel_ready+3ガード例外で「自然に立った時に使う」経路を開通(T3/T17発動実測)。積極起動(最優先プリパス)はA/B悪化(対ML65→53/100)で撤回=TF不発リスクとW迷子の期待値が負。実Archのような常用エンジン化はデッキ構築(R枠)と併せて再検討",
   "match": "field",
-  "status": "Open"
+  "status": "Fixed"
  }
 }
