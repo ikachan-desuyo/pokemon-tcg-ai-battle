@@ -82,6 +82,7 @@ def qa(games_per_matchup=5):
         ("dragapult", "dragapult", "dragapult"),
         ("alakazam", "alakazam", "alakazam"),
         ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
+        ("kangaskhan", "kangaskhan", "kangaskhan"),   # 上位メタ2番手(2026-07-07抽出)
     ]
     counts = Counter(); reps = defaultdict(list)
 
