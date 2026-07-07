@@ -2211,7 +2211,20 @@ class DeckBot(Bot):
         if self._is_energy(cid) and self._lillie_energy_dig():
             return 175
         if cid in self.plan.boss_cards:
-            return 200 if self._should_play_boss() else 40
+            if self._should_play_boss():
+                return 200
+            # クローザー確保(v9蒸留R3): 終盤×相手ベンチにドラッグ勝ち候補(pv>=自分の残り)が
+            # 居るならBossを引いておく(ml_r2 loss0: 残2でベンチML100が2ターン見えたまま
+            # Boss不在で閉じ損ね。従来40=ドローサポ170に常敗で取得されない)
+            cur_b = self._cur or {}
+            me_b = cur_b.get("players", [{}, {}])[cur_b.get("yourIndex", 0)]
+            opp_b = cur_b.get("players", [{}, {}])[1 - cur_b.get("yourIndex", 0)]
+            my_left_b = len(me_b.get("prize") or []) or 6
+            if my_left_b <= 3 and any(
+                    sp and self._prize_value(sp.get("id")) >= my_left_b
+                    for sp in opp_b.get("bench") or []):
+                return 185
+            return 40
         if cid in self.plan.heal_return_cards:
             return 190 if self._attacker_damaged(150) else 10
         if cid == LILLIE:
