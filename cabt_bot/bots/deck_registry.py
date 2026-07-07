@@ -47,10 +47,10 @@ STARMIE_PLAN = DeckPlan(
     preferred_attacks=("Nebula Beam", "Jetting Blow"),
     spread_attacks=("Jetting Blow",),  # 120でバトル場を倒せるなら、ベンチ50も入るJetting Blowを優先(次のKO準備)
     spread_damage=50,                  # Jetting Blowのベンチ50。将来前に出る火力枠を先読みで削り、KO攻撃回数を減らす
-    energy_rules=((17, 1031), (3, 1031)),  # イグニ→メガ, 水→メガ
-                                          # ※Turbo Flare(エースバーン=●1で50+山から基本エネ3枚加速)の統合は
-                                          #   2案とも不発(攻撃役化=ゲート歪みで悪化/rule最下位=T1確殺圏ガードが
-                                          #   act貼りを弾き一度も発動せず)。TurboFlareIntegrationとしてissue化
+    energy_rules=((17, 1031), (3, 1031), (3, 666)),  # イグニ→メガ, 水→メガ, 水→エースバーン(最下位)
+                                          # Turbo Flare統合(3案目): _act_accel_ready例外を実装済み
+                                          # (T1確殺圏ガード/DoomedFeedガード/eager前進の3箇所)=●1で
+                                          # 50+山から基本エネ3枚のカーブ起動(v9蒸留: 実ArchのT2定石)
     play_priority={1030: 80, 666: 60},
     card_values={1031: 100, 17: 90, 1030: 84},
     lethal=True,

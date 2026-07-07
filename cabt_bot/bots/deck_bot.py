@@ -647,6 +647,9 @@ class DeckBot(Bot):
                         fuel.append((1 if vol_j else 0, j))
                 if fuel:
                     return min(fuel)[1]
+        # ※加速技の起動貼りプリパス(TF最優先)はA/B撤回: 対ML 65→53/100。TF不発時に
+        #   T1のWがCinderaceで迷子になりStaryu→Megaカーブを遅らせる代償が上回る。
+        #   例外群(T1ガード/DoomedFeed/eager前進のaccel例外)は残置=自然に立った時は使う
         best, best_key = None, (-1, -1, -1)
         for i in idxs:
             op = options[i]
@@ -681,6 +684,7 @@ class DeckBot(Bot):
                 if (act_g is not None
                         and (act_g.get("hp") or 0) <= self._incoming_next_turn(act_g)
                         and self._attack_prizes_now(extra_energy_id=energy) <= 0
+                        and not self._act_accel_ready(act_g, energy)
                         and any(options[j].in_play_area != AreaType.ACTIVE
                                 and self._hand_id(hand, options[j].index) == energy
                                 for j in idxs)):
@@ -722,8 +726,9 @@ class DeckBot(Bot):
                 cur_k = self._cur or {}
                 if (cur_k.get("turn") == 1 and cur_k.get("yourIndex") == cur_k.get("firstPlayer")):
                     act_k = (me.get("active") or [None])[0]
-                    if act_k and (act_k.get("hp") or 0) <= self._incoming_next_turn(act_k):
-                        act_doomed_t1 = 1
+                    if (act_k and (act_k.get("hp") or 0) <= self._incoming_next_turn(act_k)
+                            and not self._act_accel_ready(act_k, energy)):
+                        act_doomed_t1 = 1   # 加速技(TF=1枚→3枚)が立つ貼りは死んでも黒字=例外
             key = (1 if rule > 0 else 0,
                    comp,
                    rule,
@@ -2263,6 +2268,10 @@ class DeckBot(Bot):
         act = me.get("active") or []
         if not act or not act[0]:
             return False
+        # 加速技(TF型)が今払えるactは前進で退かさない=1枚→3枚の加速ターンを先に消化
+        # (v9蒸留TurboFlareIntegration: eager前進が未使用のCinderaceを退かす問題への対処)
+        if self._act_accel_ready(act[0]):
+            return False
         if act[0].get("id") in self.plan.attackers:
             cur_r = self._cur or {}
             act_can = self._move_payable(act[0]) or (not cur_r.get("energyAttached") and any(
@@ -2862,6 +2871,33 @@ class DeckBot(Bot):
             return False
         dmg, ign = self._active_attack_potential(assume_hand_attach=True)
         return not (dmg > 0 and self._eff_dmg(dmg, ign, oa.get("id")) >= (oa.get("hp") or 9999))
+
+    def _act_accel_ready(self, act, extra_energy_id=None) -> bool:
+        """actが「山からエネをサーチして付ける」型の加速技を(このエネを貼れば)払えるか。
+        Turbo Flare(●1・50+山から基本エネ3枚をベンチへ)等=1枚の投資で3枚戻る
+        (v9蒸留: 実ArchはT2にCinderace TFで全カーブを起動。TurboFlareIntegration設計)。"""
+        import re
+        info = self._cardinfo.get((act or {}).get("id"))
+        if not info:
+            return False
+        att = []
+        for ec in (act.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"))
+        if extra_energy_id is not None:
+            att += self._energy_provides_syms(extra_energy_id)
+        for m in info.moves:
+            if (m.name or "").startswith("[Ability]") or m.cost is None:
+                continue
+            eff = m.effect or ""
+            if not (re.search(r"[Ss]earch your deck for .*Energy", eff) and "attach" in eff):
+                continue
+            need = re.findall(r"\{([A-Z])\}", m.cost or "")
+            n_any = (m.cost or "").count("●")
+            pool = list(att)
+            ok = all((t in pool and (pool.remove(t) or True)) for t in need) and len(pool) >= n_any
+            if ok:
+                return True
+        return False
 
     def _prize_value(self, cid) -> int:
         """KOされた時に相手が取るサイド枚数。メガex=3, ex=2, それ以外=1。"""
