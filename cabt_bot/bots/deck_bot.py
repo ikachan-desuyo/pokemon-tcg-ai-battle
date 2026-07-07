@@ -103,6 +103,8 @@ class DeckPlan:
     use_turn_evaluator: bool = False          # 「攻撃 vs 育成」の1判断のみ Turn Evaluator に委譲(限定接続・A/B用)
     smart_gust: bool = False                  # ボス等で相手を選ぶとき、現HP最小（KOしやすい）を狙う
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
+    item_locker: tuple[int, ...] = ()         # 0エネのグッズロック攻撃持ち(例:スボミー)。主砲が撃てない間、
+                                              # 前に置いてロック連打で相手のグッズ展開を止める(上位1043点grimm蒸留)
 
 
 class DeckBot(Bot):
@@ -1925,6 +1927,9 @@ class DeckBot(Bot):
                 return [g]
         ctx = sel.context
         if isinstance(ctx, SelectContext) and ctx == SelectContext.SETUP_ACTIVE_POKEMON:
+            # (見送り)グッズロッカーのT1リードは上位1043点grimmに2/20戦あるが、A/B N=200で
+            # 対arch -5.5ptの疑い(相手不明の開幕にHP30を前置き=速攻デッキに無償1枚)。
+            # ロッカー運用は中盤の昇格/残留(TO_ACTIVE/SWITCHキー・_lock_stance)のみ採用。
             # 先攻はT1攻撃不可 → 開幕は高HPの壁(エースバーン等)を前に置き、攻撃役はベンチで育てる
             if self.plan.go_first and self.plan.setup_wall:
                 wall = self._first_of(sel, self.plan.setup_wall)
@@ -1987,6 +1992,7 @@ class DeckBot(Bot):
                 and sel.options and all(getattr(o, "player_index", None) == (self._cur or {}).get("yourIndex")
                                         for o in sel.options)):
             best_i, best_key = None, None
+            lock_on = self._lock_stance()
             for i, op in enumerate(sel.options):
                 me2 = self._me() or {}
                 spots = (me2.get("active") if op.area == AreaType.ACTIVE else me2.get("bench")) or []
@@ -2003,6 +2009,10 @@ class DeckBot(Bot):
                             and self._is_evolving_base(sp.get("id"))
                             and (sp.get("hp") or 0) <= th)
                 key = (0 if loses_game else 1,                      # 次打KO=負け確定の昇格先を避ける
+                       # 主砲が撃てない谷間はロッカー(スボミー)を前へ=ロックで時間を買い
+                       # 高価値の後続を晒さない(上位1043点grimm蒸留: 対Arch T9の再登板)
+                       1 if (lock_on and not loses_game
+                             and sp.get("id") in self.plan.item_locker) else 0,
                        1 if (sp.get("hp") or 0) > th else 0,        # 1発耐える
                        0 if base_sac else 1,                        # 確定死圏の進化土台を避ける(線の保護)
                        # 全候補が土台犠牲なら線価値の低い方を犠牲に(主力線=Grimm180の土台でなく
@@ -2095,6 +2105,23 @@ class DeckBot(Bot):
                 return True
         return False
 
+    def _lock_stance(self) -> bool:
+        """グッズロック前置きが今価値あるか(上位1043点grimm蒸留 2026-07-07)。
+        実戦の型: ①序盤=スボミーを前にロック連打で相手のPoffin/Pad/飴セットアップを止める
+        (T1リード/T3-T4) ②中盤=主砲(オーロンゲ)が再装填中の谷間にロックで時間を買う(T6-T9)。
+        統一条件=『自分の主砲がまだ撃てない』: 序盤は必ず真、装填後は偽=前進して殴る。"""
+        if not self.plan.item_locker:
+            return False
+        me = self._me()
+        if not me:
+            return False
+        for sp in [(me.get("active") or [None])[0]] + list(me.get("bench") or []):
+            if (sp and sp.get("id") in self.plan.attackers
+                    and sp.get("id") not in self.plan.item_locker
+                    and self._move_payable(sp)):
+                return False                    # 主砲が撃てる=ロックより攻撃
+        return True
+
     def _should_switch(self) -> bool:
         """入替系: ①バトル場が攻撃役でなくベンチに攻撃役が居る(前進) ②前の攻撃役が被KO確定圏で
         ベンチに満タンの進化攻撃役が居る(温存=退けて守る)。②は常設エネ投資なし×このターン攻撃を
@@ -2148,6 +2175,10 @@ class DeckBot(Bot):
                     if (self._prize_value(sp.get("id")) < opp_left
                             or (sp.get("hp") or 0) > sp_th):
                         return True   # 死んでも負けない/次打(KO後脅威込み)を耐える退避先がある
+        # ロッカー残留: スボミーが前でロックが今価値ある(主砲未装填)なら退かない=ロック連打
+        # (上位1043点grimm蒸留: T1-T3リード保持。装填が済めば_lock_stance=Falseで通常の前進へ)
+        if act.get("id") in self.plan.item_locker and self._lock_stance():
+            return False
         if act.get("id") in self.plan.attackers or (_line_threat(act.get("id")) or 0) >= 180:
             # 温存パス: 次の相手ターンにKO確定圏(現実的評価=相手の現エネ+1で払える技)なら、
             # 対象はplan.attackersまたはライン180+の主役級(planに列挙されない主役=Hariyama等を
@@ -2272,6 +2303,9 @@ class DeckBot(Bot):
         # (v9蒸留TurboFlareIntegration: eager前進が未使用のCinderaceを退かす問題への対処)
         if self._act_accel_ready(act[0]):
             return False
+        # ロッカー残留: グッズロック中(主砲未装填)のスボミーは前進で退かさない(_should_switchと同一意味論)
+        if act[0].get("id") in self.plan.item_locker and self._lock_stance():
+            return False
         if act[0].get("id") in self.plan.attackers:
             cur_r = self._cur or {}
             act_can = self._move_payable(act[0]) or (not cur_r.get("energyAttached") and any(
@@ -2317,6 +2351,9 @@ class DeckBot(Bot):
             return False
         act = (me.get("active") or [None])[0]
         if not act:
+            return False
+        # ロッカー残留: グッズロック中(主砲未装填)のスボミーは前進で退かさない(_should_switchと同一意味論)
+        if act.get("id") in self.plan.item_locker and self._lock_stance():
             return False
         not_attached = not cur.get("energyAttached")
         if act.get("id") in self.plan.attackers:
