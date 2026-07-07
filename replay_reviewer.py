@@ -1245,6 +1245,12 @@ def _attack_prizes_of_option(cur, me, opp, aid):
     a2 = (me.get("active") or [None])[0]
     ci_a2 = C.get((a2 or {}).get("id"))
     ci_o2 = C.get(oa.get("id"))
+    # 可変ダメージ(自分のダメカン×N=Raging Hammer型)は実数評価(基礎80のみだと
+    # 「選んだRH=290が勝ちでない」と誤認する擬陽性。QA arch T16)
+    mv = re.search(r"does (\d+) more damage for each damage counter on this", text)
+    if mv and a2:
+        cnt2 = max(0, ((a2.get("maxHp") or 0) - (a2.get("hp") or 0)) // 10)
+        dmg = dmg + int(mv.group(1)) * cnt2
     eff_d = dmg
     if dmg and "affected by Weakness" not in text and ci_a2 and ci_o2:
         if (ci_o2.weakness or "") == (ci_a2.type or ""):
@@ -1314,6 +1320,23 @@ def det_boss_win_skipped(g, sig):
         if (ch.get("type") == PLAY and ch.get("index") is not None
                 and ch["index"] < len(h) and h[ch["index"]] == BOSS):
             boss_turns.add(cur.get("turn"))
+    # hindsight: ターン中にサイドが動き、以降に自分の決定が無い(=そのターンで勝ち切った)なら不問
+    # (grimmsnarl-4 T20: Adrena特性でMega60→30に整えてからSB+撒き30=3枚勝ち。ターン冒頭
+    #  評価の検出器は特性後の変化を見えず「Boss勝ち筋逃し」と誤検出)
+    turn_prizes = {}
+    turn_picks = {}
+    for t, ob, act in g["decisions"]:
+        cur2 = (ob.get("current") or {})
+        if cur2.get("yourIndex") != g["my"]:
+            continue
+        me2 = cur2["players"][g["my"]]
+        tn2 = cur2.get("turn")
+        turn_prizes.setdefault(tn2, []).append(len(me2.get("prize") or []) or 6)
+        s2 = ob.get("select") or {}
+        o2 = (s2.get("option") or [])[act[0]] if act and act[0] < len(s2.get("option") or []) else {}
+        if o2.get("area") == 6:                      # プライズ取得の選択=1枚
+            turn_picks[tn2] = turn_picks.get(tn2, 0) + 1
+    last_turn = max(turn_prizes) if turn_prizes else 0
     hit = set()
     for t, ob, act in g["decisions"]:
         cur, me, opp = my_view(ob, g["my"])
@@ -1323,6 +1346,11 @@ def det_boss_win_skipped(g, sig):
         tn = cur.get("turn")
         if tn in boss_turns or tn in hit:
             continue
+        pz = turn_prizes.get(tn) or []
+        if pz and (min(pz) < pz[0] or turn_picks.get(tn, 0) >= pz[0]
+                   or (tn == last_turn and turn_picks.get(tn, 0) > 0)):
+            continue    # このターンにサイド取り切り/最終自ターンで獲得(プライズ選択は最初の
+                        # 1回しか記録されず残りはエンジン自動=観測上限。勝ち切りターンの誤検出防止)
         h = hand_ids(me)
         boss_playable = any(o.get("type") == PLAY and o.get("index") is not None
                             and o["index"] < len(h) and h[o["index"]] == BOSS
