@@ -5078,5 +5078,21 @@
   "fix": "①アメ免除=Stage2×土台(前の前)在の時のみ ②単騎×手札たねゼロの取得はたね96点(_play_score 96の取得版) ③reviewer擬陽性2種解消: RH可変ダメ実数評価(前回patch不適用を修正)+Boss勝ち筋のhindsight免除(特性で盤面を整えてから勝ち切るターンをターン冒頭評価で誤検出。grimmsnarl-4 T20=Adrena2連打→SB+撒き3枚の妙手)",
   "match": "dragapult",
   "status": "Fixed"
+ },
+ "TurboFlareIntegration": {
+  "cause": "v9ラダー蒸留: 実ArchプレイヤーはT2にCinderace「Turbo Flare」(●1・50ダメ+山から基本エネ最大3枚をベンチへ加速)を使用。我々のmegaデッキも同カードを積むが純壁扱い=加速エンジンが完全に眠っている。統合試行2案とも不発: ①attackers追加=ゲート全体が歪み対フィールド83→79%(lucario 80→63%) ②energy_rules最下位追加=T1確殺圏ガード(act貼り回避)が先に効きTurbo Flare発動0回",
+  "cycles": [
+   0
+  ],
+  "detector": "手動(v9ラダー行動統計)",
+  "evidence": {
+   "confirmed": 1,
+   "frequency": 0,
+   "rejected": 2
+  },
+  "first_seen": "2026-07-08",
+  "fix": "未実装。必要な設計: 「setup加速技」専用経路=(a)T1のCinderaceへの1枚貼りをdoomedガードの例外にする(貼りが次ターンの加速3枚を生む=期待値で正当化) (b)eager前進がTurbo Flare未使用のCinderaceを退かさない (c)加速先の配分(ベンチMega優先)。attackers化はしない(ゲート歪み実証済み)",
+  "match": "field",
+  "status": "Open"
  }
 }

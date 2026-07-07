@@ -48,6 +48,9 @@ STARMIE_PLAN = DeckPlan(
     spread_attacks=("Jetting Blow",),  # 120でバトル場を倒せるなら、ベンチ50も入るJetting Blowを優先(次のKO準備)
     spread_damage=50,                  # Jetting Blowのベンチ50。将来前に出る火力枠を先読みで削り、KO攻撃回数を減らす
     energy_rules=((17, 1031), (3, 1031)),  # イグニ→メガ, 水→メガ
+                                          # ※Turbo Flare(エースバーン=●1で50+山から基本エネ3枚加速)の統合は
+                                          #   2案とも不発(攻撃役化=ゲート歪みで悪化/rule最下位=T1確殺圏ガードが
+                                          #   act貼りを弾き一度も発動せず)。TurboFlareIntegrationとしてissue化
     play_priority={1030: 80, 666: 60},
     card_values={1031: 100, 17: 90, 1030: 84},
     lethal=True,

@@ -74,6 +74,8 @@ class DeckPlan:
     hp_boost_tools: dict = field(default_factory=dict)  # HP増加ツール{id:+HP}(例:ケープ100)。activeの被KO圏→生存圏の反転を最優先
     disruption_supporters: tuple = ()  # 手札破壊系サポ(Eri/Petrel/Xerosic等)。相手手札が肥えている時に打つ
                                        # (Mega 88%調査: 妨害の価値モデル不在=kanga botが3戦でPetrel1回の根対策)
+    tempo_setup: bool = False  # 開幕アクティブ選択でアタッカーを最優先(土台保護より攻撃テンポ。
+                               # v9ラダー蒸留: 実プレイヤーは初攻撃T2.0-3.4=Duraludon等を前に出して殴る)
     heal_return_cards: tuple[int, ...] = ()   # 回復+エネ手札戻し系(例:ミツル)。アタッカーが十分ダメージ時のみ使用
     boss_cards: tuple[int, ...] = ()          # 引きずり出し系(例:ボスの指令)。KO(サイド)を生む時のみ使用
     recover_cards: tuple[int, ...] = ()       # トラッシュ回収系(例:夜のタンカ)。回収価値がある時のみ使用
@@ -1928,9 +1930,14 @@ class DeckBot(Bot):
                            if m.damage and str(m.damage).isdigit()), default=0)
                 # 「土台を前に晒さない」を最優先(攻撃不能な非土台を前に置く方が、主力土台を
                 # 晒すよりまし=arch: Relicanth前>Duraludon前)。次いでアタッカー・火力。
-                key = (0 if self._is_evolving_base(cid) else 1,
-                       1 if cid in self.plan.attackers else 0,
-                       dmg)
+                # tempo_setup: 逆に攻撃テンポ優先=殴れるアタッカーを前へ(v9ラダー蒸留)
+                if self.plan.tempo_setup:
+                    key = (1 if cid in self.plan.attackers else 0, dmg,
+                           0 if self._is_evolving_base(cid) else 1)
+                else:
+                    key = (0 if self._is_evolving_base(cid) else 1,
+                           1 if cid in self.plan.attackers else 0,
+                           dmg)
                 if key > best_key:
                     best_key, best_i = key, i
             if best_i is not None:

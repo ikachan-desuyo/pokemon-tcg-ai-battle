@@ -77,10 +77,10 @@ def qa(games_per_matchup=5):
     dl = [int(x) for x in open("decks/deck.csv").read().split() if x.strip()]
     matchups = [
         ("mirror", "deck", "deck"),
-        ("lucario", "ladder_lucario", "ladder_lucario"),
-        ("arch", "ladder_archaludon", "ladder_archaludon"),
+        ("lucario", "ladder_lucario", "ladder_lucario_v2"),
+        ("arch", "ladder_archaludon", "ladder_archaludon_v2"),
         ("dragapult", "dragapult", "dragapult"),
-        ("alakazam", "alakazam", "alakazam"),
+        ("alakazam", "alakazam", "alakazam_v2"),
         ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
         ("kangaskhan", "kangaskhan", "kangaskhan"),   # 上位メタ2番手(2026-07-07抽出)
     ]

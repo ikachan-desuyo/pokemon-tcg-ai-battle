@@ -69,10 +69,10 @@ def play_recorded(mk_me, mk_opp, deck_me, deck_opp, label):
 def main():
     dl = [int(x) for x in open("decks/deck.csv").read().split() if x.strip()]
     matchups = [("mirror", "deck", "deck", 10),
-                ("lucario", "ladder_lucario", "ladder_lucario", 10),
-                ("arch", "ladder_archaludon", "ladder_archaludon", 10),
+                ("lucario", "ladder_lucario", "ladder_lucario_v2", 10),
+                ("arch", "ladder_archaludon", "ladder_archaludon_v2", 10),
                 ("dragapult", "dragapult", "dragapult", 10),
-                ("alakazam", "alakazam", "alakazam", 10),
+                ("alakazam", "alakazam", "alakazam_v2", 10),
                 ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl", 10),
                 ("kangaskhan", "kangaskhan", "kangaskhan", 10)]
     counts = Counter(); reps = defaultdict(list); all_stats = []

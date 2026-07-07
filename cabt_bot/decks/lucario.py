@@ -12,7 +12,7 @@ from collections import defaultdict
 from ..bots.deck_bot import DeckBot, DeckPlan
 from ..cards import load_cards
 
-DECK_CSV = "decks/ladder_lucario.csv"
+DECK_CSV = "decks/ladder_lucario_v2.csv"  # v9ラダー蒸留: 実構築へ更新(2026-07-08)
 
 # 主要カードID
 RIOLU, ML, MAKUHITA, HARIYAMA, LUNATONE, SOLROCK = 677, 678, 673, 674, 675, 676
@@ -34,7 +34,9 @@ PLAN = _dc.replace(
     # 差分①(一般化候補): ソルロックは相方特性(ルナサイクル)の相棒=1体で充足。
     #   「1ターン1回」テキストはルナトーン側にしか無いため相棒側capは未導出
     # 差分②(デッキ固有): マクノシタはハリテヤマ(どすこい)土台=2枚まで
-    dup_play_caps={**_base.dup_play_caps, 676: 1, 673: 2},
+    dup_play_caps={**_base.dup_play_caps, 676: 1, 673: 2},    # 差分(v2構築): Wally's Compassion×2=回復サポ。inferはトレーナー効果を読めないため明示
+    # (QA: HealMissed/LillieOverLiveHeal=Wallyゲート全休眠の検出で発覚)
+    heal_return_cards=(1229,),
 )
 
 

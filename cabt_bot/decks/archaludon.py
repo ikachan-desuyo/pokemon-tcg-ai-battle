@@ -12,7 +12,7 @@ from collections import defaultdict
 from ..bots.deck_bot import DeckBot, DeckPlan
 from ..cards import load_cards
 
-DECK_CSV = "decks/ladder_archaludon.csv"
+DECK_CSV = "decks/ladder_archaludon_v2.csv"  # v9ラダー蒸留: 実構築へ更新(2026-07-08)
 
 DURALUDON, ARCH, RELICANTH = 169, 190, 57
 METAL = 8
@@ -35,6 +35,8 @@ PLAN = _dc.replace(
     # 差分①(一般化候補): ジーランスは静的特性(Memory Dive)=場に1体で充足、予備込み2枚まで。
     #   静的特性(1ターン1回テキスト無し)のcap導出は未対応
     dup_play_caps={**_base.dup_play_caps, 57: 2},
+    # ※tempo_setup(土台前出し)は撤回: 実プレイヤーの初手はCinderace(非土台壁+Turbo Flare)が主
+    #   =v2構築なら既定の非土台優先セットアップが実挙動と一致(QA: SetupSkew 2件で確認)
 )
 
 

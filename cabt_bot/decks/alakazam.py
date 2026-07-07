@@ -13,7 +13,7 @@ from collections import defaultdict
 from ..bots.deck_bot import DeckBot, DeckPlan
 from ..cards import load_cards
 
-DECK_CSV = "decks/alakazam.csv"
+DECK_CSV = "decks/alakazam_v2.csv"  # v9ラダー蒸留: 実構築へ更新(2026-07-08)
 
 ABRA, KADABRA, ALAKAZAM = 741, 742, 743
 DUNSPARCE, DUDUNSPARCE, FEZ, SHAYMIN = 65, 66, 140, 343
