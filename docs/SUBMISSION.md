@@ -5,7 +5,7 @@
 ## 方針（重要）
 - **不要な「ファイル」を削除するだけ。ファイル内のコードは編集しない。**
   （import文を削る・`__all__`を削る・registryを削る等の**コード編集は不要**。手間とリスクが増えるだけ。）
-- 提出デッキは **MegaStarmie**（`decks/deck.csv`）。feature flag は既定 OFF のまま（`use_resolver`/`use_turn_evaluator`/`use_search`、`evaluate_decision`/`evaluate_plan`/`opponent` は全て非接続）。
+- 提出デッキは **ルート`deck.csv`が唯一の設定**(main.pyがbot_for_decklistで専用PLANを自動解決。2026-07-09にデッキ非依存化)。現在=Kangaskhan。feature flag は既定 OFF のまま（`use_resolver`/`use_turn_evaluator`/`use_search`、`evaluate_decision`/`evaluate_plan`/`opponent` は全て非接続）。
 - 研究コード（Plan AI 等）は提出に入れない。dormant なら同梱されても無害（agent は呼ばない）。
 
 ## 手順
@@ -17,18 +17,16 @@ git switch main && git status -s        # 空を確認
 git switch -c submission-N
 
 # 2) 不要“ファイル”のみ削除（コードは触らない）。import依存の無いものだけ:
-git rm -r -q --ignore-unmatch tools out docs tests replays
-git rm -q --ignore-unmatch plan_*.py episode*.py *_review_summary.md \
-  archaludon_*.txt
+git rm -r -q --ignore-unmatch tools research out docs tests replays
+git rm -q --ignore-unmatch *_review_summary.md archaludon_*.txt
 #   ※ cabt_bot/ パッケージは丸ごと残す（bot削除はimport編集が要るので“やらない”）
-#   ※ 研究デッキcsvは import されないので消しても良い（任意）:
-#      git rm -q $(git ls-files 'decks/*.csv' | grep -vE 'decks/deck\.csv$')
+#   ※ decks/*.csv は【削除禁止】: デッキ知識モジュールがimport時に読む(2026-07-09 build同梱化)
 
 # 3) パッケージ作成
-python scripts/build_submission.py --deck decks/deck.csv --out submission.tar.gz
+python scripts/build_submission.py --deck deck.csv --out submission.tar.gz
 
 # 4) プリフライト全検証（構文→ビルド→構造→デッキ60枚合法→展開物だけで1試合完走）
-python scripts/check_submission.py --deck decks/deck.csv     # 全✅を確認
+python scripts/check_submission.py --deck deck.csv     # 全✅を確認(BOT解決=専用PLANのアサート含む)
 
 # 5) tar.gz を記録してコミット（gitignore対策で -f）
 git add -f submission.tar.gz && git add -A

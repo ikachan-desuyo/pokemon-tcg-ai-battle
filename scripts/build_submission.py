@@ -82,6 +82,11 @@ def main() -> int:
                         ignore=shutil.ignore_patterns("__pycache__", "arena.py"))
         # カードデータは実行時に使う cards.json のみ（cards.csv は概観用で不要）。
         # data/: cards.json(カードDB) + JP_Card_Data.csv(脅威ライン=ランタイム必須)。
+        # デッキ知識モジュール(cabt_bot/decks/*.py)はimport時に decks/<name>.csv を読む。
+        # 未同梱だと専用PLAN(matchup_plan等)がUniversalへsilent退化する(JP CSV事故と同型)→必須同梱。
+        (stage / "decks").mkdir()
+        for f in sorted((ROOT / "decks").glob("*.csv")):
+            shutil.copy2(f, stage / "decks" / f.name)
         # JP CSV は v5〜v7 で同梱漏れ→line_threat=0 silent降格の事故があった(必須化)。
         (stage / "data").mkdir()
         for fname in ("cards.json", "JP_Card_Data.csv"):
