@@ -1093,6 +1093,11 @@ def det_energy_stuck_no_lillie(g, sig):
                     for m in ci.moves if m.damage), default=0)
         if need == 0 or e >= need or e == 0:
             continue                                    # 最大技可 / 0=別問題(そもそも回っていない)
+        # リーリエの純増ゼロ(手札枚数>=引き直し枚数)なら打っても掘れない=温存が正着
+        # (QA comfey T47: 手札9枚でリーリエ×2温存+Jetting攻撃=正着を誤検出した擬陽性)
+        draw_n = 8 if len(me.get("prize") or []) >= 6 else 6
+        if len(me.get("hand") or []) >= draw_n:
+            continue
         sig("EnergyStuckNoLillie|エネ不足×手札エネ0×リーリエ未使用でターン終了", g["ep"], cur.get("turn"))
 
 

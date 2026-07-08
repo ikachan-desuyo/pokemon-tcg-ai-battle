@@ -45,6 +45,23 @@ PLAN = _dc.replace(
 class Bot(DeckBot):
     plan = PLAN
 
+    # K2(2026-07-08, 検証済み・不採用): 対Mega=1位フル蒸留(エネ31/31をCrustle集中+Kanga非露出)
+    # をmatchup_planで実装しA/B → 10/100 vs 基準8-9%=中立。自mega bot(Nebula 210連鎖が完璧)には
+    # Crustle 150の消耗戦が成立しない=対自megaは~10%が構造上限近傍。1位の1-2は「実ラダーの
+    # 不完全なmega」相手の数字。kangaの伸び代は対Grimm(1位9-0 vs 自bot54%)等の別対面にある。
+
+
+    # K3(2026-07-08): 対Grimm=1位の9-0蒸留。攻撃57/60・手貼り59/79をCrustle線に集中。
+    # 機構は構造的: GrimmsnarlのSB(ex技)はRock Innに遮断=grimmの主砲が完全無効
+    # (crustle_ogerponが自grimmに80%勝つのと同一機構)。Kanga(SBの2枚的)は出さない。
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.matchup_signatures = {"grimm": [648, 646]}
+        self.matchup_plans = {"grimm": {
+            "attackers": (344, 345),
+            "energy_rules": ((18, 345), (14, 345), (11, 345), (1, 345)),
+        }}
+
 
 # ==== 対策側: 脅威プロファイル ====
 THREAT = {
