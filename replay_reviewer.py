@@ -826,19 +826,28 @@ WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
 def _ex_shield_blocks_rv(defender, owner_ci, m):
-    """defenderの「Pokémon {ex}からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか
-    (bot _ex_shield_blocks同一意味論。エンジン実測: Jetting(ex)→Crustle 0/Nebula(効果無視)貫通)。"""
+    """defenderの「〜からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか
+    (bot _ex_shield_blocks同一意味論)。①ex遮断(Rock Inn。エンジン実測: Jetting(ex)→Crustle 0/
+    Nebula(効果無視)貫通) ②特性持ち遮断(Cornerstone Stance=crustle_wall編入 2026-07-08)。"""
     if not defender or owner_ci is None:
-        return False
-    if "ex" not in (owner_ci.rule or "").lower():
         return False
     if "effects on your opponent" in (m.effect or ""):
         return False
+    atk_is_ex = "ex" in (owner_ci.rule or "").lower()
+    atk_has_ability = any((am.name or "").startswith("[Ability]")
+                          for am in (owner_ci.moves or []))
+    if not (atk_is_ex or atk_has_ability):
+        return False
     ci = C.get(defender.get("id"))
     for ab in (ci.moves if ci else []):
-        if ((ab.name or "").startswith("[Ability]")
-                and "Prevent all damage" in (ab.effect or "")
-                and "Pokémon {ex}" in (ab.effect or "")):
+        eff = ab.effect or ""
+        if not ((ab.name or "").startswith("[Ability]")
+                and "Prevent all damage" in eff):
+            continue
+        if "Pokémon {ex}" in eff and atk_is_ex:
+            if "Basic Pokémon {ex}" not in eff or owner_ci.is_basic:
+                return True
+        if "have an Ability" in eff and atk_has_ability:
             return True
     return False
 

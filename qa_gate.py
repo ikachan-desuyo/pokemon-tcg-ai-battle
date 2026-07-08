@@ -83,6 +83,7 @@ def qa(games_per_matchup=5):
         ("alakazam", "alakazam", "alakazam_v2"),
         ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
         ("kangaskhan", "kangaskhan", "kangaskhan"),   # 上位メタ2番手(2026-07-07抽出)
+        ("crustle_wall", "crustle_wall", "crustle_wall"),  # 二重壁(Rock Inn+いしずえ)=対grimm/kangaカウンター(2026-07-08抽出)
     ]
     counts = Counter(); reps = defaultdict(list)
 

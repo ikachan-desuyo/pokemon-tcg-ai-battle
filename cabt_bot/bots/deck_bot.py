@@ -2637,20 +2637,31 @@ class DeckBot(Bot):
         return dmg
 
     def _ex_shield_blocks(self, my_spot, owner_ci, m) -> bool:
-        """my_spotの「Pokémon {ex}からのダメージを全て防ぐ」特性(Crustle=Mysterious Rock Inn等)が
-        攻撃者owner_ciの技mを遮断するか。エンジン実測(2026-07-07): Jetting(Mega ex)→Crustle=0/
-        Nebula(相手activeの効果無視)→貫通。"""
+        """my_spotの「〜からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか。
+        ①ex遮断(Crustle=Mysterious Rock Inn): 攻撃者がPokémon ex。エンジン実測(2026-07-07):
+          Jetting(Mega ex)→Crustle=0/Nebula(相手activeの効果無視)→貫通。
+        ②特性持ち遮断(Cornerstone Ogerpon=Cornerstone Stance): 攻撃者が[Ability]持ち
+          (上位1043点grimmを2-0した二重壁の片翼。grimm主力は全員ex/特性持ちで完封される)。"""
         if not my_spot or owner_ci is None:
-            return False
-        if "ex" not in (owner_ci.rule or "").lower():
             return False
         if "effects on your opponent" in (m.effect or ""):
             return False    # 効果無視技は貫通(実測)
+        atk_is_ex = "ex" in (owner_ci.rule or "").lower()
+        atk_has_ability = any((am.name or "").startswith("[Ability]")
+                              for am in (owner_ci.moves or []))
+        if not (atk_is_ex or atk_has_ability):
+            return False
         ci = self._cardinfo.get(my_spot.get("id"))
         for ab in (ci.moves if ci else []):
-            if ((ab.name or "").startswith("[Ability]")
-                    and "Prevent all damage" in (ab.effect or "")
-                    and "Pokémon {ex}" in (ab.effect or "")):
+            eff = ab.effect or ""
+            if not ((ab.name or "").startswith("[Ability]")
+                    and "Prevent all damage" in eff):
+                continue
+            if "Pokémon {ex}" in eff and atk_is_ex:
+                # Farigiraf型「Basic Pokémon {ex}」は攻撃者がたねの時のみ遮断
+                if "Basic Pokémon {ex}" not in eff or owner_ci.is_basic:
+                    return True
+            if "have an Ability" in eff and atk_has_ability:
                 return True
         return False
 

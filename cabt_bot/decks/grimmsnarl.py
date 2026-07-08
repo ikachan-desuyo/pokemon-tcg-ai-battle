@@ -52,6 +52,11 @@ PLAN = _dc.replace(
 class Bot(DeckBot):
     plan = PLAN
 
+    # (撤回)二重壁対面のYveltal主砲化matchup_plan: A/B N=100で21→16%と逆悪化。
+    # 唯一の非遮断打点(Yveltal 1枚・回収0)を早期前進で失うと以降完全な手詰まり。
+    # 壁対面の勝ち筋は「壁を無視してMunkidori×4+Articuno×2(=6枚)をBoss+SBで狩る」側
+    # (SBは非壁への180+ベンチ30は通る)。既存のBossゲート/smart_gustが既にこの線を打つ。
+
 
 # ==== 対策側: 脅威プロファイル ====
 THREAT = {
