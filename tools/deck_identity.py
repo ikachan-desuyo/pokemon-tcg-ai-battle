@@ -11,9 +11,10 @@ identity_metrics で「そのデッキらしいプレイ率」を集計する。
 使い方: python deck_identity.py <deck> [N] [--universal]
         (--universal で Universal版を測定。既定はPLAN版)
 """
-import sys
+import sys, os
 
-sys.path.insert(0, ".")
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT); os.chdir(_ROOT)
 from cabt_bot.arena import run_match
 from cabt_bot import Observation, load_cards
 from cabt_bot.bots import deck_registry as R

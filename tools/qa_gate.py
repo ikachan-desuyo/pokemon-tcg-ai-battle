@@ -8,7 +8,10 @@
 """
 import sys, os
 from collections import Counter, defaultdict
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # tools/ の親=repo root
+sys.path.insert(0, _ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))       # tools/ 同士のimport用
+os.chdir(_ROOT)                                                       # decks/ 等の相対パスをroot基準に固定
 from cabt_bot.arena import run_match
 from cabt_bot import Observation
 from cabt_bot.bots import deck_registry as R

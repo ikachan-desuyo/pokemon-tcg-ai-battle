@@ -10,7 +10,7 @@
 """
 import json, os, datetime
 
-PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qa_issues.json")
+PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "qa_issues.json")  # repo root(移設2026-07-09)
 
 
 def load() -> dict:

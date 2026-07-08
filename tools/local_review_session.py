@@ -7,7 +7,10 @@
 """
 import json, os, sys, pathlib, subprocess
 from collections import Counter, defaultdict
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # tools/ の親=repo root
+sys.path.insert(0, _ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))       # tools/ 同士のimport用
+os.chdir(_ROOT)                                                       # decks/ 等の相対パスをroot基準に固定
 from cg.game import battle_start, battle_select, battle_finish
 from cg.api import to_observation_class
 from cabt_bot import Observation

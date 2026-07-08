@@ -11,7 +11,8 @@ R1スコープ = Layer 0(Collector) + Layer 1(検出器5種) + Layer 2(頻度集
 """
 import json, os, sys, pathlib
 from collections import Counter, defaultdict
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # tools/ の親=repo root
+sys.path.insert(0, _ROOT)
 from cabt_bot import load_cards
 from cabt_bot.enums import SelectType, OptionType
 

@@ -19,11 +19,11 @@ v7判定→Fetch Future Value の優先キューを維持した）
 ## 手順テンプレート
 
 ### Phase 0: 現象の確定
-- 実ラダーなら `ladder_meta.py`（対面別勝敗・Elo帯別）。ローカルなら安定指標(無攻撃率/進化率/ベンチ)。
+- 実ラダーなら `research/ladder/ladder_meta.py`（対面別勝敗・Elo帯別）。ローカルなら安定指標(無攻撃率/進化率/ベンチ)。
 - 「どの相手に・どれくらい・どんな負け方か」を数字で持つ。
 
 ### Phase 1: 敗因の統計分類（DecisionDiffはまだ使わない）
-- `ladder_loss_classify.py` 型：無攻撃事故 / 展開負け(0-1) / 競り負け(2-4) / あと一歩(5) / 盤面切れ。
+- `research/ladder/ladder_loss_classify.py` 型：無攻撃事故 / 展開負け(0-1) / 競り負け(2-4) / あと一歩(5) / 盤面切れ。
 - 勝ち試合との特徴比較（初攻撃T・主役着地T・取得サイド・試合長）。
 - **注意: リプレイの action[t] は obs[t-1] への応答**（off-by-one）。ペアリングを間違えると偽の「殴らない」が出る。
 
@@ -32,7 +32,7 @@ v7判定→Fetch Future Value の優先キューを維持した）
 - 事故(手札に手段なし)は status/logs/手札で確認してから「運」と確定する（エラー/タイムアウトの反証を含む）。
 
 ### Phase 3: 上位カテゴリのみ DecisionDiff / Explain
-- `ladder_loss_diff.py` 型：分岐点(T3-8等)の実選択 vs カーネル最善、regret≥40のみ収集。
+- `research/ladder/ladder_loss_diff.py` 型：分岐点(T3-8等)の実選択 vs カーネル最善、regret≥40のみ収集。
 - 一致率が高い(≈88%)＝判断でなく構造。低い＝判断gap。
 - **同一局面比較**が最強の反証装置：「専用/Universalは同じ局面で何を選ぶか」（Recovery142回仮説を21/22一致で反証した型）。
 
@@ -57,7 +57,7 @@ v7判定→Fetch Future Value の優先キューを維持した）
 **運用ルール**: 「人間が1試合見れば気付く問題」は、提出前にReplayReviewerが検出できなければならない。
 **Kaggleは未知の問題を発見する場所であって、既知の問題を見つける場所ではない。**
 ```
-ローカル20〜50試合(ミラー+実ラダー復元ベンチ) → qa_gate.py(ReplayReviewer検出器)
+ローカル20〜50試合(ミラー+実ラダー復元ベンチ) → tools/qa_gate.py(ReplayReviewer検出器)
   → BLOCKING署名(ValuelessSupportPlay/MissedLethal/WallRetreat/LastStandリーリエ未活用)が
      1件でも残存 → 提出しない
   → 0件 → 提出可
@@ -69,7 +69,7 @@ v7判定→Fetch Future Value の優先キューを維持した）
 
 ### Phase 7: 検証提出（必要時のみ・ユーザ指示必須）
 - 目的は順位でなく仮説検証。提出前に git tag（vN-名前）、提出後に submission ID/commit hash/時刻を記録。
-- 24-48h後に `ladder_meta.py` で対面別勝率の before/after。改善なしも研究成果。
+- 24-48h後に `research/ladder/ladder_meta.py` で対面別勝率の before/after。改善なしも研究成果。
 
 ### Phase 8: 毎提出後の定例——人間レビュー→OSレビュー（必須・正式採用）
 - **提出のたびに、人間が3〜5試合リプレイを目視して違和感を挙げる**（replay_viewer HTML）。

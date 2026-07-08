@@ -157,3 +157,35 @@ DECK_BOTS: dict[str, type] = {
     # 単発観測の上位デッキ(将来のベンチ候補): raging_bolt/cynthia_garchomp/rocket_spidops/beartic
     "raging_bolt": universal_for("raging_bolt"),
 }
+
+
+# ==== 提出エントリ用: デッキリスト→bot解決(2026-07-09) ====
+# main.py を特定デッキ非依存にする。deck.csv の60枚が唯一の設定:
+# 代表カードで専用PLAN botを解決し、未知の構築は Universal(infer_plan) で回す。
+_DECK_SIGNATURES = (
+    (1031, "deck"),            # Mega Starmie ex
+    (756, "kangaskhan"),       # Mega Kangaskhan ex
+    (648, "grimmsnarl"),       # Marnie's Grimmsnarl ex
+    (743, "alakazam"),         # Alakazam(PH)
+    (117, "crustle_ogerpon"),  # Cornerstone Mask Ogerpon ex
+    (190, "ladder_archaludon"),   # Archaludon ex
+    (678, "ladder_lucario"),      # Mega Lucario ex
+    (121, "dragapult"),           # Dragapult ex
+    (98, "chandelure_control"),   # Chandelure(Comfeyより先に判定=同名Comfey共存構築)
+    (164, "comfey_control"),      # Comfey
+)
+
+
+def bot_for_decklist(decklist):
+    """deck.csvの内容から最適なbotを生成。専用PLAN(署名一致)→Universal(infer)の順。
+    どの経路も失敗したら例外を上げ、呼び出し側(main.py)のフォールバックに委ねる。"""
+    s = set(decklist or ())
+    for cid, key in _DECK_SIGNATURES:
+        if cid in s and key in DECK_BOTS:
+            try:
+                return DECK_BOTS[key](decklist=decklist)
+            except Exception:
+                continue                     # 知識モジュール欠落(csv不在等)→次候補/Universalへ
+    from .universal_bot import infer_plan
+    from .deck_bot import DeckBot
+    return DeckBot(plan=infer_plan(decklist), decklist=decklist)

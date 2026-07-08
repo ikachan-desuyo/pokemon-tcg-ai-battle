@@ -26,7 +26,7 @@ _HERE = _CANDIDATES[0]
 
 from cabt_bot import Observation
 from cabt_bot.bots import HeuristicBot
-from cabt_bot.bots.deck_registry import MegaStarmiePlanBot
+from cabt_bot.bots.deck_registry import bot_for_decklist
 
 
 def read_deck_csv() -> list[int]:
@@ -60,10 +60,11 @@ def _load_decklist() -> list[int]:
 from cabt_bot.runtime_check import run_runtime_checks
 run_runtime_checks(strict=True)
 
-# 提出デッキ(MegaStarmie)を理想的に回す専用 DeckBot。検証で SearchBot より
-# 高速かつ同等以上（探索は天井を破れず激遅=10分制限のリスク）だったため採用。
+# デッキ非依存のbot解決(2026-07-09): deck.csv の60枚が唯一の設定。
+# 代表カード署名で専用PLAN bot(MegaStarmie/Kangaskhan/Grimmsnarl等)を解決し、
+# 未知の構築は Universal(infer_plan) で回す。デッキ固有知識は deck_registry/decks 層に置く。
 try:
-    BOT = MegaStarmiePlanBot(decklist=_load_decklist())
+    BOT = bot_for_decklist(_load_decklist())
 except Exception:
     BOT = HeuristicBot()
 
