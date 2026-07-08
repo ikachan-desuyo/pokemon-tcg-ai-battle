@@ -747,13 +747,21 @@ class DeckBot(Bot):
                 best_key, best = key, i
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
 
-    def _energy_provides_syms(self, eid):
-        """エネカードが供給する型記号(基本エネ={X}1個, volatile(イグニ)=C3, その他type欄から)。"""
+    def _energy_provides_syms(self, eid, holder_cid=None):
+        """エネカードが供給する型記号(基本エネ={X}1個, volatile(イグニ)=C3, その他type欄から)。
+        {A}=Prism型ワイルドカード: たねについている間は全タイプ1個分(*)、進化には無色1個分
+        (エンジンデータ実測: Prism type='{A}'が未処理で['A']を返し、Comfey/Yveltal/Articunoの
+        payabilityが全滅していた=comfey_control対grimm 1/4の根因)。"""
         import re
         ci = self._cardinfo.get(eid)
         if not ci:
             return []
         syms = re.findall(r"\{([A-Z])\}", ci.type or "") or re.findall(r"\{([A-Z])\}", ci.name or "")
+        if syms == ["A"]:
+            holder = self._cardinfo.get(holder_cid) if holder_cid is not None else None
+            if holder is None or holder.is_basic:
+                return ["*"]
+            return ["C"]
         if syms:
             return syms
         return ["C", "C", "C"] if eid in self.plan.volatile_energies else ["C"]
@@ -768,7 +776,7 @@ class DeckBot(Bot):
             return 0
         att = []
         for ec in (sp.get("energyCards") or []):
-            att += self._energy_provides_syms(ec.get("id"))
+            att += self._energy_provides_syms(ec.get("id"), target_id)
         best = None
         for m in info.moves:
             if not m.damage:
@@ -798,13 +806,16 @@ class DeckBot(Bot):
         for t in need_spec:
             if t in pool:
                 pool.remove(t)
+            elif "*" in pool:
+                pool.remove("*")
             else:
                 remaining.append(t)
         any_left = max(0, n_any - len(pool))
         # energy_id=None は「追加なしで既に最大技が払えるか」の問い(前進ゲート①)
-        mine = self._energy_provides_syms(energy_id) if energy_id is not None else []
+        mine = self._energy_provides_syms(energy_id, target_id) if energy_id is not None else []
         if energy_id is not None:
-            progresses = any(t in remaining for t in mine) or (any_left > 0 and bool(mine))
+            progresses = (any(t in remaining for t in mine) or (any_left > 0 and bool(mine))
+                          or ("*" in mine and bool(remaining)))
             if not progresses:
                 return 0
         # この1枚で最大技が完成する(=今すぐ/次の攻撃が立つ)なら最上位
@@ -813,6 +824,8 @@ class DeckBot(Bot):
         for t in remaining:
             if t in m2:
                 m2.remove(t)
+            elif "*" in m2:
+                m2.remove("*")
             else:
                 rem2.append(t)
         left2 = max(0, any_left - len(m2))
@@ -973,9 +986,9 @@ class DeckBot(Bot):
             return False
         att = []
         for ec in (sp.get("energyCards") or []):
-            att += self._energy_provides_syms(ec.get("id"))
+            att += self._energy_provides_syms(ec.get("id"), sp.get("id"))
         if extra_energy_id is not None:
-            att += self._energy_provides_syms(extra_energy_id)
+            att += self._energy_provides_syms(extra_energy_id, sp.get("id"))
         for m in info.moves:
             if not m.damage and not (
                     not (m.name or "").startswith("[Ability]")
@@ -990,6 +1003,8 @@ class DeckBot(Bot):
             for t in need:
                 if t in pool:
                     pool.remove(t)
+                elif "*" in pool:
+                    pool.remove("*")          # ワイルドカード({A}×たね)は任意の型に充当
                 else:
                     ok = False
                     break

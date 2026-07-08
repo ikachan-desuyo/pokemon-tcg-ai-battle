@@ -226,7 +226,27 @@ def det_missed_lethal(g, sig):
         dmg = _dmg_with_units(a.get("id"), e)
         oa = (opp.get("active") or [None])[0]
         act_ko = bool(oa) and (oa.get("hp") or 999) <= dmg
-        bench_ko = any(b and (b.get("hp") or 999) <= dmg for b in (opp.get("bench") or []))
+
+        def _bench_killable(b):
+            """技単位で(払える×届く×遮断されない)を判定。遮断(Rock Inn/Cornerstone)持ちは
+            釣っても倒せない(QA kangaskhan T27の裁定: Jetting120は遮断・Nebula210は貫通だが
+            e=1で不払=どの技でも勝てない→bot正着。技をまたいだ判定は擬陽性/擬陰性の両方を生む)"""
+            if not b:
+                return False
+            import re as _re
+            for m in (ci.moves if ci else []):
+                mt2 = _re.match(r"(\d+)", str(m.damage or ""))
+                if not mt2:
+                    continue
+                need2 = len(_re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
+                if need2 > e:
+                    continue
+                if (b.get("hp") or 999) > int(mt2.group(1)):
+                    continue
+                if not _ex_shield_blocks_rv(b, ci, m):
+                    return True
+            return False
+        bench_ko = any(_bench_killable(b) for b in (opp.get("bench") or []))
         if bench_ko and not act_ko:
             sig("MissedLethal|Boss打てたのにベンチ勝ち筋逃し", g["ep"], cur.get("turn"))
 
@@ -520,6 +540,20 @@ def det_spread_skew(g, sig):
             continue
         if spread >= (pick.get("hp") or 9999):
             continue                        # 今KOを取った=正当
+        # フラワーカーテン(在場×非ルールボックスのベンチ保護): 撒き自体が通らない対象は
+        # 候補から除外(bot _opp_bench_spread_blocked同一意味論。QA chandelure T5: Shaymin在場で
+        # Litwick/Comfeyとも撒き0なのに「Litwickを外した」と誤検出した擬陽性)
+        curtain = any(
+            spc and any((mv.name or "").startswith("[Ability]")
+                        and "Prevent all damage done to your Benched" in (mv.effect or "")
+                        and "Rule Box" in (mv.effect or "")
+                        for mv in (C.get(spc.get("id")).moves if C.get(spc.get("id")) else []))
+            for spc in [(opp.get("active") or [None])[0]] + list(opp.get("bench") or []))
+        if curtain:
+            cands = [(j, sp) for j, sp in cands
+                     if (lambda ci_: ci_ and (ci_.rule or ""))(C.get(sp.get("id")))]
+            if not cands:
+                continue
         # 最大脅威線の進化前: たね × line_threat が候補全体の最大(=真の主力線) × 撒き2発以内で狩れる。
         # 「候補中のスナイプ可能な最大」だと二番手線(Makuhita等)を主力線と誤認する(QAで検出した誤検出)。
         max_th = max((line_threat(sp.get("id")) or 0) for _, sp in cands)
@@ -1201,6 +1235,11 @@ def _attack_prizes(cur, me, opp, a):
                 continue
             total = 0
             dmg_ap = int(mt.group(1))
+            # 遮断特性(Rock Inn=ex遮断/Cornerstone=特性持ち遮断): 対象が遮断するなら
+            # active KOは0(QA kangaskhan T27: Boss→Crustle100をJetting120でKOできると
+            # 誤算する擬陽性。bot側は_ex_shield_blocks配線済みで正着だった)
+            if _ex_shield_blocks_rv(oa, ci, m):
+                dmg_ap = 0
             # 弱点/抵抗/FML(bot _eff_dmg同一意味論・効果無視技は据置)。抵抗-30やFML-30を
             # 無視すると「Jetting 120で釣って勝てた」等の擬陽性(QA arch: FML下で90<100)
             if "affected by Weakness" not in (m.effect or ""):
@@ -1332,6 +1371,9 @@ def _attack_prizes_of_option(cur, me, opp, aid):
             sids = [x.get("id") for x in stad] if isinstance(stad, list) else ([stad.get("id")] if isinstance(stad, dict) else [])
             if 1244 in sids:
                 eff_d = max(0, eff_d - 30)
+    # 遮断特性(_attack_prizesと同一意味論): 対象が自分の技を遮断するならactive KO 0
+    if eff_d and ci_a2 and _ex_shield_blocks_rv(oa, ci_a2, type("M", (), {"effect": text})()):
+        eff_d = 0
     if eff_d and eff_d >= (oa.get("hp") or 9999):
         total += _pv(oa.get("id"))
     spm = re.search(r"does (\d+) damage to 1 of your opponent[’']s Benched", text)

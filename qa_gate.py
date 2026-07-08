@@ -84,6 +84,8 @@ def qa(games_per_matchup=5):
         ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
         ("kangaskhan", "kangaskhan", "kangaskhan"),   # 上位メタ2番手(2026-07-07抽出)
         ("crustle_ogerpon", "crustle_ogerpon", "crustle_ogerpon"),  # Crustle/Ogerpon(実ラダー実物 2026-07-08抽出)
+        ("comfey", "comfey_control", "comfey_control"),          # 実ラダー実物コントロール
+        ("chandelure", "chandelure_control", "chandelure_control"),  # 実ラダー実物コントロール
     ]
     counts = Counter(); reps = defaultdict(list)
 

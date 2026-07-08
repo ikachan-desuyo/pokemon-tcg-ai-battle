@@ -151,7 +151,9 @@ DECK_BOTS: dict[str, type] = {
     # 上位Grimmはmeta_grimmsnarlと60枚完全一致を確認済み):
     # Mega Kangaskhan ex+Crustle=妨害・耐久型(特殊エネ12枚・Petrel/Eri/Xerosic)。上位2番手の新型
     "kangaskhan": _deck_bot("kangaskhan"),   # PLAN版(ex遮断壁の意味論込み)
-    "crustle_ogerpon": _deck_bot("crustle_ogerpon"),  # Crustle/Cornerstone Ogerpon(実ラダー実物、遮断特性2種+Articuno/Munkidori)
+    "crustle_ogerpon": _deck_bot("crustle_ogerpon"),
+    "comfey_control": _deck_bot("comfey_control"),   # 実ラダー実物(上位grimmに2勝1敗)
+    "chandelure_control": _deck_bot("chandelure_control"),  # 実ラダー実物(上位grimmに2連勝)  # Crustle/Cornerstone Ogerpon(実ラダー実物、遮断特性2種+Articuno/Munkidori)
     # 単発観測の上位デッキ(将来のベンチ候補): raging_bolt/cynthia_garchomp/rocket_spidops/beartic
     "raging_bolt": universal_for("raging_bolt"),
 }
