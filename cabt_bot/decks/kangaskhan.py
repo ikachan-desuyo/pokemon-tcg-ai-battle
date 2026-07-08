@@ -72,6 +72,10 @@ class Bot(DeckBot):
     LINE = (344, 345)         # Dwebble, Crustle
 
     def _pick_attach(self, idxs, options, hand, me):
+        # K3(対grimm)はmatchup専用エネ規則(全て→Crustle)が検証済み=そちらへ委譲
+        # (pri順序の素通しで対grimm66→57の悪化をN=100で実測。対面ごとに検証済みの方を使う)
+        if self._matchup == "grimm":
+            return super()._pick_attach(idxs, options, hand, me)
         from ..bots.deck_bot import AreaType
 
         def spot_of(op):
@@ -99,8 +103,9 @@ class Bot(DeckBot):
             pri = None
             if "G" in syms and tid in self.LINE and not has_g(sp):
                 pri = 5                     # G→{G}枠が空のCrustle線(最優先)
-            elif "G" not in syms and tid == 345 and has_g(sp) and inv < 3:
-                pri = 4                     # 無色→G済みCrustleの仕上げ(●●)
+            elif "G" not in syms and tid in self.LINE and has_g(sp) and inv < 3:
+                pri = 4                     # 無色→G済みライン(Dwebble含む)の仕上げ(●●。進化持ち越しで
+                                            # Crustle即payable化。345限定だとG配りだけ進み誰も完成しない穴)
             elif "G" not in syms and tid == 756 and inv < 3:
                 pri = 3                     # 無色→Kanga(●●●=何でも可)
             elif "G" in syms and tid == 756 and inv < 3:
