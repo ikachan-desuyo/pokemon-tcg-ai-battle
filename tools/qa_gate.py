@@ -94,8 +94,12 @@ def qa(games_per_matchup=5):
     ]
     counts = Counter(); reps = defaultdict(list)
 
+    own_counts = Counter()   # 自bot側の発生数(発生ごとに側を判定。key単位の代表例判定は
+                             # 混在keyで誤帰属した=2026-07-09の集計バグ修正)
     def sig(key, ep, turn):
         counts[key] += 1
+        if "(相手bot)" not in ep:
+            own_counts[key] += 1
         if len(reps[key]) < 3:
             reps[key].append(f"{ep}:T{turn}")
     n = 0
@@ -122,22 +126,27 @@ def qa(games_per_matchup=5):
                 # BLOCKING検出試合はリプレイ保存(点滅FAILの裁定用: QAは使い捨て生成のため
                 # 保存が無いと稀フラグの再現・裁定が不可能=2026-07-08の教訓)
                 _fail_dir.mkdir(parents=True, exist_ok=True)
+                import time as _time
+                _stamp = _time.strftime("%m%d-%H%M%S")
                 _json.dump({"flags": hit_block,
                             "games": [{"ep": g["ep"], "my": g["my"],
                                        "decisions": g["decisions"]} for g in games]},
-                           open(_fail_dir / f"{tag}-{g_i}.json", "w"))
+                           open(_fail_dir / f"{_stamp}-{tag}-{g_i}.json", "w"))
+                # 同名上書きで裁定中の証拠が消えた事故(2026-07-09)の再発防止=タイムスタンプ付与
     print(f"=== 提出前QAゲート: ローカル{n}試合 ===")
     blocking = []      # 自bot側のみ提出ブロック(相手botは監査対象だが提出可否とは別問題)
     opp_watch = []     # 相手bot側のBLOCKING級=ベンチマーク健全性ウォッチ(警告のみ)
     for key, c in counts.most_common():
         is_block = any(key.startswith(p) for p in BLOCKING_PREFIXES)
-        own = any("(相手bot)" not in ep for ep in reps[key]) if is_block else False
+        own = own_counts[key] > 0 if is_block else False
         mark = " ❌BLOCKING" if (is_block and own) else (" ⚠️相手bot" if is_block else "")
         print(f"  {key:<58}{c:>4}  {','.join(reps[key])}{mark}")
         if is_block and own:
-            blocking.append((key, c))
+            blocking.append((key, own_counts[key]))
         elif is_block:
             opp_watch.append((key, c))
+        if is_block and own and own_counts[key] < c:
+            opp_watch.append((key, c - own_counts[key]))   # 混在keyの相手bot側分はウォッチへ
     print()
     if opp_watch:
         print(f"⚠️ 相手bot側のKnown問題 {sum(c for _, c in opp_watch)}件(提出は妨げない・ベンチマーク健全性ウォッチ)")
