@@ -731,8 +731,14 @@ class DeckBot(Bot):
                     if (act_k and (act_k.get("hp") or 0) <= self._incoming_next_turn(act_k)
                             and not self._act_accel_ready(act_k, energy)):
                         act_doomed_t1 = 1   # 加速技(TF=1枚→3枚)が立つ貼りは死んでも黒字=例外
+            # 集中原則(v10実測 2026-07-09): エネ規則(型→対象)とactiveボーナスだけだと
+            # 「引いたエネの型」と「その時のactive」に貼り先が追従し、Kanga⇔Crustleへ交互分散
+            # →全員e2で誰も3コストに届かず8T無攻撃(実ラダー8敗中6敗が0枚取りの根因)。
+            # 充足同点なら「投資済みが多い=完成が近い」個体へ集中する。
+            invested = len((sp_k or {}).get("energyCards") or [])
             key = (1 if rule > 0 else 0,
                    comp,
+                   invested,
                    rule,
                    1 if target in self.plan.attackers else 0,
                    0 if act_doomed_t1 else 1,
