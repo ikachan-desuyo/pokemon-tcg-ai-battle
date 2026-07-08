@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import os
+
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from math import comb
@@ -749,8 +751,14 @@ class DeckBot(Bot):
                 #     このattachが今ターンより強い技を解放しない(解放するなら注いで良い=Ignition→Nebula等)。
                 # 全員低価値なら従来通り付ける。実ラダー監査: 32敗中28局面が"死にゆくactiveへのエネ注ぎ"。
                 key = (0 if self._low_future_value(target, me, op, energy) else 1,) + key
+            if os.environ.get("ATTACH_DEBUG"):
+                _ci_e = self._cardinfo.get(energy); _ci_t = self._cardinfo.get(target)
+                print(f"    [attach候補] {(_ci_e.name if _ci_e else energy)!s:<24}"
+                      f"→{(_ci_t.name if _ci_t else target)!s:<20} key={key}", flush=True)
             if key > best_key:
                 best_key, best = key, i
+        if os.environ.get("ATTACH_DEBUG") and best is not None:
+            print(f"    [attach採用] idx={best}", flush=True)
         return best  # None なら良い付け先なし → 付けずに次フェーズへ
 
     def _energy_provides_syms(self, eid, holder_cid=None):
