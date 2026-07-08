@@ -63,6 +63,57 @@ class Bot(DeckBot):
         }}
 
 
+    # K4根治(2026-07-09): 型を考慮したエネ貼り順序をデッキ知識として明示。
+    # 実測した3層問題: ①Crustle{G}●●の{G}枠に無色を積むと山のG5枚待ちで凍結
+    # ②重退却のactiveがe0だと交代不能の牢獄 ③70HP進化前への投資が敵圧で蒸発。
+    # 方針: G系はCrustle線の{G}枠へ最優先/無色はKanga(●●●)か「G済みCrustle」の仕上げへ。
+    # 汎用keyの外科手術は相互作用で3連続失敗(K4)→デッキ固有ロジックとしてdecks層に置く。
+    G_LIKE = (1, 18)          # Basic{G}, Grow Grass
+    LINE = (344, 345)         # Dwebble, Crustle
+
+    def _pick_attach(self, idxs, options, hand, me):
+        from ..bots.deck_bot import AreaType
+
+        def spot_of(op):
+            spots = (me.get("active") if op.in_play_area == AreaType.ACTIVE else me.get("bench")) or []
+            i = op.in_play_index
+            return spots[i] if i is not None and 0 <= i < len(spots) else None
+
+        def has_g(sp):
+            return any(self._energy_provides_syms(ec.get("id"), sp.get("id")) == ["G"]
+                       or "G" in self._energy_provides_syms(ec.get("id"), sp.get("id"))
+                       for ec in (sp.get("energyCards") or []))
+
+        best = None   # (priority, invested, is_active, idx)
+        for i in idxs:
+            op = options[i]
+            energy = self._hand_id(hand, op.index)
+            if not self._is_energy(energy):
+                continue
+            sp = spot_of(op)
+            if not sp:
+                continue
+            tid = sp.get("id")
+            syms = self._energy_provides_syms(energy, tid)
+            inv = len(sp.get("energyCards") or [])
+            pri = None
+            if "G" in syms and tid in self.LINE and not has_g(sp):
+                pri = 5                     # G→{G}枠が空のCrustle線(最優先)
+            elif "G" not in syms and tid == 345 and has_g(sp) and inv < 3:
+                pri = 4                     # 無色→G済みCrustleの仕上げ(●●)
+            elif "G" not in syms and tid == 756 and inv < 3:
+                pri = 3                     # 無色→Kanga(●●●=何でも可)
+            elif "G" in syms and tid == 756 and inv < 3:
+                pri = 1                     # GをKangaに使うのは最後(希少資源の温存)
+            if pri is not None:
+                cand = (pri, inv, 1 if op.in_play_area == AreaType.ACTIVE else 0, i)
+                if best is None or cand > best:
+                    best = cand
+        if best is not None:
+            return best[3]
+        return super()._pick_attach(idxs, options, hand, me)
+
+
 # ==== 対策側: 脅威プロファイル ====
 THREAT = {
     "boss_count": 4,                    # Boss's Orders ×4(最大搭載)

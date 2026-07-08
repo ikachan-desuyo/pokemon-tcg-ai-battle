@@ -558,6 +558,52 @@ class DeckBot(Bot):
                         int(mt.group(1)), "affected by Weakness" in (m.effect or ""), oa.get("id")))
         return best_dmg < (oa.get("hp") or 9999)
 
+    def _attach_type_fit(self, energy_id, target_id, sp, hand):
+        """型を考慮した貼り適合(K4根治 2026-07-09)。返り値 (typed_fit, poison):
+        - typed_fit=1: このエネが対象の最大技コストの「未充足の型枠」({G}等)を埋める
+          (希少な型エネは型枠へ、無色は●へ、の順序を機械化。G→Crustle{G}●● > G→Kanga●●●)
+        - poison=1: この貼りが●枠を埋めた結果、残り枠が「手札に無い型」限定になる
+          (例: Crustle{G}●●へ無色を2枚→残り{G}のみ×手札G無し=山のG5枚待ちの凍結を作る)"""
+        import re
+        info = self._cardinfo.get(target_id)
+        if not info or not sp:
+            return 0, 0
+        best = None
+        for m in info.moves:
+            mt = re.match(r"(\d+)", str(m.damage or ""))
+            if mt and (best is None or int(mt.group(1)) > best[0]):
+                best = (int(mt.group(1)), m.cost or "")
+        if not best:
+            return 0, 0
+        need_spec = re.findall(r"\{([A-Z])\}", best[1])
+        n_any = best[1].count("●")
+        att = []
+        for ec in (sp.get("energyCards") or []):
+            att += self._energy_provides_syms(ec.get("id"), target_id)
+        pool = list(att)
+        remaining = []
+        for t in need_spec:
+            if t in pool:
+                pool.remove(t)
+            elif "*" in pool:
+                pool.remove("*")
+            else:
+                remaining.append(t)
+        any_left = max(0, n_any - len(pool))
+        mine = self._energy_provides_syms(energy_id, target_id)
+        typed_fit = 1 if any(t in remaining for t in mine) or ("*" in mine and remaining) else 0
+        poison = 0
+        if not typed_fit and any_left == 1 and remaining:
+            # この貼りで●が埋まり切り、残りが型枠のみ→その型が手札に無ければ凍結
+            hand_syms = []
+            for c in (hand or []):
+                cid = c.get("id") if isinstance(c, dict) else c
+                if self._is_energy(cid) and cid != energy_id:
+                    hand_syms += self._energy_provides_syms(cid, target_id)
+            if not any(t in hand_syms or "*" in hand_syms for t in remaining):
+                poison = 1
+        return typed_fit, poison
+
     def _pick_attach(self, idxs, options, hand, me):
         # HPブーストツール(ケープ等): activeを「被KO圏→生存圏」に反転できるなら最優先で前に貼る。
         # avoid_overstackは死亡濃厚activeへの投資を避けるが、ケープは死亡条件そのものを変えるため

@@ -77,7 +77,9 @@ def play_and_record(mk_me, mk_opp, deck_me, deck_opp, label):
 
 
 def qa(games_per_matchup=5):
-    dl = [int(x) for x in open("decks/deck.csv").read().split() if x.strip()]
+    # 自bot=現提出デッキ(ルートdeck.csv=唯一の設定)に追従(2026-07-09。従来はmega固定)
+    _root_deck = "deck.csv" if os.path.exists("deck.csv") else "decks/deck.csv"
+    dl = [int(x) for x in open(_root_deck).read().split() if x.strip()]
     matchups = [
         ("mirror", "deck", "deck"),
         ("lucario", "ladder_lucario", "ladder_lucario_v2"),
@@ -104,7 +106,7 @@ def qa(games_per_matchup=5):
         od = [int(x) for x in open(f"decks/{opp_deck}.csv").read().split() if x.strip()]
         for g_i in range(games_per_matchup):
             games = play_and_record(
-                lambda: R.DECK_BOTS["deck"](decklist=dl),
+                lambda: __import__("cabt_bot.bots.deck_registry", fromlist=["bot_for_decklist"]).bot_for_decklist(dl),
                 lambda: R.DECK_BOTS[opp_key](decklist=od),
                 dl, od, f"local-{tag}-{g_i}")
             n += 1
