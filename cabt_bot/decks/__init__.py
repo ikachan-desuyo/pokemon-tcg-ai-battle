@@ -16,7 +16,7 @@ from __future__ import annotations
 # モジュールを読み飛ばし、deck_registry側がUniversalへフォールバックする(提出プリフライトで
 # import時クラッシュを検出した修正。Phase8: 実ラダーとの差=デプロイ事故の根絶)
 DECKS = {}
-for _name in ("lucario", "alakazam", "dragapult", "archaludon", "grimmsnarl", "kangaskhan", "crustle_wall"):
+for _name in ("lucario", "alakazam", "dragapult", "archaludon", "grimmsnarl", "kangaskhan", "crustle_ogerpon"):
     try:
         DECKS[_name] = __import__(f"{__name__}.{_name}", fromlist=[_name])
     except (FileNotFoundError, OSError):

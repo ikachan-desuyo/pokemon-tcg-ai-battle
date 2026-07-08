@@ -37,3 +37,4 @@ submission*.tar.gz
 .idea/
 .vscode/
 *.swp
+out/qa_failures/

@@ -75,7 +75,7 @@ def main():
                 ("alakazam", "alakazam", "alakazam_v2", 10),
                 ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl", 10),
                 ("kangaskhan", "kangaskhan", "kangaskhan", 10),
-                ("crustle_wall", "crustle_wall", "crustle_wall", 10)]
+                ("crustle_ogerpon", "crustle_ogerpon", "crustle_ogerpon", 10)]
     counts = Counter(); reps = defaultdict(list); all_stats = []
     fam_side = {"self": Counter(), "opp": Counter()}   # 検出ファミリ別×側(自bot/相手bot)
 

@@ -83,7 +83,7 @@ def qa(games_per_matchup=5):
         ("alakazam", "alakazam", "alakazam_v2"),
         ("grimmsnarl", "grimmsnarl", "meta_grimmsnarl"),
         ("kangaskhan", "kangaskhan", "kangaskhan"),   # 上位メタ2番手(2026-07-07抽出)
-        ("crustle_wall", "crustle_wall", "crustle_wall"),  # 二重壁(Rock Inn+いしずえ)=対grimm/kangaカウンター(2026-07-08抽出)
+        ("crustle_ogerpon", "crustle_ogerpon", "crustle_ogerpon"),  # Crustle/Ogerpon(実ラダー実物 2026-07-08抽出)
     ]
     counts = Counter(); reps = defaultdict(list)
 
@@ -92,6 +92,9 @@ def qa(games_per_matchup=5):
         if len(reps[key]) < 3:
             reps[key].append(f"{ep}:T{turn}")
     n = 0
+    import json as _json
+    from pathlib import Path as _Path
+    _fail_dir = _Path("out/qa_failures")
     for tag, opp_key, opp_deck in matchups:
         od = [int(x) for x in open(f"decks/{opp_deck}.csv").read().split() if x.strip()]
         for g_i in range(games_per_matchup):
@@ -100,22 +103,41 @@ def qa(games_per_matchup=5):
                 lambda: R.DECK_BOTS[opp_key](decklist=od),
                 dl, od, f"local-{tag}-{g_i}")
             n += 1
+            hit_block = []
+            def sig_g(key, ep, turn, _hb=hit_block):
+                sig(key, ep, turn)
+                if any(key.startswith(p) for p in BLOCKING_PREFIXES):
+                    _hb.append((key, turn))
             for game in games:
                 for det in RR.DETECTORS:
-                    det(game, sig)
+                    det(game, sig_g)
+            if hit_block:
+                # BLOCKING検出試合はリプレイ保存(点滅FAILの裁定用: QAは使い捨て生成のため
+                # 保存が無いと稀フラグの再現・裁定が不可能=2026-07-08の教訓)
+                _fail_dir.mkdir(parents=True, exist_ok=True)
+                _json.dump({"flags": hit_block,
+                            "games": [{"ep": g["ep"], "my": g["my"],
+                                       "decisions": g["decisions"]} for g in games]},
+                           open(_fail_dir / f"{tag}-{g_i}.json", "w"))
     print(f"=== 提出前QAゲート: ローカル{n}試合 ===")
-    blocking = []
+    blocking = []      # 自bot側のみ提出ブロック(相手botは監査対象だが提出可否とは別問題)
+    opp_watch = []     # 相手bot側のBLOCKING級=ベンチマーク健全性ウォッチ(警告のみ)
     for key, c in counts.most_common():
         is_block = any(key.startswith(p) for p in BLOCKING_PREFIXES)
-        mark = " ❌BLOCKING" if is_block else ""
+        own = any("(相手bot)" not in ep for ep in reps[key]) if is_block else False
+        mark = " ❌BLOCKING" if (is_block and own) else (" ⚠️相手bot" if is_block else "")
         print(f"  {key:<58}{c:>4}  {','.join(reps[key])}{mark}")
-        if is_block:
+        if is_block and own:
             blocking.append((key, c))
+        elif is_block:
+            opp_watch.append((key, c))
     print()
+    if opp_watch:
+        print(f"⚠️ 相手bot側のKnown問題 {sum(c for _, c in opp_watch)}件(提出は妨げない・ベンチマーク健全性ウォッチ)")
     if blocking:
-        print(f"判定: ❌ FAIL — Known問題 {sum(c for _, c in blocking)}件が残存。修正するまで提出不可。")
+        print(f"判定: ❌ FAIL — 自bot側Known問題 {sum(c for _, c in blocking)}件が残存。修正するまで提出不可。")
         return 1
-    print("判定: ✅ PASS — Known問題0件。提出可。")
+    print("判定: ✅ PASS — 自bot側Known問題0件。提出可。")
     return 0
 
 

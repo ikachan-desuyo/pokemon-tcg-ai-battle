@@ -828,7 +828,7 @@ WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 def _ex_shield_blocks_rv(defender, owner_ci, m):
     """defenderの「〜からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか
     (bot _ex_shield_blocks同一意味論)。①ex遮断(Rock Inn。エンジン実測: Jetting(ex)→Crustle 0/
-    Nebula(効果無視)貫通) ②特性持ち遮断(Cornerstone Stance=crustle_wall編入 2026-07-08)。"""
+    Nebula(効果無視)貫通) ②特性持ち遮断(Cornerstone Stance=crustle_ogerpon編入 2026-07-08)。"""
     if not defender or owner_ci is None:
         return False
     if "effects on your opponent" in (m.effect or ""):
