@@ -2583,6 +2583,12 @@ class DeckBot(Bot):
         pr = self.analyze_prize()
         if self._attack_prizes_now() >= (pr.get("my_prizes") or 6):
             return False    # 今殴れば勝ち切れる=退かず勝つ(27巡目: 温存/退避系に共通の勝ち切りガード)
+        # Boss引き出し勝ちも「退かず勝つ」(QA裁定2026-07-09 alakazam-0 T9: Boss→Abra釣り+
+        # Jetting撒き50=Abra×2で2枚勝ちが立っているのに、doomed退却がPLAY評価より先に走り
+        # イグニ装着済みの勝利をRET+ENDで放棄した実敗着。_should_play_bossは
+        # 「素の攻撃で勝てる時は打たない/引き出しで勝てる時のみ真」の検証済みゲート)
+        if any(c.get("id") in self.plan.boss_cards for c in (me.get("hand") or []))                 and self._should_play_boss():
+            return False
         opp_left = pr.get("opp_prizes") or 6
         death_loses = pv >= opp_left           # このactiveのKO=相手の残りサイド充足=負け確定
         if act.get("id") not in self.plan.attackers and not death_loses:

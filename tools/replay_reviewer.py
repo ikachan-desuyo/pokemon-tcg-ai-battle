@@ -218,6 +218,10 @@ def det_missed_lethal(g, sig):
         evolved = bool(ci) and not getattr(ci, "is_basic", True)
         e = sum(3 if (ec.get("id") == IGN and evolved) else 1
                 for ec in (a.get("energyCards") or []))
+        syms_bb = []
+        for ec in (a.get("energyCards") or []):
+            syms_bb += (["C", "C", "C"] if (ec.get("id") == IGN and evolved)
+                        else _energy_syms_rv(ec.get("id"), holder_basic=not evolved))
         if not cur.get("energyAttached"):
             inc = 0
             for x in h:
@@ -239,8 +243,7 @@ def det_missed_lethal(g, sig):
                 mt2 = _re.match(r"(\d+)", str(m.damage or ""))
                 if not mt2:
                     continue
-                need2 = len(_re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
-                if need2 > e:
+                if not _cost_payable_rv(m.cost, syms_bb):
                     continue
                 if (b.get("hp") or 999) > int(mt2.group(1)):
                     continue
@@ -298,14 +301,22 @@ def det_wall_retreat(g, sig):
             continue
         turn = cur.get("turn")
         attacked = False
+        atk_offered = any(o.get("type") == ATTACK for o in (sel.get("option") or []))
         for t2, ob2, act2 in g["decisions"][i + 1:]:
             cur2 = ob2.get("current")
             if not cur2 or cur2.get("turn") != turn or cur2.get("yourIndex") != g["my"]:
                 break
-            _, ch2 = chosen(ob2, act2)
+            s2, ch2 = chosen(ob2, act2)
+            if (s2 or {}).get("type") == MAIN and any(
+                    o.get("type") == ATTACK for o in (s2.get("option") or [])):
+                atk_offered = True
             if ch2 and ch2.get("type") == ATTACK:
                 attacked = True
                 break
+        if not attacked and not atk_offered:
+            continue    # そのターン攻撃選択肢が一度も無い=誰も殴れない番の無料退却は
+                        # 進化線の配置換え等の正着(QA裁定2026-07-09: Yveltal e0→Morgrem e1
+                        # =翌TのGrimmsnarl+PunkUp布石を「攻撃なし」と誤検出)
         if not attacked:
             # 装填免除(bot _filter_gun_loading同一意味論): 攻撃チップが相手のダメカン×N技
             # (Raging Hammer型・Memory Dive込み)を自分の昇格先の致死圏まで装填するなら
@@ -860,6 +871,37 @@ def det_volatile_retreat_fuel(g, sig):
 WALLY, CAPE, LILLIE_ = 1229, 1159, 1227
 
 
+def _energy_syms_rv(eid, holder_basic=True):
+    """エネの供給記号(bot _energy_provides_syms同一意味論)。IGN=C3(進化時)、{A}=たね全型(*)。"""
+    import re
+    ci = C.get(eid)
+    if not ci:
+        return []
+    syms = re.findall(r"\{([A-Z])\}", getattr(ci, "type", "") or "")
+    if syms == ["A"]:
+        return ["*"] if holder_basic else ["C"]
+    if syms:
+        return syms
+    return ["C"]
+
+
+def _cost_payable_rv(cost, att_syms):
+    """型込みのコスト充足(QA裁定2026-07-09: Jetting{W}をイグニC3で払えると誤算し
+    「Boss+Jetting撒き=2枚勝ち」の幻でbot正着(RET)を実敗着と誤裁定した型無視バグの根治)。"""
+    import re
+    need = re.findall(r"\{([A-Z])\}", cost or "")
+    n_any = (cost or "").count("●")
+    pool = list(att_syms)
+    for t in need:
+        if t in pool:
+            pool.remove(t)
+        elif "*" in pool:
+            pool.remove("*")
+        else:
+            return False
+    return len(pool) >= n_any
+
+
 def _ex_shield_blocks_rv(defender, owner_ci, m):
     """defenderの「〜からのダメージを全て防ぐ」特性が攻撃者owner_ciの技mを遮断するか
     (bot _ex_shield_blocks同一意味論)。①ex遮断(Rock Inn。エンジン実測: Jetting(ex)→Crustle 0/
@@ -1222,22 +1264,29 @@ def _attack_prizes(cur, me, opp, a):
     if not a or not oa or not ci:
         return 0
     evolved = not getattr(ci, "is_basic", True)
-    e = sum(3 if (ec.get("id") == IGN and evolved) else 1 for ec in (a.get("energyCards") or []))
+    basic = not evolved
+    def _syms_of(eid):
+        if eid == IGN:
+            return ["C", "C", "C"] if evolved else ["C"]
+        return _energy_syms_rv(eid, holder_basic=basic)
+    att_syms = []
+    for ec in (a.get("energyCards") or []):
+        att_syms += _syms_of(ec.get("id"))
     hand_es = []
     if not cur.get("energyAttached"):
         for c in (me.get("hand") or []):
             cc0 = C.get(c.get("id"))
             if cc0 and "Energy" in (cc0.name or "") and not cc0.is_pokemon:
-                hand_es.append(3 if (c.get("id") == IGN and evolved) else 1)
+                hand_es.append(_syms_of(c.get("id")))
     best_total = 0
-    for extra in [0] + hand_es:
-        ee = e + extra
+    for extra in [[]] + hand_es:
+        pool_syms = att_syms + extra
         for m in ci.moves:
             mt = re.match(r"(\d+)", str(m.damage or ""))
             if not mt:
                 continue
-            need = len(re.findall(r"\{[A-Z]\}", m.cost or "")) + (m.cost or "").count("●")
-            if need > ee:
+            # 型込み充足(Jetting{W}をイグニC3で払える扱いにしない=2026-07-09裁定の根治)
+            if not _cost_payable_rv(m.cost, pool_syms):
                 continue
             total = 0
             dmg_ap = int(mt.group(1))
@@ -1662,6 +1711,31 @@ def det_promotion_skew(g, sig):
                         and "Prevent all damage" in (mv.effect or "")
                         and "Pokémon {ex}" in (mv.effect or "") for mv in ci_p.moves)):
             continue
+        # グッズロッカー免除(bot item_locker/_lock_stance同一意味論。QA裁定2026-07-09:
+        # crustle-2 T5=Budew昇格→即ロック攻撃→2T後に主砲復帰はR5設計通りの正着):
+        # 0エネのグッズロック技持ちを前に出し、次の自分手番でロック攻撃を実行した
+        # (または実行前にゲームが終わった)なら意図された時間稼ぎ。
+        if ci_p and any((mv.cost or "") in ("", "0", "No cost")
+                        for mv in ci_p.moves if "can’t play any Item" in (mv.effect or "")):
+            locker_ok = True
+            saw_next = False
+            for t3, ob3, act3 in g["decisions"]:
+                cur3 = ob3.get("current")
+                if not cur3 or cur3.get("turn") <= cur.get("turn"): continue
+                if cur3.get("yourIndex") != g["my"]: continue
+                s3, ch3 = chosen(ob3, act3)
+                if (s3 or {}).get("type") != MAIN: continue
+                a3 = (cur3["players"][g["my"]].get("active") or [None])[0]
+                if not a3 or a3.get("id") != pick.get("id"):
+                    break                     # ロッカーが前に居ない=別展開へ
+                saw_next = True
+                if ch3 and ch3.get("type") == ATTACK:
+                    break                     # ロック攻撃実行=正着
+                if ch3 and ch3.get("type") == 14:
+                    locker_ok = False         # 前に居るのに攻撃せずEND=免除しない
+                    break
+            if locker_ok:
+                continue
         better = any(sp and survives(sp) and is_main(sp)
                      for sp in (_spot_of(cur, g["my"], o) for o in opts))
         if better:
@@ -2366,7 +2440,12 @@ def det_base_line_sacrifice(g, sig):
                               for c in (me2.get("hand") or []))
             dies = (a2.get("hp") or 0) <= _incoming_next(a2, oa2, opp_seen, opp2.get("handCount"), opp2.get("bench"))
             kos = attack_dmg(a2) >= (oa2.get("hp") or 9999)
-            if evo_in_hand and dies and not kos:
+            # 予備土台免除(QA裁定2026-07-09 mirror-2 T13): 同名の土台がベンチに他にも居るなら
+            # 犠牲でも線は失われない(装填済みGrimmsnarl150をNebula210から退避させる盾に
+            # Dunsparce1体を差し出し、T15に主砲帰還=正着を誤検出していた)
+            spare_base = sum(1 for sp in (me2.get("bench") or [])
+                             if sp and sp.get("id") == a2.get("id"))
+            if evo_in_hand and dies and not kos and spare_base == 0:
                 sig(f"BaseLineSacrifice|進化土台{nm(a2.get('id'))}を確定死圏に前進(進化先在手)",
                     g["ep"], cur.get("turn"))
                 return
