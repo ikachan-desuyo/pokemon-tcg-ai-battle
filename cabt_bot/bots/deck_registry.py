@@ -40,6 +40,7 @@ def _deck_bot(deck_key: str, fallback_stem: str | None = None) -> type:
 
 # Mega Starmie（Nebula 主軸）
 STARMIE_PLAN = DeckPlan(
+    use_kernel_arbiter=True,   # P1採用(2026-07-09): 押し引きのsearchカーネル裁定。A/B400戦: grimm+5/luc+7/arch-3(ノイズ域)、実敗着T9でRET→ATK上書き実証
     name="MegaStarmie",
     go_first=True,
     attackers=(1031, 1030),               # メガスターミーex / ヒトデマン

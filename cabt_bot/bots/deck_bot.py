@@ -107,6 +107,9 @@ class DeckPlan:
     reposition: bool = False                  # 非攻撃役が前なら、攻撃役(エネ有・ベンチ)を前に出してから殴る
     item_locker: tuple[int, ...] = ()         # 0エネのグッズロック攻撃持ち(例:スボミー)。主砲が撃てない間、
                                               # 前に置いてロック連打で相手のグッズ展開を止める(上位1043点grimm蒸留)
+    use_kernel_arbiter: bool = False          # 押し引き(RETREATとATTACKが並ぶ局面)のみsearchカーネルで
+                                              # 2-3候補をロールアウト裁定(P1 2026-07-09: 1ターン貪欲+ガード集の
+                                              # EV漏れ対策。seed平均+マージン超過時のみゲート判断を上書き)
 
 
 class DeckBot(Bot):
@@ -156,6 +159,7 @@ class DeckBot(Bot):
         if sel is None or not sel.options:
             return []
         self._cur, self._sel = obs.current, sel
+        self._obs_raw = getattr(obs, "raw", None)   # searchカーネル用に生obsを保持(P1 2026-07-09)
         self._track_opponent()
         self._apply_matchup()
         try:
@@ -206,6 +210,15 @@ class DeckBot(Bot):
         # 確定圏で、残って殴っても取れるサイド<失うサイド、かつベンチの主力後続が今ターン攻撃可能なら
         # 手貼り前に退く(前の付きエネはどうせ失われる=退却コストは実質ゼロ。退いた後に後続へ貼る)。
         # ※普遍原則のためrepositionフラグ非依存(UniversalBotにも適用)。
+        # 押し引きの仲裁人(P1 2026-07-09, use_kernel_arbiter): RETREATとATTACKが並ぶ局面のみ、
+        # searchカーネル(evaluate_decision)で候補{最良ATK, RET, END}をロールアウト裁定。
+        # ゲート集の1ターン貪欲が漏らすEV(例: alakazam-0 T9=RET40.7点をATK150.7点より選択)を回収。
+        # seed2種平均+マージン30超の時だけゲート判断を上書き(ノイズでの反転防止)。
+        if (self.plan.use_kernel_arbiter and OptionType.RETREAT in g
+                and OptionType.ATTACK in g):
+            arb = self._kernel_arbiter(options, g)
+            if arb is not None:
+                return [arb]
         if OptionType.RETREAT in g and self._should_retreat_doomed(me, hand):
             return [g[OptionType.RETREAT][0]]
         if OptionType.ATTACH in g:
@@ -2569,6 +2582,44 @@ class DeckBot(Bot):
                         out = 0
                     break
         return out
+
+    def _kernel_arbiter(self, options, g):
+        """押し引きの限定ロールアウト裁定。候補={最良ATK, RET, END}をevaluate_decisionで
+        seed2種平均し、最良がRET/ゲート系を30点超で上回る場合のみそのidxを返す(それ以外None=
+        従来ゲートへ)。発動条件は呼び出し側で絞る(RETREAT×ATTACK並立時のみ)。速度実測:
+        1候補10-60ms×3候補×2seed≈0.1-0.3s/回。"""
+        obs_dict = getattr(self, "_obs_raw", None)
+        if not obs_dict or not obs_dict.get("current"):
+            return None
+        cand = []
+        atk_ids = g.get(OptionType.ATTACK) or []
+        if atk_ids:
+            best_atk = self._best_attack(atk_ids, options)
+            cand.append(("ATK", atk_ids[best_atk] if best_atk < len(atk_ids) else atk_ids[0]))
+        if OptionType.RETREAT in g:
+            cand.append(("RET", g[OptionType.RETREAT][0]))
+        if OptionType.END in g:
+            cand.append(("END", g[OptionType.END][0]))
+        if len(cand) < 2:
+            return None
+        root = (self._cur or {}).get("yourIndex", 0)
+        scores = {}
+        for lbl, idx in cand:
+            vals = []
+            for seed in (7, 17):
+                r = self.evaluate_decision(obs_dict, idx, root_player=root, seed=seed)
+                if r and r.get("position") is not None:
+                    vals.append(r["position"])
+            if vals:
+                scores[idx] = sum(vals) / len(vals)
+        if not scores:
+            return None
+        best_idx = max(scores, key=scores.get)
+        ret_idx = g[OptionType.RETREAT][0] if OptionType.RETREAT in g else None
+        base = scores.get(ret_idx, min(scores.values()))
+        if scores[best_idx] >= base + 30 and best_idx != ret_idx:
+            return best_idx
+        return None
 
     def _should_retreat_doomed(self, me, hand) -> bool:
         """死亡確定×不利トレードの前逃げ判定。①前が攻撃役×サイド2+ ②被KO確定圏 ③残って殴っても
