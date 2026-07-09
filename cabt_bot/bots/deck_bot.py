@@ -2604,9 +2604,24 @@ class DeckBot(Bot):
             return None
         root = (self._cur or {}).get("yourIndex", 0)
         scores = {}
+        # v2(相手応手込み 2026-07-09): horizon=2+BotOpponent(self)で「自手→相手の実応手→自次ターン」
+        # まで読む(RH反撃トラップ等、自ターンのみの評価が見えない罠を判定)。planが取れない
+        # 候補はevaluate_decision(自ターンのみ)へフォールバック。
+        from .opponent_policy import BotOpponent
+        opp_pol = BotOpponent(self)
         for lbl, idx in cand:
             vals = []
             for seed in (7, 17):
+                r = None
+                try:
+                    p = self.evaluate_plan(obs_dict, idx, root_player=root, horizon=2,
+                                           seeds=(seed,), opponent=opp_pol)
+                    tr = (p or {}).get("trajectory") or []
+                    if tr and tr[-1] is not None:
+                        vals.append(tr[-1])
+                        continue
+                except Exception:
+                    pass
                 r = self.evaluate_decision(obs_dict, idx, root_player=root, seed=seed)
                 if r and r.get("position") is not None:
                     vals.append(r["position"])
